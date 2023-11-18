@@ -211,7 +211,36 @@ class BMirror:
 				self.night = ((ib_data.data[4]&0x01) != 0) and ((ib_data.data[4]>>4) < self.light_thresh)
 				if self.night != last_night:
 					self.mirror.setDayNight(self.night)
-					
+			
+	#Send AIBus, er... IBus messages to change the text on the screen.
+	def sendAIBusText(self, cmd, text):
+		index = 0x40
+		if cmd==0x61: #Song name.
+			index = 0x41
+		elif cmd==0x62: #Artist name.
+			index = 0x42
+		elif cmd==0x63: #Album name.
+			index = 0x43
+			
+		text_message = IBus.AIData(8+len(text))
+		
+		text_message.data[0] = 0x68
+		text_message.data[1] = text_message.size() - 2
+		text_message.data[2] = 0x3B
+		text_message.data[3] = 0xA5
+		text_message.data[4] = 0x63
+		text_message.data[5] = 0x1 #TODO: Adjust as per BlueBus?
+		text_message.data[6] = index
+		
+		try:
+			text_message.data[7:7+len(text)] = bytes(text).decode('utf-8')
+		except:
+			pass #TODO: Fill with printable characters.
+		
+		text_message.data[text_message.size()-1] = getChecksum(text_message)
+		
+		if index != 0x40:
+			self.ibus_handler.writeIBusMessage(text_message)
 		
 	def handleEvents(self):
 		events = pg.event.get()
