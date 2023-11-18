@@ -194,9 +194,15 @@ class BMirror:
 				self.time_24h = (ib_data.data[5]&0x01) == 0
 			elif ib_data.data[3] == 0x24:
 				if ib_data.data[4] == 0x01:
-					self.time_clock = bytes(ib_data.data[6:ib_data.size()-1]).decode('utf-8')
+					try:
+						self.time_clock = bytes(ib_data.data[6:ib_data.size()-1]).decode('utf-8')
+					except:
+						pass
 				elif ib_data.data[4] == 0x02:
-					self.date = bytes(ib_data.data[6:ib_data.size()-1]).decode('utf-8')
+					try:
+						self.date = bytes(ib_data.data[6:ib_data.size()-1]).decode('utf-8')
+					except:
+						pass
 		elif ib_data.data[0] == 0xE8: #From RLS.
 			if not self.RLS_connected:
 				self.RLS_connected = True
