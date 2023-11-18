@@ -214,33 +214,103 @@ class BMirror:
 			
 	#Send AIBus, er... IBus messages to change the text on the screen.
 	def sendAIBusText(self, cmd, text):
-		index = 0x40
-		if cmd==0x61: #Song name.
-			index = 0x41
-		elif cmd==0x62: #Artist name.
-			index = 0x42
-		elif cmd==0x63: #Album name.
-			index = 0x43
+		if self.gt_version >= 5:
+			index = 0x40
+			if cmd==0x61: #Song name.
+				index = 0x41
+			elif cmd==0x62: #Artist name.
+				index = 0x42
+			elif cmd==0x63: #Album name.
+				index = 0x43
+			else:
+				return
 			
-		text_message = IBus.AIData(8+len(text))
-		
-		text_message.data[0] = 0x68
-		text_message.data[1] = text_message.size() - 2
-		text_message.data[2] = 0x3B
-		text_message.data[3] = 0xA5
-		text_message.data[4] = 0x63
-		text_message.data[5] = 0x1 #TODO: Adjust as per BlueBus?
-		text_message.data[6] = index
-		
-		try:
-			text_message.data[7:7+len(text)] = bytes(text).decode('utf-8')
-		except:
-			pass #TODO: Fill with printable characters.
-		
-		text_message.data[text_message.size()-1] = getChecksum(text_message)
-		
-		if index != 0x40:
+			text_message = IBus.AIData(8+len(text))
+
+			text_message.data[0] = 0x68
+			text_message.data[1] = text_message.size() - 2
+			text_message.data[2] = 0x3B
+			text_message.data[3] = 0xA5
+			text_message.data[4] = 0x63
+			text_message.data[5] = 0x1 #TODO: Adjust as per BlueBus?
+			text_message.data[6] = index
+
+			try:
+				text_message.data[7:7+len(text)] = bytes(text, 'ascii')
+			except:
+				for i in range(0,len(text)):
+					if text[i].isprintable():
+						text_message.data[7+i] = text[i]
+					else:
+						text_message.data[7+i] = ' '
+
+			text_message.data[text_message.size()-1] = getChecksum(text_message)
+
 			self.ibus_handler.writeIBusMessage(text_message)
+			
+			update_message = IBus.AIData(8)
+			
+			update_message.data[0] = 0x68
+			update_message.data[1] = update_message.size()-2
+			update_message.data[2] = 0x3B
+			update_message.data[3] = 0xA5
+			update_message.data[4] = 0x63
+			update_message.data[5] = 0x01
+			update_message.data[6] = 0x00
+			update_message.data[7] = getChecksum(update_message)
+			
+			self.ibus_handler.writeIBusMessage(update_message)
+		else:
+			index = -1
+			if cmd==0x61: #Song name.
+				index = 0
+			elif cmd==0x62: #Artist name.
+				index = 1
+			elif cmd==0x63: #Album name.
+				index = 2
+			else:
+				return
+			
+			text_message = IBus.AIData(8+len(text))
+
+			text_message.data[0] = 0x68
+			text_message.data[1] = text_message.size() - 2
+			text_message.data[2] = 0x3B
+			text_message.data[3] = 0x21
+			text_message.data[4] = 0x60
+			text_message.data[5] = 0x0
+			text_message.data[6] = index | 0x40
+
+			if index == 2: #TODO: Verify this?
+				new_msg = [0x6]*8
+				text = bytes(text, 'ascii')
+				text = text+new_msg
+				
+				text_message.data[7:7+len(text)] = text
+			else:
+				try:
+					text_message.data[7:7+len(text)] = bytes(text, 'ascii')
+				except:
+					for i in range(0,len(text)):
+						if text[i].isprintable():
+							text_message.data[7+i] = text[i]
+						else:
+							text_message.data[7+i] = ' '
+
+			text_message.data[text_message.size()-1] = getChecksum(text_message)
+			
+			update_message = IBus.AIData(8)
+			
+			update_message.data[0] = 0x68
+			update_message.data[1] = update_message.size()-2
+			update_message.data[2] = 0x3B
+			update_message.data[3] = 0xA5
+			update_message.data[4] = 0x60
+			update_message.data[5] = 0x01
+			update_message.data[6] = 0x00
+			update_message.data[7] = getChecksum(update_message)
+			
+			self.ibus_handler.writeIBusMessage(update_message)
 		
 	def handleEvents(self):
 		events = pg.event.get()
