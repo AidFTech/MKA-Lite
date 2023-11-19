@@ -3,7 +3,7 @@ import IBus
 
 IB_RX = 4
 
-ISerial = serial.Serial(port="/dev/ttyAMA0", baudrate=9600, parity=serial.PARITY_EVEN)
+ISerial = serial.Serial(port="/dev/ttyAMA0", baudrate=9600, parity=serial.PARITY_EVEN, timeout=0.1)
 
 class IBusHandler:
 	ib_data = IBus.AIData(0)
