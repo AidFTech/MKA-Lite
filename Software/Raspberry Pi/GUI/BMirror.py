@@ -299,6 +299,8 @@ class BMirror:
 
 			text_message.data[text_message.size()-1] = getChecksum(text_message)
 			
+			self.ibus_handler.writeIBusMessage(text_message)
+			
 			update_message = IBus.AIData(8)
 			
 			update_message.data[0] = 0x68
