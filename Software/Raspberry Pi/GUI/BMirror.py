@@ -286,6 +286,8 @@ class BMirror:
 				text = bytes(text, 'ascii')
 				text = text+new_msg
 				
+				text_message.data[1] = text_message.size() - 2
+
 				text_message.data[7:7+len(text)] = text
 			else:
 				try:
