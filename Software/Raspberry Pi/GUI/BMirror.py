@@ -282,7 +282,7 @@ class BMirror:
 			text_message.data[6] = index | 0x40
 
 			if index == 2: #TODO: Verify this?
-				new_msg = [0x6]*8
+				new_msg = bytes([0x6]*8)
 				text = bytes(text, 'ascii')
 				text = text+new_msg
 				
