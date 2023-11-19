@@ -285,10 +285,13 @@ class BMirror:
 				new_msg = bytes([0x6]*8)
 				text = bytes(text, 'ascii')
 				text = text+new_msg
-				
-				text_message.data[1] = text_message.size() - 2
 
+				tmba = bytearray(text_message.data)
+				tmba.extend([0]*8)
+				text_message.data = bytes(tmba)
 				text_message.data[7:7+len(text)] = text
+
+				text_message.data[1] = text_message.size() - 2
 			else:
 				try:
 					text_message.data[7:7+len(text)] = bytes(text, 'ascii')
