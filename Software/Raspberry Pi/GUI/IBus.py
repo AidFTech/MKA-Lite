@@ -53,17 +53,23 @@ def readAIData(ai_port, ai_b):
 	if ai_port.in_waiting > 0:
 		data_rec = list(ai_port.read(2))
 
-		sender = data_rec[0]
-		l = data_rec[1]
-		
+		try:
+			sender = data_rec[0]
+			l = data_rec[1]
+		except IndexError:
+			return received
+
 		data = list(ai_port.read(l))
 		
-		ai_b.refresh(l+2)
-		ai_b.data[0] = sender
-		ai_b.data[1] = l
-		
-		for i in range(0, l):
-			ai_b.data[i+2] = data[i]
+		try:
+			ai_b.refresh(l+2)
+			ai_b.data[0] = sender
+			ai_b.data[1] = l
+			
+			for i in range(0, l):
+				ai_b.data[i+2] = data[i]
+		except IndexError:
+			return received
 			
 		received = True
 	
