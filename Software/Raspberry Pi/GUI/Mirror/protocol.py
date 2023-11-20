@@ -8,6 +8,7 @@
 """Dongle communications protocol implementation."""
 
 import struct
+import chardet
 from enum import IntEnum
 
 def _setenum(enum, val):
@@ -151,6 +152,7 @@ class ManufacturerInfo(Message):
 
 class MetaData(Message):
 	msgtype = 25
+	encoding = 'ascii'
 	
 	def __init__(self, **new_data):
 		super().__init__(self.msgtype)
@@ -179,11 +181,12 @@ class MetaData(Message):
 					the_return += ','
 		
 		the_return += '}'
-		return bytes(the_return, 'ascii')
+		return bytes(the_return, self.encoding)
 	
 	def _setdata(self, data):
+		self.encoding = chardet.detect(data)['encoding']
 		try:
-			data = (bytes(data)).decode('ascii')
+			data = (bytes(data)).decode(self.encoding)
 		except UnicodeDecodeError:
 			return
 			
