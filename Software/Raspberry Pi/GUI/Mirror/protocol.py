@@ -184,7 +184,9 @@ class MetaData(Message):
 		return bytes(the_return, self.encoding)
 	
 	def _setdata(self, data):
-		self.encoding = chardet.detect(data)['encoding']
+		self.encoding = chardet.detect(bytes(data))['encoding']
+		if type(self.encoding) is not str:
+			self.encoding = 'utf-8'
 		try:
 			data = (bytes(data)).decode(self.encoding)
 		except UnicodeDecodeError:

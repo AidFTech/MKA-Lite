@@ -239,10 +239,10 @@ class BMirror:
 				text_message.data[7:7+len(text)] = bytes(text, 'ascii')
 			except:
 				for i in range(0,len(text)):
-					if text[i].isprintable():
-						text_message.data[7+i] = text[i]
-					else:
-						text_message.data[7+i] = ' '
+					try:
+						text_message.data[7+i] = bytes(text[i], 'utf-8')
+					except:
+						text_message.data[7+i] = bytes('*', 'utf-8')
 
 			text_message.data[text_message.size()-1] = getChecksum(text_message)
 
