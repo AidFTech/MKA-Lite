@@ -236,7 +236,7 @@ class BMirror:
 			text_message.data[6] = index
 
 			try:
-				text_message.data[7:7+len(text)] = bytes(text, 'ascii')
+				text_message.data[7:7+len(text)] = bytes(text, 'utf-8')
 			except:
 				for i in range(0,len(text)):
 					try:
@@ -271,6 +271,9 @@ class BMirror:
 			else:
 				return
 			
+			if index == 2:
+				text += '\x06'*8
+			
 			text_message = IBus.AIData(8+len(text))
 
 			text_message.data[0] = 0x68
@@ -281,26 +284,14 @@ class BMirror:
 			text_message.data[5] = 0x0
 			text_message.data[6] = index | 0x40
 
-			if index == 2: #TODO: Verify this?
-				new_msg = bytes([0x6]*8)
-				text = bytes(text, 'ascii')
-				text = text+new_msg
-
-				tmba = bytearray(text_message.data)
-				tmba.extend([0]*8)
-				text_message.data = bytes(tmba)
-				text_message.data[7:7+len(text)] = text
-
-				text_message.data[1] = text_message.size() - 2
-			else:
-				try:
-					text_message.data[7:7+len(text)] = bytes(text, 'ascii')
-				except:
-					for i in range(0,len(text)):
-						if text[i].isprintable():
-							text_message.data[7+i] = text[i]
-						else:
-							text_message.data[7+i] = ' '
+			try:
+				text_message.data[7:7+len(text)] = bytes(text, 'utf-8')
+			except:
+				for i in range(0,len(text)):
+					try:
+						text_message.data[7+i] = bytes(text[i], 'utf-8')
+					except:
+						text_message.data[7+i] = bytes('*', 'utf-8')
 
 			text_message.data[text_message.size()-1] = getChecksum(text_message)
 			
