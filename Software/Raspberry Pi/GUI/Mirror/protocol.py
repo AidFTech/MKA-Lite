@@ -199,8 +199,16 @@ class MetaData(Message):
 		
 		for i in range(0, len(data_list)):
 			current_data = data_list[i].split(':')
+			if len(current_data) > 2: #There is a ":" somewhere in the data we want.
+				full_text = current_data[1]
+				for j in range(2,len(current_data)):
+					full_text += ':'
+					full_text += current_data[j]
+				
+				current_data = [current_data[0], full_text]
+			
 			if len(current_data) > 1:
-				if current_data[1].isdigit():
+				if current_data[1].isdigit() and current_data[0] != "MediaSongName" and current_data[0] != "MediaArtistName" and current_data[0] != "MediaAlbumName":
 					setattr(self, current_data[0], int(current_data[1]))
 				else:
 					setattr(self, current_data[0], current_data[1])
