@@ -328,6 +328,8 @@ class BMirror:
 			self.android_connected = False
 			self.carplay_name = ""
 			self.android_name = ""
+
+		self.mirror.setDayNight(self.night)
 		#TODO: Alert the MKIV that a phone is connected.
 			
 	def setPhoneName(self, phone_name):
