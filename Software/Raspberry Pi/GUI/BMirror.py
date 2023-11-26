@@ -37,6 +37,9 @@ class BMirror:
 		self.colors = ColorGroup()
 		self.colors.main_font = pg.font.Font('ariblk.ttf', 32)
 		self.active_menu = main.MainMenu(self.colors, self)
+
+		self.airplay_conf = open('airplay.conf','rb').read()
+		self.oem_logo = open('BMW.png', 'rb').read()
 		
 		self.autoplay = True
 		self.selected = False

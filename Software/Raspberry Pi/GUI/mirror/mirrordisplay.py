@@ -44,11 +44,18 @@ class MirrorDisplay:
 		#TODO: Notify AMirror that the dongle is starting up.
 		self.running = True
 		self.usblink.connectDongle(manufacturer_id, product_id)
-		#TOOD: Throw an error if there is a timeout.
+		#TODO: Throw an error if there is a timeout.
 		self.startup = False
 		
 		while self.startup == False: #TODO: And device is still connected.
 			self.usblink.sendMultiple(protocol.startup_info)
+
+			if hasattr(self.amirror, "airplay_conf") and self.amirror.airplay_conf is not None:
+				self.usblink.sendMessage(protocol.SendFile("/etc/airplay.conf", self.amirror.airplay_conf))
+			
+			if hasattr(self.amirror, "oem_logo") and self.amirror.oem_logo is not None:
+				self.usblink.sendMessage(protocol.SendFile("/etc/oem_icon.png", self.amirror.oem_logo))
+
 			time.sleep(1)
 	
 	def heartbeatThread(self):
