@@ -40,6 +40,9 @@ class BMirror:
 
 		self.airplay_conf = open('airplay.conf','rb').read()
 		self.oem_logo = open('BMW.png', 'rb').read()
+		self.icon_120 = open('BMW_icon.png', 'rb').read()
+		self.icon_180 = open('BMW_icon.png', 'rb').read()
+		self.icon_256 = open('BMW_icon.png', 'rb').read()
 		
 		self.autoplay = True
 		self.selected = False

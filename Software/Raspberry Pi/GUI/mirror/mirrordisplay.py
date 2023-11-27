@@ -56,6 +56,15 @@ class MirrorDisplay:
 			if hasattr(self.amirror, "oem_logo") and self.amirror.oem_logo is not None:
 				self.usblink.sendMessage(protocol.SendFile("/etc/oem_icon.png", self.amirror.oem_logo))
 
+			if hasattr(self.amirror, "icon_120") and self.amirror.icon_120 is not None:
+				self.usblink.sendMessage(protocol.SendFile("/etc/icon_120x120.png", self.amirror.icon_120))
+
+			if hasattr(self.amirror, "icon_180") and self.amirror.icon_180 is not None:
+				self.usblink.sendMessage(protocol.SendFile("/etc/icon_180x180.png", self.amirror.icon_180))
+			
+			if hasattr(self.amirror, "icon_256") and self.amirror.icon_256 is not None:
+				self.usblink.sendMessage(protocol.SendFile("/etc/icon_256x256.png", self.amirror.icon_256))
+
 			time.sleep(1)
 	
 	def heartbeatThread(self):
