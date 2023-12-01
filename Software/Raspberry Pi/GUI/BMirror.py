@@ -11,6 +11,7 @@ import IBusHandler
 import MainMenuHandler as main
 import SettingsMenuHandler as settings
 import PhoneConnectScreen as phoneconnect
+import PongLoopHandler
 
 import threading
 
@@ -70,6 +71,12 @@ class BMirror:
 		self.ibus_handler = IBusHandler.IBusHandler(self, 0xED)
 		self.ibus_thread = threading.Thread(target=self.ibus_handler.loop)
 		self.ibus_thread.start()
+
+		self.pong_looper = PongLoopHandler.PongLoopHandler(self.ibus_handler)
+		cd_pong_thread = threading.Thread(target=self.pong_looper.loopCD)
+		cd_pong_thread.start()
+		vm_pong_thread = threading.Thread(target=self.pong_looper.loopVM)
+		vm_pong_thread.start()
 		
 		self.sendAnnouncement()
 		
@@ -86,6 +93,9 @@ class BMirror:
 		if hasattr(self.mirror, "decoder"):
 			if self.mirror.decoder is not None and not self.mirror.decoder.player.window_minimized:
 				cmd_pass = True
+				
+		if ib_data.size() < 4:
+			return
 		
 		if ib_data.data[3] == 0x1 and (ib_data.data[2] == 0xED or ib_data.data[2] == 0xBF or ib_data.data[2] == 0xFF): #Ping
 			self.ibus_handler.sendPong(ib_data.data[0], 0xED)
@@ -427,12 +437,16 @@ class BMirror:
 	def sendCDStatusMessage(self, status):
 		cd_message = IBus.AIData(16)
 
+		pseudo_status = 0x89
+		if status == 0:
+			pseudo_status = 0x82
+
 		cd_message.data[0] = 0x18
 		cd_message.data[1] = cd_message.size()-2
 		cd_message.data[2] = 0x68
 		cd_message.data[3] = 0x39
 		cd_message.data[4] = status
-		cd_message.data[5] = 0x89
+		cd_message.data[5] = pseudo_status
 		cd_message.data[6] = 0x00
 		cd_message.data[7] = 0x20
 		cd_message.data[8] = 0x00
