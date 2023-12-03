@@ -17,7 +17,7 @@ class PongLoopHandler:
             cd_announce_message.data[1] = cd_announce_message.size()-2
             cd_announce_message.data[2] = 0xBF
             cd_announce_message.data[3] = 0x02
-            cd_announce_message.data[4] = 0x01
+            cd_announce_message.data[4] = 0x00
             cd_announce_message.data[5] = IBus.getChecksum(cd_announce_message)
             
             self.ibus_handler.writeIBusMessage(cd_announce_message)
@@ -31,7 +31,7 @@ class PongLoopHandler:
             vm_announce_message.data[1] = vm_announce_message.size()-2
             vm_announce_message.data[2] = 0xBF
             vm_announce_message.data[3] = 0x02
-            vm_announce_message.data[4] = 0x01
+            vm_announce_message.data[4] = 0x00
             vm_announce_message.data[5] = IBus.getChecksum(vm_announce_message)
             
             self.ibus_handler.writeIBusMessage(vm_announce_message)

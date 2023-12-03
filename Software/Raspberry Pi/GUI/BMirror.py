@@ -47,6 +47,7 @@ class BMirror:
 		
 		self.autoplay = True
 		self.selected = False
+		self.control = False
 		
 		self.carplay_name = ""
 		self.android_name = ""
@@ -101,7 +102,10 @@ class BMirror:
 			self.ibus_handler.sendPong(ib_data.data[0], 0xED)
 		elif ib_data.data[3] == 0x1 and ib_data.data[2] == 0x18: #Ping to CD changer.
 			self.ibus_handler.sendPong(ib_data.data[0], 0x18)
-		elif ib_data.data[0] == 0xF0: #From BMBT.
+		elif ib_data.data[3] == 0x4F: #Change in screen control.
+			if(ib_data.data[4]&0x01) != 0:
+				self.control = True
+		elif ib_data.data[0] == 0xF0 and self.control: #From BMBT.
 			if ib_data.data[3] == 0x49: #Selection knob turn.
 				num_turns = ib_data.data[4]&0xF
 				for i in range(0,num_turns):
@@ -131,14 +135,8 @@ class BMirror:
 					else:
 						self.mirror.sendCommand(104)
 						self.mirror.sendCommand(105)
-				elif button == 0x34: #Menu button.
-					if state == 0x0: 
-						if not cmd_pass and isinstance(self.active_menu, settings.SettingsMenu):
-							self.openMainMenu()
-						else:
-							self.mirror.sendCommand(200)
-					elif state == 0x1:
-						self.sendVMControl(False)
+				elif button == 0x34 and state == 0x2: #Menu button released.
+					self.control = False
 				elif button == 0x20: #Select button.
 					if state == 0x0:
 						if cmd_pass:
@@ -154,8 +152,9 @@ class BMirror:
 				elif cmd_pass:
 					if self.selected and button == 0x14 and state == 0: #Direction/pause button.
 						self.mirror.sendCommand(203)
+					elif button == 0x08: #Phone button.
+						self.mirror.sendCommand(200)
 				#TODO: Audio button.
-				
 			elif ib_data.data[3] == 0x47: #"Soft" button press.
 				button = ib_data.data[5]&0x3F
 				state = (ib_data.data[5]&0xC0) >> 6
@@ -183,7 +182,7 @@ class BMirror:
 					self.selected = False
 					self.sendCDStatusMessage(0)
 					self.mirror.sendCommand(202)
-				elif ib_data.data[4] == 0x3: #Start playing.
+				elif ib_data.data[4] == 0x2 or ib_data.data[4] == 0x3: #Start playing.
 					self.selected = True
 					self.sendCDStatusMessage(2)
 					self.mirror.sendCommand(201)
@@ -199,6 +198,8 @@ class BMirror:
 						self.sendCDStatusMessage(2)
 					else:
 						self.sendCDStatusMessage(0)
+			elif (ib_data.data[3] == 0x37 or ib_data.data[3] == 0x33) and self.control: #Radio menu enable message. Must be disabled.
+				self.ibus_handler.deactivateRadioMenu()
 		elif ib_data.data[0] == 0xD0: #From LCM.
 			if ib_data.data[3] == 0x5B and not self.RLS_connected:
 				last_night = self.night
@@ -227,7 +228,17 @@ class BMirror:
 				self.night = ((ib_data.data[4]&0x01) != 0) and ((ib_data.data[4]>>4) < self.light_thresh)
 				if self.night != last_night:
 					self.mirror.setDayNight(self.night)
-			
+		elif ib_data.data[0] == 0x3B: #From navigation computer.
+			if ib_data.data[3] == 0xA0: #Version message.
+				version_data0 = ib_data.data[15]
+				version_data1 = ib_data.data[16]
+
+				version = bytearray([version_data0, version_data1])
+				self.gt_version = int(version.decode())
+			elif ib_data.data[3] == 0x4E: #Ensure the radio is enabled.
+				if (ib_data.data[4]&0x1) != 0x0:
+					self.ibus_handler.activateRadio()
+
 	#Send AIBus, er... IBus messages to change the text on the screen.
 	def sendAIBusText(self, cmd, text):
 		if self.gt_version >= 5:

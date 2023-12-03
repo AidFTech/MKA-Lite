@@ -40,3 +40,39 @@ class IBusHandler:
 		pong.data[5] = IBus.getChecksum(pong)
 		
 		self.writeIBusMessage(pong)
+
+	def sendVersionQuery(self, receiver):
+		query = IBus.AIData(5)
+
+		query.data[0] = 0x3F
+		query.data[1] = query.size()-2
+		query.data[2] = receiver
+		query.data[3] = 0x0
+		query.data[4] = IBus.getChecksum(query)
+
+		self.writeIBusMessage(query)
+
+	def activateRadio(self):
+		activator = IBus.AIData(7)
+
+		activator.data[0] = 0x3B
+		activator.data[1] = activator.size()-2
+		activator.data[2] = 0x68
+		activator.data[3] = 0x4E
+		activator.data[4] = 0x0
+		activator.data[5] = 0x0
+		activator.data[6] = IBus.getChecksum(activator)
+
+		self.writeIBusMessage(activator)
+	
+	def deactivateRadioMenu(self):
+		deactivator = IBus.AIData(6)
+
+		deactivator.data[0] = 0x68
+		deactivator.data[1] = deactivator.size()-2
+		deactivator.data[2] = 0x3B
+		deactivator.data[3] = 0x46
+		deactivator.data[4] = 0x4
+		deactivator.data[5] = IBus.getChecksum(deactivator)
+
+		self.writeIBusMessage(deactivator)
