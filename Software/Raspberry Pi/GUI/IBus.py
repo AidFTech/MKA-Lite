@@ -81,9 +81,10 @@ def writeAIBusMessage(ai_port, ai_b, rx_pin):
 	first_low = int(time.perf_counter()*1000)
 	last_low = first_low
 	
-	while last_low - first_low < 20:
+	while last_low - first_low < 240:
 		last_low = int(time.perf_counter()*1000)
 		if GPIO.input(rx_pin) == 0:
-			last_low = int(time.perf_counter()*1000)
+			first_low = int(time.perf_counter()*1000)
 	
 	ai_port.write(ai_b.data)
+

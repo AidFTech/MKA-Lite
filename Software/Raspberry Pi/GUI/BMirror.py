@@ -63,7 +63,7 @@ class BMirror:
 		self.time_clock = ""
 		self.date = ""
 		
-		self.gt_version = 4
+		self.gt_version = 0
 		
 		self.mirror = mirrordisplay.MirrorDisplay(self)
 		connect_thread = threading.Thread(target=self.mirror.startDongle, args=(0x1314, 0x1520))
@@ -137,40 +137,43 @@ class BMirror:
 						self.mirror.sendCommand(105)
 				elif button == 0x34 and state == 0x2: #Menu button released.
 					self.control = False
-				elif button == 0x20: #Select button.
-					if state == 0x0:
-						if cmd_pass:
-							self.mirror.sendCommand(106)
-						else:
-							if isinstance(self.active_menu, settings.SettingsMenu):
-								self.openMainMenu()
-							else:
-								self.openSettingsMenu()
-					elif state == 0x1 and cmd_pass:
-						self.openMainMenu()
-						self.mirror.decoder.setWindow(False)
+				#elif button == 0x20: #Select button.
+				#	if state == 0x0:
+				#		if cmd_pass:
+				#			self.mirror.sendCommand(106)
+				#		else:
+				#			if isinstance(self.active_menu, settings.SettingsMenu):
+				#				self.openMainMenu()
+				#			else:
+				#				self.openSettingsMenu()
+				#	elif state == 0x1 and cmd_pass:
+				#		self.openMainMenu()
+				#		self.mirror.decoder.setWindow(False)
 				elif cmd_pass:
 					if self.selected and button == 0x14 and state == 0: #Direction/pause button.
 						self.mirror.sendCommand(203)
 					elif button == 0x08: #Phone button.
-						self.mirror.sendCommand(200)
+						if state == 0:
+							self.mirror.sendCommand(106)
+						elif state == 1:
+							self.mirror.sendCommand(200)
 				#TODO: Audio button.
 			elif ib_data.data[3] == 0x47: #"Soft" button press.
 				button = ib_data.data[5]&0x3F
 				state = (ib_data.data[5]&0xC0) >> 6
 				
-				if button == 0xF: #Select button.
-					if state == 0x0:
-						if cmd_pass:
-							self.mirror.sendCommand(106)
-						else:
-							if isinstance(self.active_menu, settings.SettingsMenu):
-								self.openMainMenu()
-							else:
-								self.openSettingsMenu()
-					elif state == 0x1 and cmd_pass:
-						self.openMainMenu()
-						self.mirror.decoder.setWindow(False)
+			#	if button == 0xF: #Select button.
+			#		if state == 0x0:
+			#			if cmd_pass:
+			#				self.mirror.sendCommand(106)
+			#			else:
+			#				if isinstance(self.active_menu, settings.SettingsMenu):
+			#					self.openMainMenu()
+			#				else:
+			#					self.openSettingsMenu()
+			#		elif state == 0x1 and cmd_pass:
+			#			self.openMainMenu()
+			#			self.mirror.decoder.setWindow(False)
 		elif ib_data.data[0] == 0x68: #From radio.
 			if ib_data.data[2] == 0x18 and ib_data.data[3] == 0x38: #CD request.
 				if ib_data.data[4] == 0: #Request current CD and track status.
@@ -199,7 +202,7 @@ class BMirror:
 					else:
 						self.sendCDStatusMessage(0)
 			elif (ib_data.data[3] == 0x37 or ib_data.data[3] == 0x33) and self.control: #Radio menu enable message. Must be disabled.
-				self.ibus_handler.deactivateRadioMenu()
+				self.control = False #TODO: Expand!
 		elif ib_data.data[0] == 0xD0: #From LCM.
 			if ib_data.data[3] == 0x5B and not self.RLS_connected:
 				last_night = self.night
@@ -238,6 +241,9 @@ class BMirror:
 			elif ib_data.data[3] == 0x4E: #Ensure the radio is enabled.
 				if (ib_data.data[4]&0x1) != 0x0:
 					self.ibus_handler.activateRadio()
+			
+			if self.gt_version <= 0:
+				self.ibus_handler.sendVersionQuery(0x3B)
 
 	#Send AIBus, er... IBus messages to change the text on the screen.
 	def sendAIBusText(self, cmd, text):
@@ -298,8 +304,8 @@ class BMirror:
 			else:
 				return
 			
-			if index == 2:
-				text += '\x06'*8
+			#if index == 2:
+			#	text += '\x06'*8
 			
 			text_message = IBus.AIData(8+len(text))
 
@@ -374,7 +380,6 @@ class BMirror:
 	def openPhoneConnectScreen(self, phone):
 		self.active_menu = phoneconnect.PhoneScreen(self.colors, self, phone)
 		
-	#Use for pre-MKIII GTs.
 	def sendGTIBusTitle(self, text):
 		if self.gt_version < 4:
 			title_message = IBus.AIData(7+len(text))
@@ -389,6 +394,19 @@ class BMirror:
 			title_message.data[title_message.size()-1] = getChecksum(title_message)
 			
 			self.ibus_handler.writeIBusMessage(title_message)
+
+			update_message = IBus.AIData(8)
+			
+			update_message.data[0] = 0x68
+			update_message.data[1] = update_message.size()-2
+			update_message.data[2] = 0x3B
+			update_message.data[3] = 0xA5
+			update_message.data[4] = 0x62
+			update_message.data[5] = 0x01
+			update_message.data[6] = 0x00
+			update_message.data[7] = getChecksum(update_message)
+			
+			self.ibus_handler.writeIBusMessage(update_message)
 		else:
 			title_message = IBus.AIData(8+len(text))
 			
