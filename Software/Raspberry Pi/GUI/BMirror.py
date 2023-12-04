@@ -33,54 +33,55 @@ class BMirror:
 		
 		self.period_time = time.time()
 		
-		self.run = True
+		self.run = True	#True if the program is running.
 		
-		self.colors = ColorGroup()
-		self.colors.main_font = pg.font.Font('ariblk.ttf', 32)
-		self.active_menu = main.MainMenu(self.colors, self)
+		self.colors = ColorGroup()	#The active color profile. More of an AIBus carryover.
+		self.colors.main_font = pg.font.Font('ariblk.ttf', 32)	#The font to use for the menu.
+		self.active_menu = main.MainMenu(self.colors, self)	#The active menu screen (e.g. main menu, settings, phone connection).
 
-		self.airplay_conf = open('airplay.conf','rb').read()
-		self.oem_logo = open('BMW.png', 'rb').read()
-		self.icon_120 = open('BMW_icon.png', 'rb').read()
-		self.icon_180 = open('BMW_icon.png', 'rb').read()
-		self.icon_256 = open('BMW_icon.png', 'rb').read()
+		self.airplay_conf = open('airplay.conf','rb').read()	#A configuration file to be sent to the dongle.
+		self.oem_logo = open('BMW.png', 'rb').read()	#The Android Auto icon to be sent to the dongle.
+		self.icon_120 = open('BMW_icon.png', 'rb').read()	#A Carplay icon to be sent to the dongle.
+		self.icon_180 = open('BMW_icon.png', 'rb').read()	#A Carplay icon to be sent to the dongle.
+		self.icon_256 = open('BMW_icon.png', 'rb').read()	#A Carplay icon to be sent to the dongle.
 		
-		self.autoplay = True
-		self.selected = False
-		self.control = False
+		self.autoplay = True	#Determines whether the phone mirroring begins automatically when a phone is connected. This may need to change for wireless use.
+		self.selected = False	#Determines whether the Pi is selected as the audio source.
+		self.control = False	#Determines whether the Pi is under BMBT control.
 		
-		self.carplay_name = ""
-		self.android_name = ""
+		self.carplay_name = ""	#The name of the Carplay device.
+		self.android_name = ""	#The name of the Android Auto device.
 		
-		self.carplay_connected = False
-		self.android_connected = False
+		self.carplay_connected = False	#Determines whether Carplay is connected.
+		self.android_connected = False	#Determines whether Android Auto is connected.
 		
-		self.night = False
-		self.time_24h = False
-		self.RLS_connected = False
-		self.light_thresh = 4
+		self.night = False	#Determines whether night mode is active.
+		self.time_24h = False	#Determines whether 24h mode is active (on the IKE).
+		self.RLS_connected = False	#Determines whether an RLS is connected.
+		self.light_thresh = 4	#The night mode threshold for when an RLS is connected.
 		
-		self.time_clock = ""
-		self.date = ""
+		self.time_clock = ""	#The set time from the IKE.
+		self.date = ""	#The set date from the IKE.
 		
-		self.gt_version = 0
+		self.gt_version = 0	#The detected version of the nav computer. When it receives the first message with sender ID 0x3B, the Pi will send the query out.
 		
-		self.mirror = mirrordisplay.MirrorDisplay(self)
-		connect_thread = threading.Thread(target=self.mirror.startDongle, args=(0x1314, 0x1520))
+		self.mirror = mirrordisplay.MirrorDisplay(self)	#The phone mirror display object.
+		connect_thread = threading.Thread(target=self.mirror.startDongle, args=(0x1314, 0x1520))	#The connection thread.
 		connect_thread.start()
 		
-		self.ibus_handler = IBusHandler.IBusHandler(self, 0xED)
-		self.ibus_thread = threading.Thread(target=self.ibus_handler.loop)
+		self.ibus_handler = IBusHandler.IBusHandler(self, 0xED)	#The IBus handler. Currently mostly used for sending messages.
+		self.ibus_thread = threading.Thread(target=self.ibus_handler.loop)	#The IBus handler thread.
 		self.ibus_thread.start()
 
-		self.pong_looper = PongLoopHandler.PongLoopHandler(self.ibus_handler)
+		self.pong_looper = PongLoopHandler.PongLoopHandler(self.ibus_handler)	#A thread that sends the "pong" messages from the CD changer and VM.
 		cd_pong_thread = threading.Thread(target=self.pong_looper.loopCD)
 		cd_pong_thread.start()
 		vm_pong_thread = threading.Thread(target=self.pong_looper.loopVM)
 		vm_pong_thread.start()
 		
 		self.sendAnnouncement()
-		
+	
+	#Loop function, to run while the Pi is running.
 	def loop(self):
 		if self.active_menu is not None:
 			self.active_menu.displayMenu(self.display_surface)
@@ -89,6 +90,7 @@ class BMirror:
 		
 		time.sleep(1.0/60)
 	
+	#Interpret IBus messages read by the handler.
 	def handleIBusMessage(self, ib_data):
 		cmd_pass = False
 		if hasattr(self.mirror, "decoder"):
@@ -343,6 +345,7 @@ class BMirror:
 			
 			self.ibus_handler.writeIBusMessage(update_message)
 		
+	#Handle keyboard events. Carryover from the test program.
 	def handleEvents(self):
 		events = pg.event.get()
 		for e in events:
@@ -351,6 +354,7 @@ class BMirror:
 		
 		return self.run
 
+	#Set the connected phone type. This can trigger a light on the BMBT?
 	def setPhoneType(self, phone_type):
 		if phone_type == 3:
 			self.carplay_connected = True
@@ -364,22 +368,27 @@ class BMirror:
 
 		self.mirror.setDayNight(self.night)
 		#TODO: Alert the MKIV that a phone is connected.
-			
+	
+	#Set the connected phone name.	
 	def setPhoneName(self, phone_name):
 		if self.carplay_connected:
 			self.carplay_name = phone_name
 		if self.android_connected:
 			self.android_name = phone_name
 
+	#Open the main MKA-Lite menu.
 	def openMainMenu(self):
 		self.active_menu = main.MainMenu(self.colors, self)
 	
+	#Open the MKA-Lite settings menu.
 	def openSettingsMenu(self):
 		self.active_menu = settings.SettingsMenu(self.colors, self)
 		
+	#Open the MKA phone connection screen.
 	def openPhoneConnectScreen(self, phone):
 		self.active_menu = phoneconnect.PhoneScreen(self.colors, self, phone)
 		
+	#Set the text in the title header in the audio screen.
 	def sendGTIBusTitle(self, text):
 		if self.gt_version < 4:
 			title_message = IBus.AIData(7+len(text))
@@ -435,6 +444,7 @@ class BMirror:
 			
 			self.ibus_handler.writeIBusMessage(update_message)
 		
+	#Send the announcement message. May be redundant with the pong_looper object.
 	def sendAnnouncement(self):
 		announce_message = IBus.AIData(6)
 		
@@ -447,6 +457,7 @@ class BMirror:
 		
 		self.ibus_handler.writeIBusMessage(announce_message)
 	
+	#Send the VM control message.
 	def sendVMControl(self, power):
 		vm_message = IBus.AIData(7)
 		vm_message.data[0] = 0xED
@@ -463,6 +474,7 @@ class BMirror:
 		
 		self.ibus_handler.writeIBusMessage(vm_message)
 	
+	#Send the CD status message 0x39.
 	def sendCDStatusMessage(self, status):
 		cd_message = IBus.AIData(16)
 
