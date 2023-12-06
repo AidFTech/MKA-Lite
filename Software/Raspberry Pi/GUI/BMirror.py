@@ -26,7 +26,7 @@ period = 0.1
 class BMirror:
 	def __init__(self):
 		pg.init()
-		pg.display.set_mode((window_width, window_height), pg.FULLSCREEN)
+		pg.display.set_mode(size=(window_width, window_height), flags=pg.FULLSCREEN)
 		pg.mouse.set_visible(False)
 		
 		self.display_surface = pg.display.get_surface()
@@ -51,6 +51,11 @@ class BMirror:
 		
 		self.carplay_name = ""	#The name of the Carplay device.
 		self.android_name = ""	#The name of the Android Auto device.
+
+		self.app_name = "" #The name of the audio app currently running.
+		self.song_name = "" #The name of the song.
+		self.artist_name = "" #The name of the artist.
+		self.album_name = "" #The name of the album.
 		
 		self.carplay_connected = False	#Determines whether Carplay is connected.
 		self.android_connected = False	#Determines whether Android Auto is connected.
@@ -69,7 +74,7 @@ class BMirror:
 		connect_thread = threading.Thread(target=self.mirror.startDongle, args=(0x1314, 0x1520))	#The connection thread.
 		connect_thread.start()
 		
-		self.ibus_handler = IBusHandler.IBusHandler(self, 0xED)	#The IBus handler. Currently mostly used for sending messages.
+		self.ibus_handler = IBusHandler.IBusHandler(self, self.mirror, 0xED)	#The IBus handler. Currently mostly used for sending messages.
 		self.ibus_thread = threading.Thread(target=self.ibus_handler.loop)	#The IBus handler thread.
 		self.ibus_thread.start()
 
@@ -78,8 +83,6 @@ class BMirror:
 		cd_pong_thread.start()
 		vm_pong_thread = threading.Thread(target=self.pong_looper.loopVM)
 		vm_pong_thread.start()
-		
-		self.sendAnnouncement()
 	
 	#Loop function, to run while the Pi is running.
 	def loop(self):
@@ -90,261 +93,83 @@ class BMirror:
 		
 		time.sleep(1.0/60)
 	
-	#Interpret IBus messages read by the handler.
-	def handleIBusMessage(self, ib_data):
-		cmd_pass = False
-		if hasattr(self.mirror, "decoder"):
-			if self.mirror.decoder is not None and not self.mirror.decoder.player.window_minimized:
-				cmd_pass = True
-				
-		if ib_data.size() < 4:
-			return
-		
-		if ib_data.data[3] == 0x1 and (ib_data.data[2] == 0xED or ib_data.data[2] == 0xBF or ib_data.data[2] == 0xFF): #Ping
-			self.ibus_handler.sendPong(ib_data.data[0], 0xED)
-		elif ib_data.data[3] == 0x1 and ib_data.data[2] == 0x18: #Ping to CD changer.
-			self.ibus_handler.sendPong(ib_data.data[0], 0x18)
-		elif ib_data.data[3] == 0x4F: #Change in screen control.
-			if(ib_data.data[4]&0x01) != 0:
-				self.control = True
-		elif ib_data.data[0] == 0xF0 and self.control: #From BMBT.
-			if ib_data.data[3] == 0x49: #Selection knob turn.
-				num_turns = ib_data.data[4]&0xF
-				for i in range(0,num_turns):
-					if (ib_data.data[4]&0x80) == 0:
-						if not cmd_pass:
-							if self.active_menu.selected < len(self.active_menu.options):
-								self.active_menu.selected += 1
-							else:
-								self.active_menu.selected = 1
-						else:
-							self.mirror.sendCommand(100)
-					else:
-						if not cmd_pass:
-							if self.active_menu.selected > 1:
-								self.active_menu.selected -= 1
-							else:
-								self.active_menu.selected = len(self.active_menu.options)
-						else:
-							self.mirror.sendCommand(101)
-			elif ib_data.data[3] == 0x48: #Button press.
-				button = ib_data.data[4]&0x3F
-				state = (ib_data.data[4]&0xC0) >> 6
-				
-				if button == 0x5 and state == 0x0: #Selection knob.
-					if not cmd_pass:
-						self.active_menu.makeSelection(self.active_menu.selected)
-					else:
-						self.mirror.sendCommand(104)
-						self.mirror.sendCommand(105)
-				elif button == 0x34 and state == 0x2: #Menu button released.
-					self.control = False
-				#elif button == 0x20: #Select button.
-				#	if state == 0x0:
-				#		if cmd_pass:
-				#			self.mirror.sendCommand(106)
-				#		else:
-				#			if isinstance(self.active_menu, settings.SettingsMenu):
-				#				self.openMainMenu()
-				#			else:
-				#				self.openSettingsMenu()
-				#	elif state == 0x1 and cmd_pass:
-				#		self.openMainMenu()
-				#		self.mirror.decoder.setWindow(False)
-				elif cmd_pass:
-					if self.selected and button == 0x14 and state == 0: #Direction/pause button.
-						self.mirror.sendCommand(203)
-					elif button == 0x08: #Phone button.
-						if state == 0:
-							self.mirror.sendCommand(106)
-						elif state == 1:
-							self.mirror.sendCommand(200)
-				#TODO: Audio button.
-			elif ib_data.data[3] == 0x47: #"Soft" button press.
-				button = ib_data.data[5]&0x3F
-				state = (ib_data.data[5]&0xC0) >> 6
-				
-			#	if button == 0xF: #Select button.
-			#		if state == 0x0:
-			#			if cmd_pass:
-			#				self.mirror.sendCommand(106)
-			#			else:
-			#				if isinstance(self.active_menu, settings.SettingsMenu):
-			#					self.openMainMenu()
-			#				else:
-			#					self.openSettingsMenu()
-			#		elif state == 0x1 and cmd_pass:
-			#			self.openMainMenu()
-			#			self.mirror.decoder.setWindow(False)
-		elif ib_data.data[0] == 0x68: #From radio.
-			if ib_data.data[2] == 0x18 and ib_data.data[3] == 0x38: #CD request.
-				if ib_data.data[4] == 0: #Request current CD and track status.
-					if self.selected:
-						self.sendCDStatusMessage(2)
-					else:
-						self.sendCDStatusMessage(0)
-				elif ib_data.data[4] == 0x1: #Stop playing.
-					self.selected = False
+	#Interpret radio IBus messages.
+	def handleRadioMessage(self, ib_data):
+		if ib_data.data[2] == 0x18 and ib_data.data[3] == 0x38: #CD request.
+			if ib_data.data[4] == 0: #Request current CD and track status.
+				if self.selected:
+					self.sendCDStatusMessage(2)
+				else:
 					self.sendCDStatusMessage(0)
-					self.mirror.sendCommand(202)
-				elif ib_data.data[4] == 0x2 or ib_data.data[4] == 0x3: #Start playing.
-					self.selected = True
+			elif ib_data.data[4] == 0x1: #Stop playing.
+				self.selected = False
+				self.sendCDStatusMessage(0)
+				self.mirror.sendCommand(202)
+			elif ib_data.data[4] == 0x2 or ib_data.data[4] == 0x3: #Start playing.
+				self.selected = True
+				self.sendCDStatusMessage(2)
+				self.mirror.sendCommand(201)
+				
+				self.sendHeaderText() #TODO: Send this only if the audio screen is active.
+			elif ib_data.data[4] == 0xA:
+				if ib_data.data[5] == 0x0: #Next track.
+					self.mirror.sendCommand(204)
+				elif ib_data.data[5] == 0x1: #Previous track.
+					self.mirror.sendCommand(205)
+				
+				self.sendCDStatusMessage(2)
+			else: #Default response to the radio.
+				if self.selected:
 					self.sendCDStatusMessage(2)
-					self.mirror.sendCommand(201)
-				elif ib_data.data[4] == 0xA:
-					if ib_data.data[5] == 0x0: #Next track.
-						self.mirror.sendCommand(204)
-					elif ib_data.data[5] == 0x1: #Previous track.
-						self.mirror.sendCommand(205)
-					
-					self.sendCDStatusMessage(2)
-				else: #Default response to the radio.
-					if self.selected:
-						self.sendCDStatusMessage(2)
-					else:
-						self.sendCDStatusMessage(0)
-			elif (ib_data.data[3] == 0x37 or ib_data.data[3] == 0x33) and self.control: #Radio menu enable message. Must be disabled.
-				self.control = False #TODO: Expand!
-		elif ib_data.data[0] == 0xD0: #From LCM.
-			if ib_data.data[3] == 0x5B and not self.RLS_connected:
-				last_night = self.night
-				self.night = (ib_data.data[4]&0x01) != 0
-				if self.night != last_night:
-					self.mirror.setDayNight(self.night)
-		elif ib_data.data[0] == 0x80: #From IKE.
-			if ib_data.data[3] == 0x15:
+				else:
+					self.sendCDStatusMessage(0)
+		elif (ib_data.data[3] == 0x37 or ib_data.data[3] == 0x33) and self.control: #Radio menu enable message. Must be disabled.
+			self.control = False #TODO: Expand!
+		elif (ib_data.data[3] == 0x23 or ib_data.data[3] == 0x21) and self.selected: #Headerbar text change message.
+			if bytes("TR",'utf-8') in bytes(ib_data.data) and bytes("-",'utf-8') in bytes(ib_data.data):
+				self.sendHeaderText()
+
+	def handleIKEMessage(self, ib_data):
+		if ib_data.data[3] == 0x15:
 				self.time_24h = (ib_data.data[5]&0x01) == 0
-			elif ib_data.data[3] == 0x24:
-				if ib_data.data[4] == 0x01:
-					try:
-						self.time_clock = bytes(ib_data.data[6:ib_data.size()-1]).decode('utf-8')
-					except:
-						pass
-				elif ib_data.data[4] == 0x02:
-					try:
-						self.date = bytes(ib_data.data[6:ib_data.size()-1]).decode('utf-8')
-					except:
-						pass
-		elif ib_data.data[0] == 0xE8: #From RLS.
-			if not self.RLS_connected:
-				self.RLS_connected = True
-			if ib_data.data[3] == 0x59:
-				last_night = self.night
-				self.night = ((ib_data.data[4]&0x01) != 0) and ((ib_data.data[4]>>4) < self.light_thresh)
-				if self.night != last_night:
-					self.mirror.setDayNight(self.night)
-		elif ib_data.data[0] == 0x3B: #From navigation computer.
-			if ib_data.data[3] == 0xA0: #Version message.
-				version_data0 = ib_data.data[15]
-				version_data1 = ib_data.data[16]
+		elif ib_data.data[3] == 0x24:
+			if ib_data.data[4] == 0x01:
+				try:
+					self.time_clock = bytes(ib_data.data[6:ib_data.size()-1]).decode('utf-8')
+				except:
+					pass
+			elif ib_data.data[4] == 0x02:
+				try:
+					self.date = bytes(ib_data.data[6:ib_data.size()-1]).decode('utf-8')
+				except:
+					pass
 
-				version = bytearray([version_data0, version_data1])
-				self.gt_version = int(version.decode())
-			elif ib_data.data[3] == 0x4E: #Ensure the radio is enabled.
-				if (ib_data.data[4]&0x1) != 0x0:
-					self.ibus_handler.activateRadio()
-			
-			if self.gt_version <= 0:
-				self.ibus_handler.sendVersionQuery(0x3B)
+	#Set the song and artist name.
+	def setMetadata(self, cmd, text):
+		last_app_name = self.app_name
 
-	#Send AIBus, er... IBus messages to change the text on the screen.
-	def sendAIBusText(self, cmd, text):
-		if self.gt_version >= 5:
-			index = 0x40
-			if cmd==0x61: #Song name.
-				index = 0x41
-			elif cmd==0x62: #Artist name.
-				index = 0x42
-			elif cmd==0x63: #Album name.
-				index = 0x43
-			else:
-				return
-			
-			text_message = IBus.AIData(8+len(text))
+		if cmd == IBusHandler.SONG_NAME:
+			self.song_name = text
+		elif cmd == IBusHandler.ARTIST_NAME:
+			self.artist_name = text
+		elif cmd == IBusHandler.ALBUM_NAME:
+			self.album_name = text
+		elif cmd == IBusHandler.APP_NAME:
+			self.app_name = text
+			if self.app_name != last_app_name:
+				self.artist_name = ""
+				self.song_name = ""
+				self.album_name = ""
 
-			text_message.data[0] = 0x68
-			text_message.data[1] = text_message.size() - 2
-			text_message.data[2] = 0x3B
-			text_message.data[3] = 0xA5
-			text_message.data[4] = 0x63
-			text_message.data[5] = 0x1 #TODO: Adjust as per BlueBus?
-			text_message.data[6] = index
-
-			try:
-				text_message.data[7:7+len(text)] = bytes(text, 'utf-8')
-			except:
-				for i in range(0,len(text)):
-					try:
-						text_message.data[7+i] = bytes(text[i], 'utf-8')
-					except:
-						text_message.data[7+i] = bytes('*', 'utf-8')
-
-			text_message.data[text_message.size()-1] = getChecksum(text_message)
-
-			self.ibus_handler.writeIBusMessage(text_message)
-			
-			update_message = IBus.AIData(8)
-			
-			update_message.data[0] = 0x68
-			update_message.data[1] = update_message.size()-2
-			update_message.data[2] = 0x3B
-			update_message.data[3] = 0xA5
-			update_message.data[4] = 0x63
-			update_message.data[5] = 0x01
-			update_message.data[6] = 0x00
-			update_message.data[7] = getChecksum(update_message)
-			
-			self.ibus_handler.writeIBusMessage(update_message)
+	#Send the text to be displayed to the header.
+	def sendHeaderText(self):
+		if self.android_connected:
+			self.ibus_handler.sendGTIBusTitle("Android")
+		elif self.carplay_connected:
+			self.ibus_handler.sendGTIBusTitle("Carplay")
 		else:
-			index = -1
-			if cmd==0x61: #Song name.
-				index = 0
-			elif cmd==0x62: #Artist name.
-				index = 1
-			elif cmd==0x63: #Album name.
-				index = 2
-			else:
-				return
-			
-			#if index == 2:
-			#	text += '\x06'*8
-			
-			text_message = IBus.AIData(8+len(text))
+			self.ibus_handler.sendGTIBusTitle("MKA")
 
-			text_message.data[0] = 0x68
-			text_message.data[1] = text_message.size() - 2
-			text_message.data[2] = 0x3B
-			text_message.data[3] = 0x21
-			text_message.data[4] = 0x60
-			text_message.data[5] = 0x0
-			text_message.data[6] = index | 0x40
-
-			try:
-				text_message.data[7:7+len(text)] = bytes(text, 'utf-8')
-			except:
-				for i in range(0,len(text)):
-					try:
-						text_message.data[7+i] = bytes(text[i], 'utf-8')
-					except:
-						text_message.data[7+i] = bytes('*', 'utf-8')
-
-			text_message.data[text_message.size()-1] = getChecksum(text_message)
-			
-			self.ibus_handler.writeIBusMessage(text_message)
-			
-			update_message = IBus.AIData(8)
-			
-			update_message.data[0] = 0x68
-			update_message.data[1] = update_message.size()-2
-			update_message.data[2] = 0x3B
-			update_message.data[3] = 0xA5
-			update_message.data[4] = 0x60
-			update_message.data[5] = 0x01
-			update_message.data[6] = 0x00
-			update_message.data[7] = getChecksum(update_message)
-			
-			self.ibus_handler.writeIBusMessage(update_message)
-		
 	#Handle keyboard events. Carryover from the test program.
 	def handleEvents(self):
 		events = pg.event.get()
@@ -387,92 +212,6 @@ class BMirror:
 	#Open the MKA phone connection screen.
 	def openPhoneConnectScreen(self, phone):
 		self.active_menu = phoneconnect.PhoneScreen(self.colors, self, phone)
-		
-	#Set the text in the title header in the audio screen.
-	def sendGTIBusTitle(self, text):
-		if self.gt_version < 4:
-			title_message = IBus.AIData(7+len(text))
-			
-			title_message.data[0] = 0x68
-			title_message.data[1] = title_message.size()-2
-			title_message.data[2] = 0x3B
-			title_message.data[3] = 0x23
-			title_message.data[4] = 0x62
-			title_message.data[5] = 0x30
-			title_message.data[6:6+len(text)] = bytes(text, 'ascii')
-			title_message.data[title_message.size()-1] = getChecksum(title_message)
-			
-			self.ibus_handler.writeIBusMessage(title_message)
-
-			update_message = IBus.AIData(8)
-			
-			update_message.data[0] = 0x68
-			update_message.data[1] = update_message.size()-2
-			update_message.data[2] = 0x3B
-			update_message.data[3] = 0xA5
-			update_message.data[4] = 0x62
-			update_message.data[5] = 0x01
-			update_message.data[6] = 0x00
-			update_message.data[7] = getChecksum(update_message)
-			
-			self.ibus_handler.writeIBusMessage(update_message)
-		else:
-			title_message = IBus.AIData(8+len(text))
-			
-			title_message.data[0] = 0x68
-			title_message.data[1] = title_message.size()-2
-			title_message.data[2] = 0x3B
-			title_message.data[3] = 0x21
-			title_message.data[4] = 0x62
-			title_message.data[5] = 0x01
-			title_message.data[6] = 0x40
-			title_message.data[7:7+len(text)] = bytes(text, 'ascii')
-			title_message.data[title_message.size()-1] = getChecksum(title_message)
-			
-			self.ibus_handler.writeIBusMessage(title_message)
-			
-			update_message = IBus.AIData(8)
-			
-			update_message.data[0] = 0x68
-			update_message.data[1] = update_message.size()-2
-			update_message.data[2] = 0x3B
-			update_message.data[3] = 0xA5
-			update_message.data[4] = 0x62
-			update_message.data[5] = 0x01
-			update_message.data[6] = 0x00
-			update_message.data[7] = getChecksum(update_message)
-			
-			self.ibus_handler.writeIBusMessage(update_message)
-		
-	#Send the announcement message. May be redundant with the pong_looper object.
-	def sendAnnouncement(self):
-		announce_message = IBus.AIData(6)
-		
-		announce_message.data[0] = 0xED
-		announce_message.data[1] = announce_message.size()-2
-		announce_message.data[2] = 0xBF
-		announce_message.data[3] = 0x02
-		announce_message.data[4] = 0x01
-		announce_message.data[5] = getChecksum(announce_message)
-		
-		self.ibus_handler.writeIBusMessage(announce_message)
-	
-	#Send the VM control message.
-	def sendVMControl(self, power):
-		vm_message = IBus.AIData(7)
-		vm_message.data[0] = 0xED
-		vm_message.data[1] = vm_message.size()-2
-		vm_message.data[2] = 0xF0
-		vm_message.data[3] = 0x4F
-		if power:
-			vm_message.data[4] = 0x11
-			vm_message.data[5] = 0x11
-		else:
-			vm_message.data[4] = 0x12
-			vm_message.data[5] = 0x11 #TODO: Double-check this byte.
-		vm_message.data[6] = getChecksum(vm_message)
-		
-		self.ibus_handler.writeIBusMessage(vm_message)
 	
 	#Send the CD status message 0x39.
 	def sendCDStatusMessage(self, status):
@@ -500,6 +239,31 @@ class BMirror:
 		cd_message.data[15] = getChecksum(cd_message)
 		
 		self.ibus_handler.writeIBusMessage(cd_message)
+
+	def endVMControl(self):
+		self.control = False
+
+		menu_press = IBus.AIData(6)
+
+		menu_press.data[0] = 0xF0
+		menu_press.data[1] = menu_press.size() - 2
+		menu_press.data[2] = 0xFF
+		menu_press.data[3] = 0x48
+		menu_press.data[4] = 0x34
+		menu_press.data[5] = IBus.getChecksum(menu_press)
+
+		self.ibus_handler.writeIBusMessage(menu_press)
+
+		menu_release = IBus.AIData(6)
+
+		menu_release.data[0] = 0xF0
+		menu_release.data[1] = menu_release.size() - 2
+		menu_release.data[2] = 0xFF
+		menu_release.data[3] = 0x48
+		menu_release.data[4] = 0xB4
+		menu_release.data[5] = IBus.getChecksum(menu_release)
+
+		self.ibus_handler.writeIBusMessage(menu_release)
 
 class ColorGroup:
 	br = (40, 32, 95)

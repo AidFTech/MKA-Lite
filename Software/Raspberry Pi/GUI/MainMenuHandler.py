@@ -114,4 +114,4 @@ class MainMenu:
 		elif item == 2: #Setup
 			self.parent.openSettingsMenu()
 		elif item == 3: #Return to MKIV
-			self.parent.sendVMControl(False)
+			self.parent.endVMControl()

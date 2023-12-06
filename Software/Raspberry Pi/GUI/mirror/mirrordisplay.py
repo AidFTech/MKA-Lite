@@ -10,6 +10,11 @@ import time
 import queue
 import threading
 
+SONG_NAME = 1
+ARTIST_NAME = 2
+ALBUM_NAME = 3
+APP_NAME = 4
+
 class MirrorDisplay:
 	
 	def __init__(self, amirror):
@@ -115,16 +120,16 @@ class MirrorDisplay:
 				self.amirror.setPhoneName(message.MDModel)
 			
 			if hasattr(message, "MediaAPPName"):
-				self.amirror.sendAIBusText(0x60, message.MediaAPPName)
+				self.amirror.setMetadata(APP_NAME, message.MediaAPPName)
 			
 			if hasattr(message, "MediaSongName"):
-				self.amirror.sendAIBusText(0x61, message.MediaSongName)
+				self.amirror.setMetadata(SONG_NAME, message.MediaSongName)
 			
 			if hasattr(message, "MediaArtistName"):
-				self.amirror.sendAIBusText(0x62, message.MediaArtistName)
+				self.amirror.setMetadata(ARTIST_NAME, message.MediaArtistName)
 			
 			if hasattr(message, "MediaAlbumName"):
-				self.amirror.sendAIBusText(0x63, message.MediaAlbumName)
+				self.amirror.setMetadata(ALBUM_NAME, message.MediaAlbumName)
 	
 	def startPhoneConnection(self):
 		if self.decoder is None:
