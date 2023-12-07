@@ -1,10 +1,9 @@
-import sys
-import os
+import BMirror
 
 import pygame as pg
 from pygame import Rect
 
-window_width = 800
+window_width = 720
 window_height = 480
 
 margin_width = 60

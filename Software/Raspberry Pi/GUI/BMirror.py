@@ -26,6 +26,7 @@ period = 0.1
 class BMirror:
 	def __init__(self):
 		pg.init()
+
 		pg.display.set_mode(size=(window_width, window_height), flags=pg.FULLSCREEN)
 		pg.mouse.set_visible(False)
 		
@@ -48,6 +49,8 @@ class BMirror:
 		self.autoplay = True	#Determines whether the phone mirroring begins automatically when a phone is connected. This may need to change for wireless use.
 		self.selected = False	#Determines whether the Pi is selected as the audio source.
 		self.control = False	#Determines whether the Pi is under BMBT control.
+
+		self.audio_screen_open = False	#True if the MKIV audio screen is open.
 		
 		self.carplay_name = ""	#The name of the Carplay device.
 		self.android_name = ""	#The name of the Android Auto device.
@@ -128,6 +131,13 @@ class BMirror:
 		elif (ib_data.data[3] == 0x23 or ib_data.data[3] == 0x21) and self.selected: #Headerbar text change message.
 			if bytes("TR",'utf-8') in bytes(ib_data.data) and bytes("-",'utf-8') in bytes(ib_data.data):
 				self.sendHeaderText()
+		elif ib_data.data[3] == 0x46: #Send metadata.
+			if (ib_data.data[4]&0x2) == 0 and self.selected:
+				self.sendMetadata()
+				self.audio_screen_open = True
+			else:
+				self.audio_screen_open = False
+
 
 	def handleIKEMessage(self, ib_data):
 		if ib_data.data[3] == 0x15:
@@ -161,6 +171,9 @@ class BMirror:
 				self.song_name = ""
 				self.album_name = ""
 
+		if self.audio_screen_open:
+			self.sendMetadata()
+
 	#Send the text to be displayed to the header.
 	def sendHeaderText(self):
 		if self.android_connected:
@@ -169,6 +182,36 @@ class BMirror:
 			self.ibus_handler.sendGTIBusTitle("Carplay")
 		else:
 			self.ibus_handler.sendGTIBusTitle("MKA")
+
+	def sendMetadata(self):
+		last_data = 1
+		if self.artist_name:
+			last_data = 2
+		if self.album_name:
+			last_data = 3
+		if self.app_name:
+			last_data = 4
+		
+		if self.song_name:
+			self.ibus_handler.sendRadioText(self.song_name, IBusHandler.SONG_NAME, last_data == 1)
+		else:
+			self.ibus_handler.sendRadioText(" ", IBusHandler.SONG_NAME, last_data == 1)
+
+		if self.artist_name:
+			self.ibus_handler.sendRadioText(self.artist_name, IBusHandler.ARTIST_NAME, last_data == 2)
+		else:
+			self.ibus_handler.sendRadioText(" ", IBusHandler.ARTIST_NAME, last_data == 2)
+
+		if self.album_name:
+			self.ibus_handler.sendRadioText(self.album_name, IBusHandler.ALBUM_NAME, last_data == 3)
+		else:
+			self.ibus_handler.sendRadioText(" ", IBusHandler.ALBUM_NAME, last_data == 3)
+		
+		if self.app_name:
+			self.ibus_handler.sendRadioText(self.app_name, IBusHandler.APP_NAME, last_data == 4)
+		else:
+			self.ibus_handler.sendRadioText(" ", IBusHandler.APP_NAME, last_data == 4)
+		
 
 	#Handle keyboard events. Carryover from the test program.
 	def handleEvents(self):

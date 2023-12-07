@@ -202,6 +202,8 @@ class IBusHandler:
 				index = 0x42
 			elif position == ALBUM_NAME:
 				index = 0x43
+			elif position == APP_NAME:
+				index = 0x44
 			else:
 				return
 			
@@ -249,6 +251,8 @@ class IBusHandler:
 				index = 1
 			elif position == ALBUM_NAME:
 				index = 2
+			elif position == APP_NAME:
+				index = 3
 			else:
 				return
 			

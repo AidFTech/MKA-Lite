@@ -1,5 +1,4 @@
-import sys
-import os
+import BMirror
 
 import pygame as pg
 from pygame import Rect
