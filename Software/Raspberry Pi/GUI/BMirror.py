@@ -18,7 +18,7 @@ import threading
 sys.path.append("./mirror")
 import mirrordisplay
 
-window_width = 800
+window_width = 720
 window_height = 480
 
 period = 0.1

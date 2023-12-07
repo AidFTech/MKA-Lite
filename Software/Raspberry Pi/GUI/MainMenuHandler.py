@@ -3,7 +3,7 @@ import BMirror
 import pygame as pg
 from pygame import Rect
 
-window_width = 800
+window_width = 720
 window_height = 480
 
 margin_width = 60
@@ -26,8 +26,8 @@ class MainMenu:
 		android_img = pg.image.load('Android_Auto_icon_100.png')
 		return_img = pg.image.load('return.png')
 		
-		display.blit(carplay_img, (150, 120))
-		display.blit(android_img, (575, 120))
+		display.blit(carplay_img, (int(window_width*3/16), int(window_height/4)))
+		display.blit(android_img, (int(window_width*23/32), int(window_height/4)))
 		
 		font = self.color_group.main_font
 		for i in range(0,len(self.options)):
@@ -53,15 +53,15 @@ class MainMenu:
 		
 		if hasattr(self.parent, "carplay_name") and self.parent.carplay_name != "":
 			carplay_text = font.render(self.parent.carplay_name, False, self.color_group.text_color)
-			t_x = 200 - carplay_text.get_width()/2
-			t_y = 240
+			t_x = int(window_width/4) - carplay_text.get_width()/2
+			t_y = int(window_height/2)
 			
 			display.blit(carplay_text, (t_x, t_y))
 		
 		if hasattr(self.parent, "android_name") and self.parent.android_name != "":
 			android_text = font.render(self.parent.android_name, False, self.color_group.text_color)
-			t_x = 625 - android_text.get_width()/2
-			t_y = 240
+			t_x = int(window_width*25/32) - android_text.get_width()/2
+			t_y = int(window_height/2)
 			
 			display.blit(android_text, (t_x, t_y))
 		
