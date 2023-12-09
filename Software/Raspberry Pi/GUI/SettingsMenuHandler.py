@@ -1,15 +1,17 @@
-import BMirror
+import Defaults
 
 import pygame as pg
 from pygame import Rect
 
-window_width = 720
-window_height = 480
+window_width = Defaults.window_width
+window_height = Defaults.window_height
 
-margin_width = 60
+margin_width = Defaults.margin_width
+small_rect_size = Defaults.small_rect_size
+header_height = Defaults.header_height
+rect_w = Defaults.rect_w
+
 right_margin_width = 200
-header_height = 40
-rect_w = 20
 
 opt_pairapple = "Pair Apple Device"
 opt_pairandroid = "Pair Android Device"

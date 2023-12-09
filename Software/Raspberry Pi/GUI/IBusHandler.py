@@ -1,6 +1,6 @@
 import serial
 import IBus
-from enum import IntEnum
+import time
 
 IB_RX = 4
 
@@ -8,6 +8,8 @@ SONG_NAME = 1
 ARTIST_NAME = 2
 ALBUM_NAME = 3
 APP_NAME = 4
+
+WAIT_TIME = 100
 
 ISerial = serial.Serial(port="/dev/ttyAMA0", baudrate=9600, parity=serial.PARITY_EVEN, timeout=0.1)
 
@@ -193,6 +195,7 @@ class IBusHandler:
 		
 		self.writeIBusMessage(vm_message)
 
+	#Send radio metadata text.
 	def sendRadioText(self, text, position, refresh):
 		if self.parent.gt_version >= 5:
 			index = 0x40
@@ -299,7 +302,7 @@ class IBusHandler:
 	#Set the text in the title header in the audio screen.
 	def sendGTIBusTitle(self, text):
 		if self.parent.gt_version < 4:
-			title_message = IBus.AIData(7+len(text))
+			title_message = IBus.AIData(8+len(text))
 			
 			title_message.data[0] = 0x68
 			title_message.data[1] = title_message.size()-2
@@ -308,11 +311,12 @@ class IBusHandler:
 			title_message.data[4] = 0x62
 			title_message.data[5] = 0x30
 			title_message.data[6:6+len(text)] = bytes(text, 'ascii')
+			title_message.data[title_message.size()-2] = 0x8E #Flag for telling the system that it sent the message.
 			title_message.data[title_message.size()-1] = IBus.getChecksum(title_message)
 			
 			self.writeIBusMessage(title_message)
 
-			update_message = IBus.AIData(8)
+			update_message = IBus.AIData(9)
 			
 			update_message.data[0] = 0x68
 			update_message.data[1] = update_message.size()-2
@@ -321,11 +325,12 @@ class IBusHandler:
 			update_message.data[4] = 0x62
 			update_message.data[5] = 0x01
 			update_message.data[6] = 0x00
-			update_message.data[7] = IBus.getChecksum(update_message)
+			update_message.data[7] = 0x8E
+			update_message.data[8] = IBus.getChecksum(update_message)
 			
 			self.writeIBusMessage(update_message)
 		else:
-			title_message = IBus.AIData(8+len(text))
+			title_message = IBus.AIData(9+len(text))
 			
 			title_message.data[0] = 0x68
 			title_message.data[1] = title_message.size()-2
@@ -335,11 +340,12 @@ class IBusHandler:
 			title_message.data[5] = 0x01
 			title_message.data[6] = 0x40
 			title_message.data[7:7+len(text)] = bytes(text, 'ascii')
+			title_message.data[title_message.size()-2] = 0x8E #Flag for telling the system that it sent the message.
 			title_message.data[title_message.size()-1] = IBus.getChecksum(title_message)
 			
 			self.writeIBusMessage(title_message)
 			
-			update_message = IBus.AIData(8)
+			update_message = IBus.AIData(9)
 			
 			update_message.data[0] = 0x68
 			update_message.data[1] = update_message.size()-2
@@ -348,6 +354,40 @@ class IBusHandler:
 			update_message.data[4] = 0x62
 			update_message.data[5] = 0x01
 			update_message.data[6] = 0x00
-			update_message.data[7] = IBus.getChecksum(update_message)
+			update_message.data[7] = 0x8E
+			update_message.data[8] = IBus.getChecksum(update_message)
 			
 			self.writeIBusMessage(update_message)
+
+	##Set the "subtitles" in the top of the headerbar.
+	def sendGTIBusSubtitle(self, text, position, refresh):
+		if position > 6:
+			return
+		
+		subtitle_message = IBus.AIData(9+len(text))
+
+		subtitle_message.data[0] = 0x68
+		subtitle_message.data[1] = subtitle_message.size()-2
+		subtitle_message.data[2] = 0x3B
+		subtitle_message.data[3] = 0xA5
+		subtitle_message.data[4] = 0x62
+		subtitle_message.data[5] = 0x01
+		subtitle_message.data[6] = position|0x40
+		subtitle_message.data[7:7+len(text)] = bytes(text, 'ascii')
+		subtitle_message.data[subtitle_message.size()-2] = 0x8E #Flag for telling the system that it sent the message.
+		subtitle_message.data[subtitle_message.size()-1] = IBus.getChecksum(subtitle_message)
+
+		self.writeIBusMessage(subtitle_message)
+
+		if refresh:
+			update_message = IBus.AIData(9)
+		
+			update_message.data[0] = 0x68
+			update_message.data[1] = update_message.size()-2
+			update_message.data[2] = 0x3B
+			update_message.data[3] = 0xA5
+			update_message.data[4] = 0x62
+			update_message.data[5] = 0x01
+			update_message.data[6] = 0x00
+			update_message.data[7] = 0x8E
+			update_message.data[8] = IBus.getChecksum(update_message)

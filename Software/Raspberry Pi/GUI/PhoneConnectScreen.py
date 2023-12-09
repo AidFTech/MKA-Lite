@@ -1,15 +1,15 @@
-import BMirror
+import Defaults
 
 import pygame as pg
 from pygame import Rect
 
-window_width = 720
-window_height = 480
+window_width = Defaults.window_width
+window_height = Defaults.window_height
 
-margin_width = 60
-small_rect_size = 70
-header_height = 40
-rect_w = 20
+margin_width = Defaults.margin_width
+small_rect_size = Defaults.small_rect_size
+header_height = Defaults.header_height
+rect_w = Defaults.rect_w
 
 class PhoneScreen:
 	selected = 1

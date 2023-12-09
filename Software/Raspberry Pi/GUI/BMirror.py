@@ -1,5 +1,5 @@
 import sys
-import os
+import Defaults
 import time
 
 import pygame as pg
@@ -18,8 +18,8 @@ import threading
 sys.path.append("./mirror")
 import mirrordisplay
 
-window_width = 720
-window_height = 480
+window_width = Defaults.window_width
+window_height = Defaults.window_height
 
 period = 0.1
 
@@ -35,6 +35,8 @@ class BMirror:
 		self.period_time = time.time()
 		
 		self.run = True	#True if the program is running.
+		self.title_change = False	#True if the header has been changed. Wait for the "refresh".
+		self.subtitle_change = False	#True if one of the upper subtitles has been changed. Wait for the "refresh".
 		
 		self.colors = ColorGroup()	#The active color profile. More of an AIBus carryover.
 		self.colors.main_font = pg.font.Font('ariblk.ttf', 32)	#The font to use for the menu.
@@ -114,6 +116,7 @@ class BMirror:
 				self.mirror.sendCommand(201)
 				
 				self.sendHeaderText() #TODO: Send this only if the audio screen is active.
+				self.sendSubtitleCluster()
 			elif ib_data.data[4] == 0xA:
 				if ib_data.data[5] == 0x0: #Next track.
 					self.mirror.sendCommand(204)
@@ -126,17 +129,32 @@ class BMirror:
 					self.sendCDStatusMessage(2)
 				else:
 					self.sendCDStatusMessage(0)
-		elif (ib_data.data[3] == 0x37 or ib_data.data[3] == 0x33) and self.control: #Radio menu enable message. Must be disabled.
+		elif (ib_data.data[3] == 0x37 or ib_data.data[3] == 0x33) and self.control: #Radio menu enable message. Control must be relenquished.
 			self.control = False #TODO: Expand!
 		elif (ib_data.data[3] == 0x23 or ib_data.data[3] == 0x21) and self.selected: #Headerbar text change message.
-			if bytes("TR",'utf-8') in bytes(ib_data.data) and bytes("-",'utf-8') in bytes(ib_data.data):
-				self.sendHeaderText()
+			if ib_data.data[ib_data.size()-2] != 0x8E and bytes("TR",'utf-8') in bytes(ib_data.data) and bytes("-",'utf-8') in bytes(ib_data.data):
+				if ib_data.data[5] == 0x1:
+					self.title_change = True
+					self.subtitle_change = True
+				else:
+					self.sendHeaderText()
+					self.sendSubtitleCluster()
 		elif ib_data.data[3] == 0x46: #Send metadata.
 			if (ib_data.data[4]&0x2) == 0 and self.selected:
 				self.sendMetadata()
 				self.audio_screen_open = True
 			else:
 				self.audio_screen_open = False
+		elif ib_data.data[3] == 0xA5 and ib_data.data[ib_data.size()-2] != 0x8E: #Possible subtitle change.
+			if self.selected and ib_data.data[4] == 0x62 and ib_data.data[5] == 0x01 and (ib_data.data[6]&0x40) != 0:
+				self.subtitle_change = True
+			elif self.selected and ib_data.data[6] == 0:
+				if self.title_change:
+					self.sendHeaderText()
+					self.title_change = False
+				if self.subtitle_change:
+					self.sendSubtitleCluster()
+					self.subtitle_change = False
 
 
 	def handleIKEMessage(self, ib_data):
@@ -183,34 +201,55 @@ class BMirror:
 		else:
 			self.ibus_handler.sendGTIBusTitle("MKA")
 
+	#Send the smaller text to be displayed in the header.
+	def sendSubtitleCluster(self):
+		self.ibus_handler.sendGTIBusSubtitle(" ", 1, False)
+		#TODO: Get phone status.
+		self.ibus_handler.sendGTIBusSubtitle("  >", 2, False)
+		self.ibus_handler.sendGTIBusSubtitle(" ", 3, False)
+		self.ibus_handler.sendGTIBusSubtitle(" ", 4, False)
+		self.ibus_handler.sendGTIBusSubtitle(" ", 5, False)
+		if self.android_connected and self.android_name:
+			self.ibus_handler.sendGTIBusSubtitle(self.android_name, 6, True)
+		elif self.carplay_connected and self.carplay_name:
+			self.ibus_handler.sendGTIBusSubtitle(self.carplay_name, 6, True)
+		elif self.android_connected:
+			self.ibus_handler.sendGTIBusSubtitle("Android Phone", 6, True)
+		elif self.carplay_connected:
+			self.ibus_handler.sendGTIBusSubtitle("Apple Phone", 6, True)
+		else:
+			self.ibus_handler.sendGTIBusSubtitle(" ", 6, True)
+
+	def clearMetaData(self, send):
+		self.song_name = ""
+		self.artist_name = ""
+		self.album_name = ""
+		self.app_name = ""
+
+		if(send and self.selected):
+			self.sendMetadata()
+
+	#Send song metadata.
 	def sendMetadata(self):
-		last_data = 1
-		if self.artist_name:
-			last_data = 2
-		if self.album_name:
-			last_data = 3
-		if self.app_name:
-			last_data = 4
-		
 		if self.song_name:
-			self.ibus_handler.sendRadioText(self.song_name, IBusHandler.SONG_NAME, last_data == 1)
+			self.ibus_handler.sendRadioText(self.song_name, IBusHandler.SONG_NAME, False)
 		else:
-			self.ibus_handler.sendRadioText(" ", IBusHandler.SONG_NAME, last_data == 1)
+			self.ibus_handler.sendRadioText(" ", IBusHandler.SONG_NAME, False)
 
 		if self.artist_name:
-			self.ibus_handler.sendRadioText(self.artist_name, IBusHandler.ARTIST_NAME, last_data == 2)
+			self.ibus_handler.sendRadioText(self.artist_name, IBusHandler.ARTIST_NAME, False)
 		else:
-			self.ibus_handler.sendRadioText(" ", IBusHandler.ARTIST_NAME, last_data == 2)
+			self.ibus_handler.sendRadioText(" ", IBusHandler.ARTIST_NAME, False)
 
 		if self.album_name:
-			self.ibus_handler.sendRadioText(self.album_name, IBusHandler.ALBUM_NAME, last_data == 3)
+			self.ibus_handler.sendRadioText(self.album_name, IBusHandler.ALBUM_NAME, False)
 		else:
-			self.ibus_handler.sendRadioText(" ", IBusHandler.ALBUM_NAME, last_data == 3)
+			self.ibus_handler.sendRadioText(" ", IBusHandler.ALBUM_NAME, False)
 		
 		if self.app_name:
-			self.ibus_handler.sendRadioText(self.app_name, IBusHandler.APP_NAME, last_data == 4)
+			self.ibus_handler.sendRadioText(self.app_name, IBusHandler.APP_NAME, True)
 		else:
-			self.ibus_handler.sendRadioText(" ", IBusHandler.APP_NAME, last_data == 4)
+			self.ibus_handler.sendRadioText(" ", IBusHandler.APP_NAME, True)
 		
 
 	#Handle keyboard events. Carryover from the test program.
@@ -219,6 +258,11 @@ class BMirror:
 		for e in events:
 			if e.type == pg.QUIT:
 				return False
+			elif e.type == pg.KEYDOWN:
+				if e.key == pg.K_ESCAPE:
+					return False
+				elif e.key == pg.K_LEFT:
+					pg.display.toggle_fullscreen()
 		
 		return self.run
 
@@ -234,8 +278,12 @@ class BMirror:
 			self.carplay_name = ""
 			self.android_name = ""
 
+		self.clearMetaData(self.selected)
+
 		self.mirror.setDayNight(self.night)
-		#TODO: Alert the MKIV that a phone is connected.
+		if self.selected:
+			self.sendHeaderText()
+			self.sendSubtitleCluster()
 	
 	#Set the connected phone name.	
 	def setPhoneName(self, phone_name):
@@ -243,6 +291,12 @@ class BMirror:
 			self.carplay_name = phone_name
 		if self.android_connected:
 			self.android_name = phone_name
+
+		self.clearMetaData(self.selected)
+
+		if self.selected:
+			self.sendHeaderText()
+			self.sendSubtitleCluster()
 
 	#Open the main MKA-Lite menu.
 	def openMainMenu(self):
