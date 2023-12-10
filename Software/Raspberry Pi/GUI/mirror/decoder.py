@@ -35,7 +35,7 @@ class Decoder:
 			self.running = threading.Event()
 			self.shutdown = False
 			
-			player = mpv.MPV(log_handler=self.owner.log, input_default_bindings=False, input_vo_keyboard=True, hwdec="rpi", hwdec_codecs="h264", untimed=True, opengl_glfinish=True, hwdec_extra_frames = 75, audio=False, demuxer_rawvideo_fps=30, fps=30)
+			player = mpv.MPV(log_handler=self.owner.log, input_default_bindings=False, input_vo_keyboard=True, hwdec="rpi", hwdec_codecs="h264", untimed=True, opengl_glfinish=True, hwdec_extra_frames = 75, audio=False, demuxer_rawvideo_fps=30, fps=30, video_aspect_override = 3)
 			self.owner.player = player
 			player.fullscreen = True
 			
