@@ -27,10 +27,10 @@ class BMirror:
 	def __init__(self):
 		pg.init()
 
-		pg.display.set_mode(size=(window_width, window_height), flags=pg.FULLSCREEN)
+		pg.display.set_mode(flags=pg.FULLSCREEN)
 		pg.mouse.set_visible(False)
 		
-		self.display_surface = pg.display.get_surface()
+		self.display_surface = pg.Surface((window_width, window_height)) #pg.display.get_surface()
 		
 		self.period_time = time.time()
 		
@@ -93,7 +93,10 @@ class BMirror:
 	def loop(self):
 		if self.active_menu is not None:
 			self.active_menu.displayMenu(self.display_surface)
-		
+			scaled_win = pg.transform.smoothscale(self.display_surface, (pg.display.get_surface().get_width(), pg.display.get_surface().get_height()))
+			pg.display.get_surface().blit(scaled_win, (0,0))
+			pg.display.update()
+
 		self.run = self.handleEvents()
 		
 		time.sleep(1.0/60)

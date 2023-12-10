@@ -1,0 +1,1 @@
+/home/aidan/Documents/GitHub/MKA-Lite/Software/Raspberry Pi/GUI/Defaults.py

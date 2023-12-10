@@ -98,8 +98,8 @@ class MainMenu:
 		if self.selected == 3 or self.selected == 4:
 			r_x = window_width - rect_w
 		pg.draw.rect(display, self.color_group.rect_color, Rect(r_x, r_y, rect_w, r_h))
-		
-		pg.display.update()
+
+		#pg.display.update()
 		
 	def makeSelection(self, item):
 		if item == 1: #Start CarPlay

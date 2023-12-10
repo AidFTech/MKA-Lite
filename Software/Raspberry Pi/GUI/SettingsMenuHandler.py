@@ -79,7 +79,7 @@ class SettingsMenu:
 		pg.draw.rect(display, self.color_group.rect_color, Rect(r_x, r_y, r_w, r_h), 5)
 		pg.draw.rect(display, self.color_group.rect_color, Rect(r_x, r_y, rect_w, r_h))
 		
-		pg.display.update()
+		#pg.display.update()
 		
 	def makeSelection(self, item):
 		if self.options[item-1] == opt_back:
