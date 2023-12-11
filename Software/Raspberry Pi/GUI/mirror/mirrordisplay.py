@@ -7,7 +7,7 @@ import usb_link
 
 import struct
 import time
-import queue
+import pygame as pg
 import threading
 
 SONG_NAME = 1
@@ -133,7 +133,7 @@ class MirrorDisplay:
 	
 	def startPhoneConnection(self):
 		if self.decoder is None:
-			self.decoder = decoder.Decoder()
+			self.decoder = decoder.Decoder(pg.display.get_surface().get_width(), pg.display.get_surface().get_height())
 		
 		if self.audio_decoder is None:
 			self.audio_decoder = audiodecoder.AudioDecoder()

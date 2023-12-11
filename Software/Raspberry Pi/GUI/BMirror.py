@@ -3,7 +3,6 @@ import Defaults
 import time
 
 import pygame as pg
-from pygame import Rect
 from IBus import *
 
 import IBus

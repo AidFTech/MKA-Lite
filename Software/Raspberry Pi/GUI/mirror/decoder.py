@@ -29,13 +29,13 @@ class KeyEvent(IntEnum):
 	BUTTON_PREV_TRACK = 205
 class Decoder:
 	class _Thread(threading.Thread):
-		def __init__(self, owner):
+		def __init__(self, owner, w=720, h=480):
 			super().__init__()
 			self.owner = owner
 			self.running = threading.Event()
 			self.shutdown = False
 			
-			player = mpv.MPV(log_handler=self.owner.log, input_default_bindings=False, input_vo_keyboard=True, hwdec="rpi", hwdec_codecs="h264", untimed=True, opengl_glfinish=True, hwdec_extra_frames = 75, audio=False, demuxer_rawvideo_fps=30, fps=30, video_aspect_override = 3)
+			player = mpv.MPV(log_handler=self.owner.log, input_default_bindings=False, input_vo_keyboard=True, hwdec="rpi", hwdec_codecs="h264", untimed=True, opengl_glfinish=True, hwdec_extra_frames = 75, audio=False, demuxer_rawvideo_fps=30, fps=30, video_aspect_override = w/h)
 			self.owner.player = player
 			player.fullscreen = True
 			
@@ -86,13 +86,13 @@ class Decoder:
 			def fullscreen():
 				player.fullscreen = not player.fullscreen
 	
-	def __init__(self):	
+	def __init__(self, w=720, h=480):	
 		# self.child = subprocess.Popen(["mpv", "--hwdec=rpi", "--demuxer-rawvideo-fps=60", "--fps=60", "-"], stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, bufsize=1)	
 		
 		self.readPipe, self.writePipe = os.pipe()
 		
 		self.playing = False
-		self.thread = self._Thread(self)
+		self.thread = self._Thread(self,w,h)
 		self.thread.start()
 
 	def stop(self):
