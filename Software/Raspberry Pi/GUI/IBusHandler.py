@@ -262,42 +262,46 @@ class IBusHandler:
 			#if index == 2:
 			#	text += '\x06'*8
 			
-			text_message = IBus.AIData(8+len(text))
+			self.sendRadioButton(index, 0, text, refresh)
 
-			text_message.data[0] = 0x68
-			text_message.data[1] = text_message.size() - 2
-			text_message.data[2] = 0x3B
-			text_message.data[3] = 0x21
-			text_message.data[4] = 0x60
-			text_message.data[5] = 0x0
-			text_message.data[6] = index | 0x40
+	#Send the button messages.
+	def sendRadioButton(self, mode, button, text, update):
+		text_message = IBus.AIData(8+len(text))
 
-			try:
-				text_message.data[7:7+len(text)] = bytes(text, 'utf-8')
-			except:
-				for i in range(0,len(text)):
-					try:
-						text_message.data[7+i] = bytes(text[i], 'utf-8')
-					except:
-						text_message.data[7+i] = bytes('*', 'utf-8')
+		text_message.data[0] = 0x68
+		text_message.data[1] = text_message.size() - 2
+		text_message.data[2] = 0x3B
+		text_message.data[3] = 0x21
+		text_message.data[4] = 0x60 | mode
+		text_message.data[5] = 0x0
+		text_message.data[6] = button | 0x40
 
-			text_message.data[text_message.size()-1] = IBus.getChecksum(text_message)
+		try:
+			text_message.data[7:7+len(text)] = bytes(text, 'utf-8')
+		except:
+			for i in range(0,len(text)):
+				try:
+					text_message.data[7+i] = bytes(text[i], 'utf-8')
+				except:
+					text_message.data[7+i] = bytes('*', 'utf-8')
+
+		text_message.data[text_message.size()-1] = IBus.getChecksum(text_message)
+		
+		self.writeIBusMessage(text_message)
+		
+		if update:
+			update_message = IBus.AIData(8)
 			
-			self.writeIBusMessage(text_message)
+			update_message.data[0] = 0x68
+			update_message.data[1] = update_message.size()-2
+			update_message.data[2] = 0x3B
+			update_message.data[3] = 0xA5
+			update_message.data[4] = 0x60
+			update_message.data[5] = 0x01
+			update_message.data[6] = 0x00
+			update_message.data[7] = IBus.getChecksum(update_message)
 			
-			if refresh:
-				update_message = IBus.AIData(8)
-				
-				update_message.data[0] = 0x68
-				update_message.data[1] = update_message.size()-2
-				update_message.data[2] = 0x3B
-				update_message.data[3] = 0xA5
-				update_message.data[4] = 0x60
-				update_message.data[5] = 0x01
-				update_message.data[6] = 0x00
-				update_message.data[7] = IBus.getChecksum(update_message)
-				
-				self.writeIBusMessage(update_message)
+			self.writeIBusMessage(update_message)
 
 	#Set the text in the title header in the audio screen.
 	def sendGTIBusTitle(self, text):
