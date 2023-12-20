@@ -296,7 +296,7 @@ class IBusHandler:
 			update_message.data[1] = update_message.size()-2
 			update_message.data[2] = 0x3B
 			update_message.data[3] = 0xA5
-			update_message.data[4] = 0x60
+			update_message.data[4] = 0x60 | mode
 			update_message.data[5] = 0x01
 			update_message.data[6] = 0x00
 			update_message.data[7] = IBus.getChecksum(update_message)
@@ -395,3 +395,14 @@ class IBusHandler:
 			update_message.data[6] = 0x00
 			update_message.data[7] = 0x8E
 			update_message.data[8] = IBus.getChecksum(update_message)
+	
+	#Send the message to open and clear the audio screen.
+	def sendAudioScreenClear(self):
+		screen_clear_message = IBus.AIData(6)
+
+		screen_clear_message.data[0] = 0x3B
+		screen_clear_message.data[1] = screen_clear_message.size() - 2
+		screen_clear_message.data[2] = 0x68
+		screen_clear_message.data[3] = 0x45
+		screen_clear_message.data[4] = 0x2
+		screen_clear_message.data[5] = IBus.getChecksum(screen_clear_message)
