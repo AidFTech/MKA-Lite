@@ -5,10 +5,12 @@ opt_main_menu = "MKA Main Menu"
 
 MENU_HEADER = "MKA-Lite Settings"
 
-DEFAULT_OPTIONS = [opt_autoconnect, opt_source, opt_main_menu]
+def setOptions():
+	options = [opt_autoconnect, opt_source, opt_main_menu]
+	return options
 
 class MKIVMMenu:
-	options = DEFAULT_OPTIONS
+	options = setOptions()
 
 	def __init__(self, parent, ibus_handler):
 		self.parent = parent
@@ -17,7 +19,7 @@ class MKIVMMenu:
 	
 	#Send the menu creation message.
 	def sendCreateMenuMessage(self):
-		self.options = DEFAULT_OPTIONS
+		self.options = setOptions()
 
 		if hasattr(self.parent, "RLS_connected") and self.parent.RLS_connected:
 			str_lightsens = self.getLightSensitivityString()
@@ -45,6 +47,9 @@ class MKIVMMenu:
 	def makeSelection(self, index):
 		if not self.menu_open:
 			return
+		
+		if index < 0 or index >= len(self.options):
+			return
 
 		selected = self.options[index]
 		
@@ -65,7 +70,7 @@ class MKIVMMenu:
 				self.options[index] = opt_autoconnect + "Off"
 			self.ibus_handler.sendRadioButton(1, index, self.options[index], True)
 		elif opt_main_menu in selected:
-			if hasattr(self.parent, "mirror"):
+			if hasattr(self.parent, "mirror") and hasattr(self.parent.mirror, "decoder"):
 				self.parent.mirror.decoder.setWindow(False)
 				self.parent.openMainMenu()
 				self.menu_open = False

@@ -83,6 +83,8 @@ class IBusHandler:
 						self.mirror.sendCommand(105)
 				elif button == 0x34 and state == 0x2: #Menu button released.
 					self.parent.control = False
+				#elif button == 0x20 and state == 0x2: #Select button released.
+				#	self.parent.handleSelectMessage()
 				elif cmd_pass:
 					if self.parent.selected and button == 0x14 and state == 0: #Direction/pause button.
 						self.mirror.sendCommand(203)
@@ -95,6 +97,7 @@ class IBusHandler:
 			elif ib_data.data[3] == 0x47: #"Soft" button press.
 				button = ib_data.data[5]&0x3F
 				state = (ib_data.data[5]&0xC0) >> 6
+				
 		elif ib_data.data[0] == 0x68: #From radio.
 			self.parent.handleRadioMessage(ib_data)
 		elif ib_data.data[0] == 0xD0: #From LCM.
@@ -123,6 +126,8 @@ class IBusHandler:
 			elif ib_data.data[3] == 0x4E: #Ensure the radio is enabled.
 				if (ib_data.data[4]&0x1) != 0x0:
 					self.activateRadio()
+			elif ib_data.data[3] == 0x31: #Menu button selected.
+				self.parent.handleButtonSelection(ib_data)
 			
 			if self.parent.gt_version <= 0:
 				self.sendVersionQuery(0x3B)

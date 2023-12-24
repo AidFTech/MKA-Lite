@@ -12,6 +12,8 @@ import SettingsMenuHandler as settings
 import PhoneConnectScreen as phoneconnect
 import PongLoopHandler
 
+from MKIVMenuHandler import MKIVMMenu
+
 import threading
 
 sys.path.append("./mirror")
@@ -82,6 +84,8 @@ class BMirror:
 		self.ibus_thread = threading.Thread(target=self.ibus_handler.loop)	#The IBus handler thread.
 		self.ibus_thread.start()
 
+		self.select_menu_handler = MKIVMMenu(self, self.ibus_handler)
+
 		self.pong_looper = PongLoopHandler.PongLoopHandler(self.ibus_handler)	#A thread that sends the "pong" messages from the CD changer and VM.
 		cd_pong_thread = threading.Thread(target=self.pong_looper.loopCD)
 		cd_pong_thread.start()
@@ -100,6 +104,25 @@ class BMirror:
 		
 		time.sleep(1.0/60)
 	
+	#Interpret "Select" button message.
+	def handleSelectMessage(self):
+		if not self.selected:
+			return
+
+		self.control = False
+		self.select_menu_handler.sendCreateMenuMessage()
+
+	def handleButtonSelection(self, ib_data):
+		if not self.selected:
+			return
+		
+		if ib_data.data[3] != 0x31:
+			return
+		
+		sel = ib_data.data[6]
+		if self.select_menu_handler.menu_open:
+			self.select_menu_handler.makeSelection(sel)
+
 	#Interpret radio IBus messages.
 	def handleRadioMessage(self, ib_data):
 		if ib_data.data[2] == 0x18 and ib_data.data[3] == 0x38: #CD request.
@@ -128,11 +151,13 @@ class BMirror:
 				self.sendCDStatusMessage(2)
 			else: #Default response to the radio.
 				if self.selected:
-					self.sendCDStatusMessage(2)
+					self.sendCDStatusMessage(7)
 				else:
 					self.sendCDStatusMessage(0)
 		elif (ib_data.data[3] == 0x37 or ib_data.data[3] == 0x33) and self.control: #Radio menu enable message. Control must be relenquished.
 			self.control = False #TODO: Expand!
+			if ib_data.data[3] == 0x33: #Select menu.
+				self.handleSelectMessage()
 		elif (ib_data.data[3] == 0x23 or ib_data.data[3] == 0x21) and self.selected: #Headerbar text change message.
 			if ib_data.data[ib_data.size()-2] != 0x8E and bytes("TR",'utf-8') in bytes(ib_data.data) and bytes("-",'utf-8') in bytes(ib_data.data):
 				if ib_data.data[5] == 0x1:
