@@ -1,3 +1,5 @@
+import IBusHandler
+
 opt_lightsens = "Night Sens.: "
 opt_autoconnect = "Autoplay: "
 opt_source = "SRC: "
@@ -12,7 +14,7 @@ def setOptions():
 class MKIVMMenu:
 	options = setOptions()
 
-	def __init__(self, parent, ibus_handler):
+	def __init__(self, parent, ibus_handler: IBusHandler.IBusHandler):
 		self.parent = parent
 		self.ibus_handler = ibus_handler
 		self.menu_open = False
@@ -44,7 +46,7 @@ class MKIVMMenu:
 		#TODO: Send a message to choose what is selected?
 	
 	#Make a selection. This is always called by BMirror after receiving a function call from the IBus handler.
-	def makeSelection(self, index):
+	def makeSelection(self, index: int):
 		if not self.menu_open:
 			return
 		

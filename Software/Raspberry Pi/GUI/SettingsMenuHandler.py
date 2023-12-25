@@ -37,7 +37,7 @@ class SettingsMenu:
 			light_str = opt_lightsens + ": " + str(self.parent.light_thresh)
 			self.options.insert(len(self.options)-2, light_str)
 	
-	def displayMenu(self, display):
+	def displayMenu(self, display: pg.surface):
 		display.fill(self.color_group.br)
 		
 		font = self.color_group.main_font
@@ -81,7 +81,7 @@ class SettingsMenu:
 		
 		#pg.display.update()
 		
-	def makeSelection(self, item):
+	def makeSelection(self, item: int):
 		if self.options[item-1] == opt_back:
 			self.parent.openMainMenu()
 		elif self.options[item - 1] == opt_autoconnect:

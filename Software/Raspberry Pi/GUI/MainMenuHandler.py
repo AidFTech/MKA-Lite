@@ -19,7 +19,7 @@ class MainMenu:
 		self.color_group = color_group
 		self.parent = parent
 	
-	def displayMenu(self, display):
+	def displayMenu(self, display: pg.surface):
 		display.fill(self.color_group.br)
 		
 		carplay_img = pg.image.load('Apple_CarPlay_Logo_100.png')
@@ -101,7 +101,7 @@ class MainMenu:
 
 		#pg.display.update()
 		
-	def makeSelection(self, item):
+	def makeSelection(self, item: int):
 		if item == 1: #Start CarPlay
 			if hasattr(self.parent, "carplay_connected") and self.parent.carplay_connected and hasattr(self.parent, "mirror"):
 				self.parent.openPhoneConnectScreen(self.parent.carplay_name)

@@ -1,11 +1,12 @@
 import IBus
+import IBusHandler
 import time
 
 CD_PERIOD = 45
 VM_PERIOD = 12
 
 class PongLoopHandler:
-    def __init__(self, bushandler):
+    def __init__(self, bushandler: IBusHandler.IBusHandler):
         self.ibus_handler = bushandler
         self.running = True
         self.cd_announced = False

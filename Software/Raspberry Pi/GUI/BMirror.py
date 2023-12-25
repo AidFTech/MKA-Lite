@@ -112,7 +112,7 @@ class BMirror:
 		self.control = False
 		self.select_menu_handler.sendCreateMenuMessage()
 
-	def handleButtonSelection(self, ib_data):
+	def handleButtonSelection(self, ib_data: IBus.AIData):
 		if not self.selected:
 			return
 		
@@ -124,7 +124,7 @@ class BMirror:
 			self.select_menu_handler.makeSelection(sel)
 
 	#Interpret radio IBus messages.
-	def handleRadioMessage(self, ib_data):
+	def handleRadioMessage(self, ib_data: IBus.AIData):
 		if ib_data.data[2] == 0x18 and ib_data.data[3] == 0x38: #CD request.
 			if ib_data.data[4] == 0: #Request current CD and track status.
 				if self.selected:
@@ -184,7 +184,7 @@ class BMirror:
 					self.subtitle_change = False
 
 
-	def handleIKEMessage(self, ib_data):
+	def handleIKEMessage(self, ib_data: IBus.AIData):
 		if ib_data.data[3] == 0x15:
 				self.time_24h = (ib_data.data[5]&0x01) == 0
 		elif ib_data.data[3] == 0x24:
@@ -200,7 +200,7 @@ class BMirror:
 					pass
 
 	#Set the song and artist name.
-	def setMetadata(self, cmd, text):
+	def setMetadata(self, cmd: int, text: str):
 		last_app_name = self.app_name
 
 		if cmd == IBusHandler.SONG_NAME:
@@ -247,7 +247,7 @@ class BMirror:
 		else:
 			self.ibus_handler.sendGTIBusSubtitle(" ", 6, True)
 
-	def clearMetaData(self, send):
+	def clearMetaData(self, send: bool):
 		self.song_name = ""
 		self.artist_name = ""
 		self.album_name = ""
@@ -294,7 +294,7 @@ class BMirror:
 		return self.run
 
 	#Set the connected phone type. This can trigger a light on the BMBT?
-	def setPhoneType(self, phone_type):
+	def setPhoneType(self, phone_type: int):
 		if phone_type == 3:
 			self.carplay_connected = True
 		elif phone_type == 5:
@@ -313,7 +313,7 @@ class BMirror:
 			self.sendSubtitleCluster()
 	
 	#Set the connected phone name.	
-	def setPhoneName(self, phone_name):
+	def setPhoneName(self, phone_name: str):
 		if self.carplay_connected:
 			self.carplay_name = phone_name
 		if self.android_connected:
@@ -334,11 +334,11 @@ class BMirror:
 		self.active_menu = settings.SettingsMenu(self.colors, self)
 		
 	#Open the MKA phone connection screen.
-	def openPhoneConnectScreen(self, phone):
+	def openPhoneConnectScreen(self, phone: str):
 		self.active_menu = phoneconnect.PhoneScreen(self.colors, self, phone)
 	
 	#Send the CD status message 0x39.
-	def sendCDStatusMessage(self, status):
+	def sendCDStatusMessage(self, status: int):
 		cd_message = IBus.AIData(16)
 
 		pseudo_status = 0x89

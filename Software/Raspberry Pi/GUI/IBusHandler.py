@@ -20,7 +20,7 @@ class IBusHandler:
 	parent_id = 0x01
 	mirror = None
 	
-	def __init__(self, parent, mirror, parent_id):
+	def __init__(self, parent, mirror, parent_id: int):
 		self.parent = parent
 		self.parent_id = parent_id
 		self.mirror = mirror
@@ -35,7 +35,7 @@ class IBusHandler:
 				if IBus.checkValidity(ib_data):
 					self.readIBusMessage(ib_data)
 	
-	def readIBusMessage(self, ib_data):
+	def readIBusMessage(self, ib_data: IBus.AIData):
 		cmd_pass = False
 		if hasattr(self.mirror, "decoder"):
 			if self.mirror.decoder is not None and not self.mirror.decoder.player.window_minimized:
@@ -132,10 +132,10 @@ class IBusHandler:
 			if self.parent.gt_version <= 0:
 				self.sendVersionQuery(0x3B)
 
-	def writeIBusMessage(self, ib_msg):
+	def writeIBusMessage(self, ib_msg: IBus.AIData):
 		IBus.writeAIBusMessage(ISerial, ib_msg, IB_RX)
 		
-	def sendPong(self, receiver, my_id):
+	def sendPong(self, receiver: int, my_id: int):
 		pong = IBus.AIData(6)
 		
 		pong.data[0] = my_id
@@ -147,7 +147,7 @@ class IBusHandler:
 		
 		self.writeIBusMessage(pong)
 
-	def sendVersionQuery(self, receiver):
+	def sendVersionQuery(self, receiver: int):
 		query = IBus.AIData(5)
 
 		query.data[0] = 0x3F
@@ -184,7 +184,7 @@ class IBusHandler:
 		self.writeIBusMessage(deactivator)
 
 	#Send the VM control message.
-	def sendVMControl(self, power):
+	def sendVMControl(self, power: bool):
 		vm_message = IBus.AIData(7)
 		vm_message.data[0] = 0xED
 		vm_message.data[1] = vm_message.size()-2
@@ -201,7 +201,7 @@ class IBusHandler:
 		self.writeIBusMessage(vm_message)
 
 	#Send radio metadata text.
-	def sendRadioText(self, text, position, refresh):
+	def sendRadioText(self, text: str, position: int, refresh: bool):
 		if self.parent.gt_version >= 5:
 			index = 0x40
 			if position == SONG_NAME:
@@ -270,7 +270,7 @@ class IBusHandler:
 			self.sendRadioButton(index, 0, text, refresh)
 
 	#Send the button messages.
-	def sendRadioButton(self, mode, button, text, update):
+	def sendRadioButton(self, mode: int, button: int, text: str, update: bool):
 		text_message = IBus.AIData(8+len(text))
 
 		text_message.data[0] = 0x68
@@ -309,7 +309,7 @@ class IBusHandler:
 			self.writeIBusMessage(update_message)
 
 	#Set the text in the title header in the audio screen.
-	def sendGTIBusTitle(self, text):
+	def sendGTIBusTitle(self, text: str):
 		if self.parent.gt_version < 4:
 			title_message = IBus.AIData(8+len(text))
 			
@@ -369,7 +369,7 @@ class IBusHandler:
 			self.writeIBusMessage(update_message)
 
 	##Set the "subtitles" in the top of the headerbar.
-	def sendGTIBusSubtitle(self, text, position, refresh):
+	def sendGTIBusSubtitle(self, text: str, position: int, refresh: bool):
 		if position > 6:
 			return
 		

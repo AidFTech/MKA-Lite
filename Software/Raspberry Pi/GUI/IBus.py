@@ -3,7 +3,7 @@ import time
 import RPi.GPIO as GPIO
 
 class AIData:
-	def __init__(self, newl):
+	def __init__(self, newl: int):
 		self.data = [0]*newl
 	
 	def size(self):
@@ -18,7 +18,7 @@ class AIData:
 	def refresh(self, newl):
 		self.data = [0]*newl
 
-def getChecksum(ai_b):
+def getChecksum(ai_b: AIData):
 	checksum = 0
 	
 	for i in range(0, ai_b.size() - 1):
@@ -26,7 +26,7 @@ def getChecksum(ai_b):
 	
 	return checksum
 
-def checkValidity(ai_b):
+def checkValidity(ai_b: AIData):
 	l = ai_b.size()
 	checksum = getChecksum(ai_b)
 
@@ -35,7 +35,7 @@ def checkValidity(ai_b):
 	else:
 		return False
 
-def checkDestination(ai_b, dest_id):
+def checkDestination(ai_b: AIData, dest_id: int):
 	if not checkValidity(ai_b):
 		return False
 	
@@ -47,7 +47,7 @@ def checkDestination(ai_b, dest_id):
 	else:
 		return False
 
-def readAIData(ai_port, ai_b):
+def readAIData(ai_port: serial.Serial, ai_b: AIData):
 	received = False
 	
 	if ai_port.in_waiting > 0:
@@ -75,7 +75,7 @@ def readAIData(ai_port, ai_b):
 	
 	return received
 
-def writeAIBusMessage(ai_port, ai_b, rx_pin):
+def writeAIBusMessage(ai_port: serial.Serial, ai_b: AIData, rx_pin: int):
 	GPIO.setmode(GPIO.BCM)
 	GPIO.setup(rx_pin, GPIO.IN)
 	first_low = int(time.perf_counter()*1000)

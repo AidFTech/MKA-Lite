@@ -14,12 +14,12 @@ rect_w = Defaults.rect_w
 class PhoneScreen:
 	selected = 1
 	
-	def __init__(self, color_group, parent, phone_name):
+	def __init__(self, color_group, parent, phone_name: str):
 		self.color_group = color_group
 		self.parent = parent
 		self.phone_name = phone_name
 	
-	def displayMenu(self, display):
+	def displayMenu(self, display: pg.surface):
 		display.fill(self.color_group.br)
 		
 		return_img = pg.image.load('return.png')
@@ -56,7 +56,7 @@ class PhoneScreen:
 		
 		#pg.display.update()
 		
-	def makeSelection(self, item):
+	def makeSelection(self, item: int):
 		if item == 1: 
 			self.parent.mirror.decoder.setWindow(False)
 			self.parent.openMainMenu()
