@@ -1,0 +1,6 @@
+{
+	"files.associations": {
+		"ibus_handler.h": "c",
+		"stdint.h": "c"
+	}
+}
