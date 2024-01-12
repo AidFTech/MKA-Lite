@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <time.h>
 
 #if __has_include(<pigpio.h>) //Including an "if has include" so we can test this on a desktop if need be.
 #include <pigpio.h>
@@ -11,6 +12,7 @@
 #define ibus_handler_h
 
 #define IBUS_BAUD 9600
+#define MAX_DELAY 500 //500ms. I believe this is longer than an IBus message will ever take. Adjust as needed.
 
 #ifdef RPI_UART
 int ibusSerialInit(char* port);

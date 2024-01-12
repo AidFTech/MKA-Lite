@@ -20,8 +20,15 @@ int readIBusData(const int port, uint8_t* sender, uint8_t* receiver, uint8_t* da
 		const uint8_t s = (uint8_t)(serReadByte(port));
 		const uint8_t l = (uint8_t)(serReadByte(port));
 
-		if(l<2 || serDataAvailable(port) != l)
+		if(l<2)
 			return -1;
+		
+		clock_t start = clock();
+		while(serDataAvailable(port) != l) {
+			if((clock() - start)/(CLOCKS_PER_SEC/1000) >= MAX_DELAY) {
+				return -1;
+			}
+		}
 		
 		const uint8_t r = (uint8_t)(serReadByte(port));
 
