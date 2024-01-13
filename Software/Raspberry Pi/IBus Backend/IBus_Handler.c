@@ -4,12 +4,15 @@
 //Open the serial port defined by string port. Returns the port number to be used throughout the program.
 int ibusSerialInit(char* port) {
 	gpioInitialise();
+	gpioSetMode(IB_RX, PI_INPUT);
+	gpioSetPullUpDown(IB_RX, PI_PUD_UP);
 	return serOpen(port, IBUS_BAUD, 0); //TODO: Add even parity option.
 }
 
 //Close the serial port.
 void ibusSerialClose(const int port) {
 	serClose(port);
+	gpioTerminate();
 }
 #endif
 
@@ -81,7 +84,11 @@ void writeIBusData(const int port, const uint8_t sender, const uint8_t receiver,
 	msg_data[full_length-1] = getChecksum(sender, receiver, data, l);
 	
 	#ifdef RPI_UART
-	//TODO: Confirm that the port is free.
+	clock_t start = clock();
+	while((clock() - start)/(CLOCKS_PER_SEC/1000) < IB_WAIT) {
+		if(gpioRead(IB_RX) == 0)
+			start = clock();
+	}
 	for(uint8_t i=0;i<full_length;i+=1)
 		serWriteByte(port, msg_data[i]);
 	#else

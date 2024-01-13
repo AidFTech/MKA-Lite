@@ -14,6 +14,9 @@
 #define IBUS_BAUD 9600
 #define MAX_DELAY 500 //500ms. I believe this is longer than an IBus message will ever take. Adjust as needed.
 
+#define IB_RX 4 //The GPIO input to use to determine whether the IBus RX is active.
+#define IB_WAIT 20 //The amount of time to wait for the IBus RX to be free before sending any data.
+
 #ifdef RPI_UART
 int ibusSerialInit(char* port);
 void ibusSerialClose(const int port);
