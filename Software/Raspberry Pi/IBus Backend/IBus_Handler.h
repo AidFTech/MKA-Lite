@@ -26,4 +26,8 @@ int readIBusData(const int port, uint8_t* sender, uint8_t* receiver, uint8_t* da
 void writeIBusData(const int port, const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l);
 
 uint8_t getChecksum(const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l);
+
+#ifndef RPI_UART
+uint16_t charToNumber(char c);
+#endif
 #endif

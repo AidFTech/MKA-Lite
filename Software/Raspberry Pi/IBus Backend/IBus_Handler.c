@@ -42,18 +42,8 @@ int readIBusData(const int port, uint8_t* sender, uint8_t* receiver, uint8_t* da
 		for(uint8_t i=0;i<l;i+=1)
 			d[i] = (uint8_t)(d_c[i]);
 		
-		{
-			uint8_t chex[l+2];
-			chex[0] = s;
-			chex[1] = l;
-			chex[2] = r;
-
-			for(uint8_t i=0;i<l-1;i+=1)
-				chex[i+3] = d[i];
-			
-			if(getChecksum(s, r, d, l-1)
-				return -1;
-		}
+		if(getChecksum(s, r, d, l-1)
+			return -1;
 
 		*sender = s;
 		*receiver = r;
@@ -65,7 +55,37 @@ int readIBusData(const int port, uint8_t* sender, uint8_t* receiver, uint8_t* da
 	} else
 		return -1;
 	#else
-	return -1; //TODO: Use SCANF to read in a string.
+	char c;
+	int num = 0;
+	uint8_t l=0;
+	uint8_t data_in[255];
+
+	do {
+		scanf("%c", &c);
+		if(c == '\n')
+			break;
+		else if(c == ' ') { //New character.
+			data_in[l] = (uint8_t)(num);
+			l += 1;
+			num = 0;
+		} else if((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			num <<= 4;
+			num |= charToNumber(c);
+		}
+	} while(c != '\n' && l < 255);
+	data_in[l] = num;
+	l+=1;
+	
+	if(l >= 2) {
+		*sender = data_in[0];
+		*receiver = data_in[1];
+
+		for(uint8_t i=0;i<l-2;i+=1)
+			data[i] = data_in[i+2];
+
+		return l-2;
+	} else
+		return -1;
 	#endif
 }
 
@@ -105,7 +125,72 @@ uint8_t getChecksum(const uint8_t sender, const uint8_t receiver, uint8_t* data,
 	checksum ^= (uint8_t)(l+2);
 	checksum ^= receiver;
 	for(uint8_t i=0;i<l;i+=1)
-		checksum ^= data[3+i];
+		checksum ^= data[i];
 
 	return checksum;
 }
+
+#ifndef RPI_UART
+uint16_t charToNumber(char c) {
+	uint16_t the_return = 0;
+
+	switch(c) {
+		case '0':
+			the_return |= 0x0;
+			break;
+		case '1':
+			the_return |= 0x1;
+			break;
+		case '2':
+			the_return |= 0x2;
+			break;
+		case '3':
+			the_return |= 0x3;
+			break;
+		case '4':
+			the_return |= 0x4;
+			break;
+		case '5':
+			the_return |= 0x5;
+			break;
+		case '6':
+			the_return |= 0x6;
+			break;
+		case '7':
+			the_return |= 0x7;
+			break;
+		case '8':
+			the_return |= 0x8;
+			break;
+		case '9':
+			the_return |= 0x9;
+			break;
+		case 'A':
+		case 'a':
+			the_return |= 0xA;
+			break;
+		case 'B':
+		case 'b':
+			the_return |= 0xB;
+			break;
+		case 'C':
+		case 'c':
+			the_return |= 0xC;
+			break;
+		case 'D':
+		case 'd':
+			the_return |= 0xD;
+			break;
+		case 'E':
+		case 'e':
+			the_return |= 0xE;
+			break;
+		case 'F':
+		case 'f':
+			the_return |= 0xF;
+			break;
+	}
+
+	return the_return;
+}
+#endif
