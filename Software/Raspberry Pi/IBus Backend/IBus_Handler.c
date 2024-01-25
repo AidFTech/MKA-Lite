@@ -39,10 +39,10 @@ int readIBusData(const int port, uint8_t* sender, uint8_t* receiver, uint8_t* da
 		serRead(port, d_c, l-1);
 
 		uint8_t d[l-1];
-		for(uint8_t i=0;i<l;i+=1)
+		for(uint8_t i=0;i<l-1;i+=1)
 			d[i] = (uint8_t)(d_c[i]);
 		
-		if(getChecksum(s, r, d, l-1)
+		if(getChecksum(s, r, d, l-1) != d[l-2])
 			return -1;
 
 		*sender = s;
