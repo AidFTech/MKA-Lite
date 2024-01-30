@@ -17,10 +17,8 @@
 #define IB_RX 4 //The GPIO input to use to determine whether the IBus RX is active.
 #define IB_WAIT 20 //The amount of time to wait for the IBus RX to be free before sending any data.
 
-#ifdef RPI_UART
 int ibusSerialInit(char* port);
 void ibusSerialClose(const int port);
-#endif
 
 int readIBusData(const int port, uint8_t* sender, uint8_t* receiver, uint8_t* data);
 void writeIBusData(const int port, const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l);

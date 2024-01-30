@@ -1,0 +1,86 @@
+import sys
+import os
+
+if os.path.exists("./GUI") and not os.path.exists("./MKA_Defaults.py"):
+	sys.path.append("./GUI")
+
+import pygame as pg
+import MKA_Defaults as defaults
+import MenuWindow
+import MirrorMenuWindow
+from AttributeGroup import AttributeGroup
+
+class MKA:
+	'''Fullscreen is defined as true if running on the Pi (defined in C). Full_interface is true if the full interface is required (e.g. for non-nav vehicles).'''
+	def __init__(self, fullscreen: bool, full_interface: bool, file_path: str):
+		pg.init()
+		if fullscreen:
+			pg.display.set_mode(flags=pg.FULLSCREEN)
+			pg.mouse.set_visible(False)
+		else:
+			pg.display.set_mode(size=(defaults.WINDOW_WIDTH,defaults.WINDOW_HEIGHT))
+
+		if not full_interface:
+			pg.display.set_caption("MKA-Lite")
+		else:
+			pg.display.set_caption("MKA")
+
+		self.full_interface = full_interface	#True if the full interface is required (e.g. for non-nav vehicles).
+		self.fullscreen = fullscreen	#True if the program is running in fullscreen mode, i.e. on the Pi.
+		self.display_surface = pg.Surface((defaults.WINDOW_WIDTH, defaults.WINDOW_HEIGHT))	#Render surface for the potentially scaled window.
+
+		self.file_path = getFileRoot(file_path)	#The file path the script is being called from.
+
+		path_str = self.file_path
+
+		self.attribute_group = AttributeGroup()	#The assigned color/attribute group.
+		self.attribute_group.main_font = pg.font.Font(path_str + 'ariblk.ttf', 32)	#The color group font.
+		self.attribute_group.w = defaults.WINDOW_WIDTH
+		self.attribute_group.h = defaults.WINDOW_HEIGHT
+		self.attribute_group.header_height = defaults.HEADER_HEIGHT
+
+		self.airplay_conf = open(path_str + 'airplay.conf','rb').read()	#A configuration file to be sent to the dongle.
+		self.oem_logo = open(path_str + 'BMW.png', 'rb').read()	#The Android Auto icon to be sent to the dongle.
+		self.icon_120 = open(path_str + 'BMW_icon.png', 'rb').read()	#A Carplay icon to be sent to the dongle.
+		self.icon_180 = open(path_str + 'BMW_icon.png', 'rb').read()	#A Carplay icon to be sent to the dongle.
+		self.icon_256 = open(path_str + 'BMW_icon.png', 'rb').read()	#A Carplay icon to be sent to the dongle.
+
+		self.active_menu = MenuWindow.MenuWindow	#The active menu window.
+		self.active_menu = None
+		if not full_interface:
+			self.active_menu = MirrorMenuWindow.MirrorMenuWindow(self.attribute_group, self.file_path)
+
+		self.run = True	#True if the program is running.
+
+	'''Loop function, to run while the Pi is running.'''
+	def loop(self):
+		self.display_surface.fill(self.attribute_group.br)
+
+		if self.active_menu is not None:
+			self.active_menu.displayMenu(self.display_surface)
+
+		scaled_win = pg.transform.smoothscale(self.display_surface, (pg.display.get_surface().get_width(), pg.display.get_surface().get_height()))
+		pg.display.get_surface().blit(scaled_win, (0,0))
+		
+		pg.display.update()
+
+		self.run = self.handleEvents()
+
+	def handleEvents(self) -> bool:
+		events = pg.event.get()
+		for e in events:
+			if e.type == pg.QUIT:
+				return False
+			elif e.type == pg.KEYDOWN:
+				if e.key == pg.K_ESCAPE:
+					return False
+		
+		return True
+	
+def getFileRoot(fname: str) -> str:
+	MYNAME = "MKA.py"
+	if fname.find(MYNAME) < 1: #File is being called from the same directory as the C file.
+		return ""
+
+	the_return = fname.replace(MYNAME, "")
+	return the_return

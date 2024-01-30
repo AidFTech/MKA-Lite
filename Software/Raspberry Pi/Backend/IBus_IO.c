@@ -1,20 +1,24 @@
-#include "IBus_Handler.h"
+#include "IBus_IO.h"
 
-#ifdef RPI_UART
 //Open the serial port defined by string port. Returns the port number to be used throughout the program.
 int ibusSerialInit(char* port) {
+	#ifdef RPI_UART
 	gpioInitialise();
 	gpioSetMode(IB_RX, PI_INPUT);
 	gpioSetPullUpDown(IB_RX, PI_PUD_UP);
 	return serOpen(port, IBUS_BAUD, 0); //TODO: Add even parity option.
+	#else
+	printf("Ready!\nEnter the sender, receiver, and data. Separate all characters with a space. Do not include the checksum.\n");
+	#endif
 }
 
 //Close the serial port.
 void ibusSerialClose(const int port) {
+	#ifdef RPI_UART
 	serClose(port);
 	gpioTerminate();
+	#endif
 }
-#endif
 
 //Read IBus data. Return -1 if unsuccessful, otherwise return the number of bytes.
 int readIBusData(const int port, uint8_t* sender, uint8_t* receiver, uint8_t* data) {
@@ -27,7 +31,7 @@ int readIBusData(const int port, uint8_t* sender, uint8_t* receiver, uint8_t* da
 			return -1;
 		
 		clock_t start = clock();
-		while(serDataAvailable(port) != l) {
+		while(serDataAvailable(port) < l) {
 			if((clock() - start)/(CLOCKS_PER_SEC/1000) >= MAX_DELAY) {
 				return -1;
 			}
