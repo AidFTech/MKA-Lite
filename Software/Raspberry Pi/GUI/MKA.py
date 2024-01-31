@@ -38,6 +38,8 @@ class MKA:
 		self.attribute_group.w = defaults.WINDOW_WIDTH
 		self.attribute_group.h = defaults.WINDOW_HEIGHT
 		self.attribute_group.header_height = defaults.HEADER_HEIGHT
+		self.attribute_group.rect_width = defaults.RECT_WIDTH
+		self.attribute_group.option_height = defaults.OPTION_HEIGHT
 
 		self.airplay_conf = open(path_str + 'airplay.conf','rb').read()	#A configuration file to be sent to the dongle.
 		self.oem_logo = open(path_str + 'BMW.png', 'rb').read()	#The Android Auto icon to be sent to the dongle.
@@ -49,6 +51,7 @@ class MKA:
 		self.active_menu = None
 		if not full_interface:
 			self.active_menu = MirrorMenuWindow.MirrorMenuWindow(self.attribute_group, self.file_path)
+			self.active_menu.setSelected(1)
 
 		self.run = True	#True if the program is running.
 
@@ -66,6 +69,7 @@ class MKA:
 
 		self.run = self.handleEvents()
 
+	'''Look for the <Escape> key or Close button.'''
 	def handleEvents(self) -> bool:
 		events = pg.event.get()
 		for e in events:
@@ -77,9 +81,30 @@ class MKA:
 		
 		return True
 	
+	'''IBus knob turn. "Clockwise" is true if the knob is turned clockwise.'''
+	def knobTurn(self, clockwise: bool, count: int):
+		if self.active_menu is None:
+			return
+
+		#TODO: Determine whether the phone mirror is active.
+		if not clockwise:
+			for i in range(count):
+				self.active_menu.incrementSelected()
+		else:
+			for i in range(count):
+				self.active_menu.decrementSelected()
+
+	'''Enter button pressed. Normally this will call a function in the active menu.'''
+	def handleEnterButton(self):
+		if self.active_menu is None:
+			return
+		
+
+
+	
 def getFileRoot(fname: str) -> str:
 	MYNAME = "MKA.py"
-	if fname.find(MYNAME) < 1: #File is being called from the same directory as the C file.
+	if fname.find(MYNAME) < 0: #File is being called from the same directory as the C file.
 		return ""
 
 	the_return = fname.replace(MYNAME, "")

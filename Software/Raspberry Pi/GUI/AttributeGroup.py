@@ -15,3 +15,5 @@ class AttributeGroup:
 	w = 0
 	h = 0
 	header_height = 0
+	rect_width = 0
+	option_height = 0

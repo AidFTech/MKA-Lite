@@ -13,5 +13,11 @@ wchar_t* pyInit(int argc, char *argv[]);
 void pyFinalize(wchar_t* program);
 
 PyObject* startMKA(const char* fname);
+void MKAloop(PyObject* mka);
+int MKAgetRun(PyObject* mka);
+void MKAturnKnob(PyObject* mka, const uint8_t steps, const uint8_t clockwise);
+void MKAenterButton(PyObject* mka);
+
+void handleIBus(PyObject* mka, const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l);
 
 #endif
