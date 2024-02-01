@@ -9,6 +9,7 @@ import MKA_Defaults as defaults
 import MenuWindow
 import MirrorMenuWindow
 from AttributeGroup import AttributeGroup
+import ParameterList
 
 class MKA:
 	'''Fullscreen is defined as true if running on the Pi (defined in C). Full_interface is true if the full interface is required (e.g. for non-nav vehicles).'''
@@ -40,6 +41,8 @@ class MKA:
 		self.attribute_group.header_height = defaults.HEADER_HEIGHT
 		self.attribute_group.rect_width = defaults.RECT_WIDTH
 		self.attribute_group.option_height = defaults.OPTION_HEIGHT
+		
+		self.parameter_list = ParameterList.ParameterList()	#The assigned parameter group.
 
 		self.airplay_conf = open(path_str + 'airplay.conf','rb').read()	#A configuration file to be sent to the dongle.
 		self.oem_logo = open(path_str + 'BMW.png', 'rb').read()	#The Android Auto icon to be sent to the dongle.
@@ -50,7 +53,7 @@ class MKA:
 		self.active_menu = MenuWindow.MenuWindow	#The active menu window.
 		self.active_menu = None
 		if not full_interface:
-			self.active_menu = MirrorMenuWindow.MirrorMenuWindow(self.attribute_group, self.file_path)
+			self.active_menu = MirrorMenuWindow.MirrorMenuWindow(self.attribute_group, self.parameter_list, self.file_path)
 			self.active_menu.setSelected(1)
 
 		self.run = True	#True if the program is running.
@@ -67,6 +70,7 @@ class MKA:
 		
 		pg.display.update()
 
+		self.checkNextWindow()
 		self.run = self.handleEvents()
 
 	'''Look for the <Escape> key or Close button.'''
@@ -81,6 +85,16 @@ class MKA:
 		
 		return True
 	
+	'''Open a queued window.'''
+	def checkNextWindow(self):
+		next_menu = self.parameter_list.next_menu
+		if next_menu > 0:
+			if next_menu == ParameterList.MIRROR_MENU:
+				self.active_menu = MirrorMenuWindow.MirrorMenuWindow(self.attribute_group, self.parameter_list, self.file_path)
+			
+			self.parameter_list.next_menu = ParameterList.NO_MENU
+
+
 	'''IBus knob turn. "Clockwise" is true if the knob is turned clockwise.'''
 	def knobTurn(self, clockwise: bool, count: int):
 		if self.active_menu is None:
@@ -96,11 +110,11 @@ class MKA:
 
 	'''Enter button pressed. Normally this will call a function in the active menu.'''
 	def handleEnterButton(self):
+		#TODO: Determine whether the phone mirror is active.
 		if self.active_menu is None:
 			return
-		
-
-
+		else:
+			self.active_menu.makeSelection()
 	
 def getFileRoot(fname: str) -> str:
 	MYNAME = "MKA.py"
