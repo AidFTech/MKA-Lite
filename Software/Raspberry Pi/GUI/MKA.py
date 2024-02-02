@@ -96,6 +96,7 @@ class MKA:
 				self.active_menu = SettingsMenuWindow.SettingsMenuWindow(self.attribute_group, self.parameter_list, self.file_path)
 			
 			self.parameter_list.next_menu = ParameterList.NEXTMENU_NO_MENU
+			self.active_menu.selected = 1
 
 
 	'''IBus knob turn. "Clockwise" is true if the knob is turned clockwise.'''
