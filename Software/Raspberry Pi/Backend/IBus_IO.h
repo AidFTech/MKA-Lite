@@ -1,6 +1,8 @@
 #include <stdint.h>
 #include <time.h>
 
+#include "IBus_Serial.h"
+
 #if __has_include(<pigpio.h>) //Including an "if has include" so we can test this on a desktop if need be.
 #include <pigpio.h>
 #define RPI_UART

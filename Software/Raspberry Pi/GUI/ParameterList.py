@@ -4,16 +4,17 @@ ANDROID = 1
 CARPLAY = 2
 
 #Next menu:
-NO_MENU = 0
-MIRROR_MENU = 1
-SETTINGS_MENU = 2
+NEXTMENU_OEM_MENU = -1 #Return to the OEM nav menu.
+NEXTMENU_NO_MENU = 0
+NEXTMENU_MIRROR_MENU = 1
+NEXTMENU_SETTINGS_MENU = 2
 
 '''A list of variables to be shared between the MKA object and its windows, as well as the C backend.'''
 class ParameterList:
 	#General parameters.
-	selected = False	#True if the radio has sent the "Play" command to the MKA.
+	audio_selected = False	#True if the radio has sent the "Play" command to the MKA.
 	phone_active = False	#True if the phone screen is active.
-	next_menu = NO_MENU	#The next menu to open.
+	next_menu = NEXTMENU_NO_MENU	#The next menu to open.
 	
 	#Phone parameters.
 	phone_type = NO_PHONE	#The type of phone connected.

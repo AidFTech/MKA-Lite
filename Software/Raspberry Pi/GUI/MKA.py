@@ -8,6 +8,7 @@ import pygame as pg
 import MKA_Defaults as defaults
 import MenuWindow
 import MirrorMenuWindow
+import SettingsMenuWindow
 from AttributeGroup import AttributeGroup
 import ParameterList
 
@@ -89,10 +90,12 @@ class MKA:
 	def checkNextWindow(self):
 		next_menu = self.parameter_list.next_menu
 		if next_menu > 0:
-			if next_menu == ParameterList.MIRROR_MENU:
+			if next_menu == ParameterList.NEXTMENU_MIRROR_MENU:
 				self.active_menu = MirrorMenuWindow.MirrorMenuWindow(self.attribute_group, self.parameter_list, self.file_path)
+			elif next_menu == ParameterList.NEXTMENU_SETTINGS_MENU:
+				self.active_menu = SettingsMenuWindow.SettingsMenuWindow(self.attribute_group, self.parameter_list, self.file_path)
 			
-			self.parameter_list.next_menu = ParameterList.NO_MENU
+			self.parameter_list.next_menu = ParameterList.NEXTMENU_NO_MENU
 
 
 	'''IBus knob turn. "Clockwise" is true if the knob is turned clockwise.'''

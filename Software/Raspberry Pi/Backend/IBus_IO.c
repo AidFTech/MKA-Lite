@@ -6,7 +6,7 @@ int ibusSerialInit(char* port) {
 	gpioInitialise();
 	gpioSetMode(IB_RX, PI_INPUT);
 	gpioSetPullUpDown(IB_RX, PI_PUD_UP);
-	return serOpen(port, IBUS_BAUD, 0); //TODO: Add even parity option.
+	return iserialOpen(port);
 	#else
 	printf("Ready!\nEnter the sender, receiver, and data. Separate all characters with a space. Do not include the checksum.\n");
 	#endif
@@ -15,7 +15,7 @@ int ibusSerialInit(char* port) {
 //Close the serial port.
 void ibusSerialClose(const int port) {
 	#ifdef RPI_UART
-	serClose(port);
+	iserialClose(port);
 	gpioTerminate();
 	#endif
 }
@@ -23,24 +23,24 @@ void ibusSerialClose(const int port) {
 //Read IBus data. Return -1 if unsuccessful, otherwise return the number of bytes.
 int readIBusData(const int port, uint8_t* sender, uint8_t* receiver, uint8_t* data) {
 	#ifdef RPI_UART
-	if(serDataAvailable(port) >= 2) {
-		const uint8_t s = (uint8_t)(serReadByte(port));
-		const uint8_t l = (uint8_t)(serReadByte(port));
+	if(iserialBytesAvailable(port) >= 2) {
+		const uint8_t s = (uint8_t)(iserialReadByte(port));
+		const uint8_t l = (uint8_t)(iserialReadByte(port));
 
 		if(l<2)
 			return -1;
 		
 		clock_t start = clock();
-		while(serDataAvailable(port) < l) {
+		while(iserialBytesAvailable(port) < l) {
 			if((clock() - start)/(CLOCKS_PER_SEC/1000) >= MAX_DELAY) {
 				return -1;
 			}
 		}
 		
-		const uint8_t r = (uint8_t)(serReadByte(port));
+		const uint8_t r = (uint8_t)(iserialReadByte(port));
 
 		char d_c[l-1];
-		serRead(port, d_c, l-1);
+		iserialRead(port, d_c, l-1);
 
 		uint8_t d[l-1];
 		for(uint8_t i=0;i<l-1;i+=1)
@@ -114,7 +114,7 @@ void writeIBusData(const int port, const uint8_t sender, const uint8_t receiver,
 			start = clock();
 	}
 	for(uint8_t i=0;i<full_length;i+=1)
-		serWriteByte(port, msg_data[i]);
+		iserialWriteByte(port, msg_data[i]);
 	#else
 	for(uint8_t i=0;i<full_length;i+=1)
 		printf("%X ", msg_data[i]);

@@ -1,6 +1,6 @@
 from MenuWindow import MenuWindow
 from AttributeGroup import AttributeGroup
-from ParameterList import ParameterList
+import ParameterList
 import pygame as pg
 
 SETTINGS_MSG = "Settings"
@@ -11,7 +11,7 @@ CARPLAY = 2
 
 '''The phone mirror menu.'''
 class MirrorMenuWindow(MenuWindow):
-	def __init__(self, attribute_group: AttributeGroup, parameter_group: ParameterList, file_path: str):
+	def __init__(self, attribute_group: AttributeGroup, parameter_group: ParameterList.ParameterList, file_path: str):
 		super().__init__(attribute_group, parameter_group, file_path)
 		self.MAX_SELECTED = 3
 		self.mirror_msg = "Start Phone Mirroring"	#Generic placeholder message.
@@ -67,6 +67,15 @@ class MirrorMenuWindow(MenuWindow):
 			
 			pg.draw.rect(display, self.attribute_group.rect_color, pg.Rect(0, r_y, RECT_WIDTH, r_h))
 			pg.draw.rect(display, self.attribute_group.rect_color, pg.Rect(0, r_y, WINDOW_WIDTH - RECT_WIDTH*2, r_h), 5)
+
+	def makeSelection(self):
+		if self.selected == 1: #Start phone mirroring.
+			if self.parameter_group.phone_type != NO_PHONE:
+				self.parameter_group.phone_active = True
+		elif self.selected == 2: #Open settings menu.
+			self.parameter_group.next_menu = ParameterList.NEXTMENU_SETTINGS_MENU
+		elif self.selected == 3:
+			self.parameter_group.next_menu = ParameterList.NEXTMENU_OEM_MENU
 
 def getMirrorMessage(phone_name: str, phone_type: int) -> str:
 	if phone_type == ANDROID:

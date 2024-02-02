@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
 void readIBus(PyObject* mka, const int port) {
 	uint8_t sender, receiver;
 	uint8_t data[255];
-	const int l = readIBusData(0, &sender, &receiver, data);
+	const int l = readIBusData(port, &sender, &receiver, data);
 	if(l > 0) {
 		handleIBus(mka, sender, receiver, data, l);
 	}

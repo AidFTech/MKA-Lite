@@ -68,7 +68,8 @@ void MKAturnKnob(PyObject* mka, const uint8_t steps, const uint8_t clockwise) {
 
 //Press the enter button.
 void MKAenterButton(PyObject* mka) {
-
+	PyObject* handle_enter_button = PyObject_GetAttrString(mka, "handleEnterButton");
+	PyObject_CallObject(handle_enter_button, NULL);
 }
 
 //Handle an IBus message.
@@ -93,4 +94,8 @@ void handleIBus(PyObject* mka, const uint8_t sender, const uint8_t receiver, uin
 				MKAenterButton(mka);
 		}
 	}
+	#ifndef RPI_UART
+	if(data[0] != IBUS_CMD_IKE_IGN_STATUS_RESP)
+		MKAloop(mka);
+	#endif
 }
