@@ -36,6 +36,7 @@ class SettingsMenuWindow(MenuWindow):
 
 		pg.draw.rect(display, self.attribute_group.header_color, pg.Rect(0, 0, WINDOW_WIDTH, HEADER_HEIGHT))
 		pg.draw.rect(display, self.attribute_group.header_color, pg.Rect(0, WINDOW_HEIGHT-HEADER_HEIGHT, WINDOW_WIDTH, HEADER_HEIGHT))
+		self.drawClock(display)
 
 		title_text = font.render("MKA Settings", False, self.attribute_group.text_color)
 		display.blit(title_text, (4,-3))

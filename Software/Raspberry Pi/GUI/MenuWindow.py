@@ -16,6 +16,40 @@ class MenuWindow:
 	def displayMenu(self, display: pg.surface):
 		display.fill(self.attribute_group.br)
 
+	'''Draw the clock.'''
+	def drawClock(self, display: pg.surface):
+		time_str = "--:--"
+		if self.parameter_group.ike_hour >= 0 and self.parameter_group.ike_minute >= 0:
+			if self.parameter_group.ike_24h or (self.parameter_group.ike_hour >=1 and self.parameter_group.ike_hour <= 12):
+				time_str = str(self.parameter_group.ike_hour)
+				time_str += ":"
+			elif self.parameter_group.ike_hour == 0:
+				time_str = "12:"
+			elif self.parameter_group.ike_hour >= 13:
+				time_str = str(self.parameter_group.ike_hour-12)
+				time_str += ":"
+				
+			if self.parameter_group.ike_minute < 10:
+				time_str += "0" + str(self.parameter_group.ike_minute)
+			else:
+				time_str += str(self.parameter_group.ike_minute)
+
+			if not self.parameter_group.ike_24h:
+				if self.parameter_group.ike_hour < 12:
+					time_str += " AM"
+				else:
+					time_str += " PM"
+					
+		date_str = self.parameter_group.ike_datestring
+		
+		font = self.attribute_group.main_font
+
+		time_text = font.render(time_str, False, self.attribute_group.text_color)
+		display.blit(time_text, (4, self.attribute_group.h-self.attribute_group.header_height-3))
+
+		date_text = font.render(date_str, False, self.attribute_group.text_color)
+		display.blit(date_text, (self.attribute_group.w - date_text.get_width() - 20, self.attribute_group.h-self.attribute_group.header_height-3))
+
 	'''Choose the selected option.'''
 	def setSelected(self, new_selected: int):
 		if new_selected < 0:

@@ -83,6 +83,23 @@ void handleIBus(PyObject* mka, const uint8_t sender, const uint8_t receiver, uin
 				MKAsetRun(mka, 0);
 			else
 				MKAsetRun(mka, 1);
+		} else if(data[0] == IBUS_CMD_IKE_RESP_VEHICLE_CONFIG) {
+			PyObject_SetAttrString(PyObject_GetAttrString(mka, "parameter_list"), "ike_24h", PyBool_FromLong(!(data[2]&0x1)));
+		} else if(data[0] == IBUS_CMD_IKE_OBC_TEXT) {
+			if(data[1] == 0x1) { //Time.
+				char time_string[l-2];
+				for(uint8_t i=3;i<l;i+=1)
+					time_string[i-3] = (char)(data[i]);
+				time_string[l-3] = '\0';
+				setTime(mka, time_string);
+			} else if(data[1] == 0x2) { //Date.
+				char date_string[l-2];
+				for(uint8_t i=3;i<l;i+=1)
+					date_string[i-3] = (char)(data[i]);
+				date_string[l-3] = '\0';
+
+				PyObject_SetAttrString(PyObject_GetAttrString(mka, "parameter_list"), "ike_datestring", Py_BuildValue("s", date_string));
+			}
 		}
 	} else if(sender == IBUS_DEVICE_BMBT) {
 		if(data[0] == IBUS_CMD_BMBT_KNOB) { //Knob turn.
@@ -93,9 +110,61 @@ void handleIBus(PyObject* mka, const uint8_t sender, const uint8_t receiver, uin
 			if(button == 0x05 && state == 2) //Enter button.
 				MKAenterButton(mka);
 		}
-	}
+	} 
 	#ifndef RPI_UART
 	if(data[0] != IBUS_CMD_IKE_IGN_STATUS_RESP)
 		MKAloop(mka);
 	#endif
+}
+
+void setTime(PyObject* mka, char* time_string) {
+	const int colon_index = getCharacterIndex(time_string, ':');
+	if(colon_index < 0)
+		return;
+
+	char hour_array[] = {time_string[colon_index - 2], time_string[colon_index - 1], '\0'};
+	char min_array[] = {time_string[colon_index + 1], time_string[colon_index + 2], '\0'};
+
+	int hour, min;
+	sscanf(hour_array, "%d", &hour);
+	sscanf(min_array, "%d", &min);
+
+	PyObject* parameter_list = PyObject_GetAttrString(mka, "parameter_list");
+	int ike_24h = PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "ike_24h"));
+	int meridian_index = getCharacterIndex(time_string, 'p');
+	if(meridian_index < 0)
+		meridian_index = getCharacterIndex(time_string, 'P');
+	if(meridian_index < 0)
+		meridian_index = getCharacterIndex(time_string, 'a');
+	if(meridian_index < 0)
+		meridian_index = getCharacterIndex(time_string, 'A');
+
+	if(meridian_index < 0) {
+		PyObject_SetAttrString(parameter_list, "ike_hour", PyLong_FromLong(hour));
+	} else {
+		int pm_index = getCharacterIndex(time_string, 'p');
+		if(pm_index < 0)
+			pm_index = getCharacterIndex(time_string, 'P');
+		
+		if(pm_index < 0) { //AM.
+			if(hour >= 12)
+				hour = 0;
+			
+			PyObject_SetAttrString(parameter_list, "ike_hour", PyLong_FromLong(hour));
+		} else { //PM.
+			PyObject_SetAttrString(parameter_list, "ike_hour", PyLong_FromLong(hour+12));
+		}
+	}
+	PyObject_SetAttrString(parameter_list, "ike_minute", PyLong_FromLong(min));
+}
+
+int getCharacterIndex(char* str, char desired) {
+	int i=0;
+	while(str[i] != '\0' && str[i] != desired)
+		i+=1;
+	
+	if(str[i] == desired)
+		return i;
+	else
+		return -1;
 }

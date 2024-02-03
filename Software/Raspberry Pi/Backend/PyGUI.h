@@ -4,6 +4,8 @@
 #include <python3.10/Python.h>
 #endif
 
+#include <stdio.h>
+
 #include "IBus_IO.h"
 
 #ifndef pygui_h
@@ -19,5 +21,7 @@ void MKAturnKnob(PyObject* mka, const uint8_t steps, const uint8_t clockwise);
 void MKAenterButton(PyObject* mka);
 
 void handleIBus(PyObject* mka, const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l);
+void setTime(PyObject* mka, char* time_string);
+int getCharacterIndex(char* str, char desired);
 
 #endif

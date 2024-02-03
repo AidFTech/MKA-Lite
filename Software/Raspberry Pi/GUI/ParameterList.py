@@ -33,3 +33,9 @@ class ParameterList:
 	headlights_on = False	#Whether headlights are on or off, for non-RLS vehicles.
 	audio_hud = True	#Whether to display the heads-up display for other audio sources.
 	autoconnect = True	#Whether to automatically start the MKA and mirrored phone when the car is turned on.
+
+	#Time and date parameters.
+	ike_hour = -1
+	ike_minute = -1
+	ike_datestring = "--/--/----"
+	ike_24h = True	#24hr format

@@ -35,6 +35,12 @@ class MirrorMenuWindow(MenuWindow):
 
 		pg.draw.rect(display, self.attribute_group.header_color, pg.Rect(0, 0, WINDOW_WIDTH, HEADER_HEIGHT))
 		pg.draw.rect(display, self.attribute_group.header_color, pg.Rect(0, WINDOW_HEIGHT-HEADER_HEIGHT, WINDOW_WIDTH, HEADER_HEIGHT))
+		self.drawClock(display)
+
+		font = self.attribute_group.main_font
+
+		title_text = font.render("MKA", False, self.attribute_group.text_color)
+		display.blit(title_text, (4,-3))
 
 		pg.draw.rect(display, self.attribute_group.border_color, pg.Rect(0, HEADER_HEIGHT, RECT_WIDTH, WINDOW_HEIGHT - 2*HEADER_HEIGHT - 2*OPTION_HEIGHT))
 		pg.draw.rect(display, self.attribute_group.border_outline, pg.Rect(0, HEADER_HEIGHT, RECT_WIDTH, WINDOW_HEIGHT - 2*HEADER_HEIGHT - 2*OPTION_HEIGHT), 1)
@@ -45,7 +51,6 @@ class MirrorMenuWindow(MenuWindow):
 		pg.draw.rect(display, self.attribute_group.border_color, pg.Rect(0, WINDOW_HEIGHT - HEADER_HEIGHT - OPTION_HEIGHT, RECT_WIDTH, OPTION_HEIGHT))
 		pg.draw.rect(display, self.attribute_group.border_outline, pg.Rect(0, WINDOW_HEIGHT - HEADER_HEIGHT - OPTION_HEIGHT, RECT_WIDTH, OPTION_HEIGHT), 1)
 
-		font = self.attribute_group.main_font
 		text = font.render(getMirrorMessage(self.parameter_group.phone_name, phone_type), False, self.attribute_group.text_color)
 		display.blit(text, (RECT_WIDTH + 10,HEADER_HEIGHT + 200))
 
