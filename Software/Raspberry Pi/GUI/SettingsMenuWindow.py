@@ -75,7 +75,7 @@ class SettingsMenuWindow(MenuWindow):
 		if self.parameter_group.light_level > 0:
 			self.MAX_SELECTED += 1
 			self.options = [""]*self.MAX_SELECTED
-			self.options[0] = SETTINGS_MSG_NIGHTSENS + self.parameter_group.night_level
+			self.options[0] = SETTINGS_MSG_NIGHTSENS + str(self.parameter_group.night_level)
 			add = 1
 		self.options[add] = SETTINGS_MSG_AUTOCONNECT
 		self.options[add + 1] = SETTINGS_MSG_SOURCE + "MKA" #TODO: Add source name.

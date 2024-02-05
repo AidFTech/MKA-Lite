@@ -110,13 +110,35 @@ void handleIBus(PyObject* mka, const uint8_t sender, const uint8_t receiver, uin
 			if(button == 0x05 && state == 2) //Enter button.
 				MKAenterButton(mka);
 		}
-	} 
+	} else if(sender == IBUS_DEVICE_LCM) {
+		if(data[0] == IBUS_CMD_LCM_BULB_IND_RESP) {
+			PyObject* parameter_list = PyObject_GetAttrString(mka, "parameter_list");
+			const uint8_t last_headlights_on = PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "headlights_on"));
+			const uint8_t light_level = PyLong_AsLong(PyObject_GetAttrString(parameter_list, "light_level"));
+
+			PyObject_SetAttrString(parameter_list, "headlights_on", PyBool_FromLong(data[1]&0x01));
+			if(light_level <= 0 && last_headlights_on != data[1]&0x01) { //RLS is not connected. Switch to day or night mode.
+				PyObject* set_night_mode = PyObject_GetAttrString(mka, "setNightMode");
+				PyObject_CallObject(set_night_mode, NULL);
+			}
+		}
+	} else if(sender == IBUS_DEVICE_RLS) {
+		if(data[0] == IBUS_CMD_RLS_LIGHT_CONTROL) {
+			const uint8_t light_level = data[1]>>4;
+			PyObject* parameter_list = PyObject_GetAttrString(mka, "parameter_list");
+			PyObject_SetAttrString(parameter_list, "light_level", PyLong_FromLong(light_level));
+
+			PyObject* set_night_mode = PyObject_GetAttrString(mka, "setNightMode");
+			PyObject_CallObject(set_night_mode, NULL);
+		}
+	}
 	#ifndef RPI_UART
 	if(data[0] != IBUS_CMD_IKE_IGN_STATUS_RESP)
 		MKAloop(mka);
 	#endif
 }
 
+//Set the displayed time.
 void setTime(PyObject* mka, char* time_string) {
 	const int colon_index = getCharacterIndex(time_string, ':');
 	if(colon_index < 0)
@@ -130,7 +152,6 @@ void setTime(PyObject* mka, char* time_string) {
 	sscanf(min_array, "%d", &min);
 
 	PyObject* parameter_list = PyObject_GetAttrString(mka, "parameter_list");
-	int ike_24h = PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "ike_24h"));
 	int meridian_index = getCharacterIndex(time_string, 'p');
 	if(meridian_index < 0)
 		meridian_index = getCharacterIndex(time_string, 'P');
@@ -158,6 +179,7 @@ void setTime(PyObject* mka, char* time_string) {
 	PyObject_SetAttrString(parameter_list, "ike_minute", PyLong_FromLong(min));
 }
 
+//Returns the position of the first occurence of a character in a C string.
 int getCharacterIndex(char* str, char desired) {
 	int i=0;
 	while(str[i] != '\0' && str[i] != desired)

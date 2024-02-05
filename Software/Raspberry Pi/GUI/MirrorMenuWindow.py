@@ -15,6 +15,7 @@ class MirrorMenuWindow(MenuWindow):
 		super().__init__(attribute_group, parameter_group, file_path)
 		self.MAX_SELECTED = 3
 		self.mirror_msg = "Start Phone Mirroring"	#Generic placeholder message.
+		self.selected = 1
 
 	def displayMenu(self, display: pg.surface):
 		carplay_img = pg.image.load(self.file_path + 'Apple_CarPlay_Logo_100.png')

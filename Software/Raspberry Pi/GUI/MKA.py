@@ -96,8 +96,6 @@ class MKA:
 				self.active_menu = SettingsMenuWindow.SettingsMenuWindow(self.attribute_group, self.parameter_list, self.file_path)
 			
 			self.parameter_list.next_menu = ParameterList.NEXTMENU_NO_MENU
-			self.active_menu.selected = 1
-
 
 	'''IBus knob turn. "Clockwise" is true if the knob is turned clockwise.'''
 	def knobTurn(self, clockwise: bool, count: int):
@@ -119,6 +117,12 @@ class MKA:
 			return
 		else:
 			self.active_menu.makeSelection()
+
+	def setNightMode(self):
+		if (self.parameter_list.headlights_on and self.parameter_list.light_level <= 0) or (self.parameter_list.light_level <= self.parameter_list.night_level and self.parameter_list.light_level > 0):
+			print("Night Mode On") #TODO: Send the night mode message.
+		else:
+			print("Night Mode Off") #TODO: Send the message to cancel night mode.
 	
 def getFileRoot(fname: str) -> str:
 	MYNAME = "MKA.py"

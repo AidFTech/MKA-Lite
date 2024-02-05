@@ -41,6 +41,7 @@
 #define IBUS_DEVICE_LCM 0xD0 /* Light control module */
 #define IBUS_DEVICE_IRIS 0xE0 /* Integrated radio information system */
 #define IBUS_DEVICE_ANZV 0xE7 /* Front display */
+#define IBUS_DEVICE_RLS 0xE8 /* Rain Light Sensor */
 #define IBUS_DEVICE_VM 0xED /* Video Module */
 #define IBUS_DEVICE_BMBT 0xF0 /* On-board monitor */
 #define IBUS_DEVICE_LOC 0xFF /* Local */
@@ -104,6 +105,9 @@
 #define IBUS_CMD_LCM_REQ_REDUNDANT_DATA 0x53
 #define IBUS_CMD_LCM_RESP_REDUNDANT_DATA 0x54
 #define IBUS_CMD_LCM_BULB_IND_REQ 0x5A
+#define IBUS_CMD_LCM_BULB_IND_RESP 0x5B
+
+#define IBUS_CMD_RLS_LIGHT_CONTROL 0x59
 
 #define IBUS_CMD_MOD_STATUS_REQ 0x01
 #define IBUS_CMD_MOD_STATUS_RESP 0x02
