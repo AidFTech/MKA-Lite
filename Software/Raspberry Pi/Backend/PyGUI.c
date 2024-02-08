@@ -73,7 +73,7 @@ void MKAenterButton(PyObject* mka) {
 }
 
 //Handle an IBus message.
-void handleIBus(PyObject* mka, const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l) {
+void handleIBus(PyObject* mka, const int ibus_port, const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l) {
 	if(l < 1)
 		return;
 
@@ -110,6 +110,8 @@ void handleIBus(PyObject* mka, const uint8_t sender, const uint8_t receiver, uin
 			if(button == 0x05 && state == 2) //Enter button.
 				MKAenterButton(mka);
 		}
+	} else if(sender == IBUS_DEVICE_RAD) {
+		handleRadioIBus(mka, ibus_port, sender, receiver, data, l);
 	} else if(sender == IBUS_DEVICE_LCM) {
 		if(data[0] == IBUS_CMD_LCM_BULB_IND_RESP) {
 			PyObject* parameter_list = PyObject_GetAttrString(mka, "parameter_list");
