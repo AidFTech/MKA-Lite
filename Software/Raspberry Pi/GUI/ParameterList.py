@@ -8,6 +8,8 @@ NEXTMENU_OEM_MENU = -1 #Return to the OEM nav menu.
 NEXTMENU_NO_MENU = 0
 NEXTMENU_MIRROR_MENU = 1
 NEXTMENU_SETTINGS_MENU = 2
+NEXTMENU_COLOR_MENU = 3
+NEXTMENU_CUSTOM_COLOR_MENU = 4
 
 '''A list of variables to be shared between the MKA object and its windows, as well as the C backend.'''
 class ParameterList:

@@ -6,9 +6,12 @@ if os.path.exists("./GUI") and not os.path.exists("./MKA_Defaults.py"):
 
 import pygame as pg
 import MKA_Defaults as defaults
+
 import MenuWindow
 import MirrorMenuWindow
 import SettingsMenuWindow
+import ColorMenuWindow
+
 from AttributeGroup import AttributeGroup
 import ParameterList
 
@@ -94,6 +97,8 @@ class MKA:
 				self.active_menu = MirrorMenuWindow.MirrorMenuWindow(self.attribute_group, self.parameter_list, self.file_path)
 			elif next_menu == ParameterList.NEXTMENU_SETTINGS_MENU:
 				self.active_menu = SettingsMenuWindow.SettingsMenuWindow(self.attribute_group, self.parameter_list, self.file_path)
+			elif next_menu == ParameterList.NEXTMENU_COLOR_MENU:
+				self.active_menu = ColorMenuWindow.ColorMenuWindow(self.attribute_group, self.parameter_list, self.file_path)
 			
 			self.parameter_list.next_menu = ParameterList.NEXTMENU_NO_MENU
 

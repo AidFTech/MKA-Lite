@@ -7,9 +7,10 @@ SETTINGS_MSG_NIGHTSENS = "Night Mode Sensitivity: "
 SETTINGS_MSG_AUTOCONNECT = "Auto Connect"
 SETTINGS_MSG_SOURCE = "Audio Source: "
 SETTINGS_MSG_HUD = "Audio HUD"
+SETTINGS_MSG_COLORS = "Colors"
 SETTINGS_MSG_BACK = "Back"
 
-DEFAULT_MAX = 4
+DEFAULT_MAX = 5
 
 '''The settings menu.'''
 class SettingsMenuWindow(MenuWindow):
@@ -80,7 +81,8 @@ class SettingsMenuWindow(MenuWindow):
 		self.options[add] = SETTINGS_MSG_AUTOCONNECT
 		self.options[add + 1] = SETTINGS_MSG_SOURCE + "MKA" #TODO: Add source name.
 		self.options[add + 2] = SETTINGS_MSG_HUD
-		self.options[add + 3] = SETTINGS_MSG_BACK
+		self.options[add + 3] = SETTINGS_MSG_COLORS
+		self.options[add + 4] = SETTINGS_MSG_BACK
 
 	def makeSelection(self):
 		selected = self.selected - 1
@@ -90,3 +92,5 @@ class SettingsMenuWindow(MenuWindow):
 			self.parameter_group.autoconnect = not self.parameter_group.autoconnect
 		elif SETTINGS_MSG_HUD in self.options[selected]:
 			self.parameter_group.audio_hud = not self.parameter_group.audio_hud
+		elif SETTINGS_MSG_COLORS in self.options[selected]:
+			self.parameter_group.next_menu = ParameterList.NEXTMENU_COLOR_MENU
