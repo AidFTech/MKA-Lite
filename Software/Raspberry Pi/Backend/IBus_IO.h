@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <time.h>
+#include <string.h>
 
 #include "IBus_Serial.h"
 
@@ -163,7 +164,7 @@
 int ibusSerialInit(char* port);
 void ibusSerialClose(const int port);
 
-int readIBusData(const int port, uint8_t* sender, uint8_t* receiver, uint8_t* data);
+int readIBusData(const int port, uint8_t* sender, uint8_t* receiver, uint8_t* data, int* new_port);
 void writeIBusData(const int port, const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l);
 
 uint8_t getChecksum(const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l);

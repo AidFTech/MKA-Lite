@@ -7,6 +7,6 @@
 #define mka_main_h
 
 int main(int argc, char* argv[]);
-void readIBus(PyObject* mka, const int port);
+void readIBus(PyObject* mka, int* port);
 
 #endif

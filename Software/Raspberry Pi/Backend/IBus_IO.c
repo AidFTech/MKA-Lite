@@ -6,91 +6,121 @@ int ibusSerialInit(char* port) {
 	gpioInitialise();
 	gpioSetMode(IB_RX, PI_INPUT);
 	gpioSetPullUpDown(IB_RX, PI_PUD_UP);
-	return iserialOpen(port);
-	#else
-	printf("Ready!\nEnter the sender, receiver, and data. Separate all characters with a space. Do not include the checksum.\n");
 	#endif
+	if(strlen(port) > 0)
+		return iserialOpen(port);
+	else {
+		#ifndef RPI_UART
+		printf("Ready!\nEnter the sender, receiver, and data. Separate all characters with a space. Do not include the checksum.\nTo use a serial port, enter the port link.\n");
+		return -1;
+		#endif
+	}
 }
 
 //Close the serial port.
 void ibusSerialClose(const int port) {
+	if(port >= 0)
+		iserialClose(port);
 	#ifdef RPI_UART
-	iserialClose(port);
 	gpioTerminate();
 	#endif
 }
 
 //Read IBus data. Return -1 if unsuccessful, otherwise return the number of bytes.
-int readIBusData(const int port, uint8_t* sender, uint8_t* receiver, uint8_t* data) {
-	#ifdef RPI_UART
-	if(iserialBytesAvailable(port) >= 2) {
-		const uint8_t s = (uint8_t)(iserialReadByte(port));
-		const uint8_t l = (uint8_t)(iserialReadByte(port));
+int readIBusData(const int port, uint8_t* sender, uint8_t* receiver, uint8_t* data, int* new_port) {
+	if(port >= 0) {
+		if(iserialBytesAvailable(port) >= 2) {
+			const uint8_t s = (uint8_t)(iserialReadByte(port));
+			const uint8_t l = (uint8_t)(iserialReadByte(port));
 
-		if(l<2)
-			return -1;
-		
-		clock_t start = clock();
-		while(iserialBytesAvailable(port) < l) {
-			if((clock() - start)/(CLOCKS_PER_SEC/1000) >= MAX_DELAY) {
+			if(l<2)
 				return -1;
+			
+			clock_t start = clock();
+			while(iserialBytesAvailable(port) < l) {
+				if((clock() - start)/(CLOCKS_PER_SEC/1000) >= MAX_DELAY) {
+					return -1;
+				}
 			}
-		}
-		
-		const uint8_t r = (uint8_t)(iserialReadByte(port));
+			
+			const uint8_t r = (uint8_t)(iserialReadByte(port));
 
-		char d_c[l-1];
-		iserialRead(port, d_c, l-1);
+			char d_c[l-1];
+			iserialRead(port, d_c, l-1);
 
-		uint8_t d[l-1];
-		for(uint8_t i=0;i<l-1;i+=1)
-			d[i] = (uint8_t)(d_c[i]);
-		
-		if(getChecksum(s, r, d, l-2) != d[l-2])
+			uint8_t d[l-1];
+			for(uint8_t i=0;i<l-1;i+=1)
+				d[i] = (uint8_t)(d_c[i]);
+			
+			if(getChecksum(s, r, d, l-2) != d[l-2])
+				return -1;
+
+			*sender = s;
+			*receiver = r;
+
+			for(uint8_t i=0;i<l-2;i+=1)
+				data[i] = d[i];
+			
+			return l-2;
+		} else
 			return -1;
+	} else {
+		#ifndef RPI_UART
+		char c;
+		int num = 0;
+		uint8_t l=0;
+		uint8_t data_in[255];
 
-		*sender = s;
-		*receiver = r;
+		do {
+			scanf("%c", &c);
+			if(c == '\n')
+				break;
+			else if(c == ' ') { //New character.
+				data_in[l] = (uint8_t)(num);
+				l += 1;
+				num = 0;
+			} else if((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+				num <<= 4;
+				num |= charToNumber(c);
+			} else if(c == '/') {
+				char* port_name;
+				scanf("%[^\n]s", port_name);
 
-		for(uint8_t i=0;i<l-2;i+=1)
-			data[i] = d[i];
+				char new_port_name[strlen(port_name) + 2];
+				new_port_name[0] = '/';
+				for(int i=0;i<=strlen(port_name);i+=1)
+					new_port_name[i+1] = port_name[i];
+				new_port_name[strlen(port_name) + 1] = '\0';
+
+				*new_port = ibusSerialInit(new_port_name);
+
+				if(*new_port >= 0) {
+					printf("Successfully opened %s!\n", new_port_name);
+					return 0;
+				} else {
+					printf("Failed to open %s.\n", new_port_name);
+					*new_port = -1;
+					return -1;
+				}
+			}
+		} while(c != '\n' && l < 255);
+		data_in[l] = num;
+		l+=1;
 		
-		return l-2;
-	} else
+		if(l >= 2) {
+			*sender = data_in[0];
+			*receiver = data_in[1];
+
+			for(uint8_t i=0;i<l-2;i+=1)
+				data[i] = data_in[i+2];
+
+			return l-2;
+		} else
+			return -1;
+		#else
 		return -1;
-	#else
-	char c;
-	int num = 0;
-	uint8_t l=0;
-	uint8_t data_in[255];
-
-	do {
-		scanf("%c", &c);
-		if(c == '\n')
-			break;
-		else if(c == ' ') { //New character.
-			data_in[l] = (uint8_t)(num);
-			l += 1;
-			num = 0;
-		} else if((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
-			num <<= 4;
-			num |= charToNumber(c);
-		}
-	} while(c != '\n' && l < 255);
-	data_in[l] = num;
-	l+=1;
-	
-	if(l >= 2) {
-		*sender = data_in[0];
-		*receiver = data_in[1];
-
-		for(uint8_t i=0;i<l-2;i+=1)
-			data[i] = data_in[i+2];
-
-		return l-2;
-	} else
-		return -1;
-	#endif
+		#endif
+	}
 }
 
 //Write IBus data to the serial port.
@@ -107,19 +137,23 @@ void writeIBusData(const int port, const uint8_t sender, const uint8_t receiver,
 
 	msg_data[full_length-1] = getChecksum(sender, receiver, data, l);
 	
-	#ifdef RPI_UART
-	clock_t start = clock();
-	while((clock() - start)/(CLOCKS_PER_SEC/1000) < IB_WAIT) {
-		if(gpioRead(IB_RX) == 0)
-			start = clock();
+	if(port >= 0) {
+		clock_t start = clock();
+		while((clock() - start)/(CLOCKS_PER_SEC/1000) < IB_WAIT) {
+			#ifdef RPI_UART
+			if(gpioRead(IB_RX) == 0)
+				start = clock();
+			#endif
+		}
+		for(uint8_t i=0;i<full_length;i+=1)
+			iserialWriteByte(port, msg_data[i]);
+	} else {
+		#ifndef RPI_UART
+		for(uint8_t i=0;i<full_length;i+=1)
+			printf("%X ", msg_data[i]);
+		printf("\n");
+		#endif
 	}
-	for(uint8_t i=0;i<full_length;i+=1)
-		iserialWriteByte(port, msg_data[i]);
-	#else
-	for(uint8_t i=0;i<full_length;i+=1)
-		printf("%X ", msg_data[i]);
-	printf("\n");
-	#endif
 }
 
 //Get an IBus checksum.

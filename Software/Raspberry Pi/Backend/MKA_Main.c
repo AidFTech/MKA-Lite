@@ -2,7 +2,11 @@
 
 //Main MKA code.
 int main(int argc, char* argv[]) {
+	#ifdef RPI_UART
 	int ibus = ibusSerialInit("/dev/ttyAMA0");
+	#else
+	int ibus = ibusSerialInit("");
+	#endif
 	wchar_t* program = pyInit(argc, argv);
 
 	PyObject* mka = startMKA("./GUI/MKA.py");
@@ -15,7 +19,7 @@ int main(int argc, char* argv[]) {
 		if(run <= 0)
 			break;
 		
-		readIBus(mka, ibus);
+		readIBus(mka, &ibus);
 		//TODO: Check for differences in the Python parameters to see if anything needs to be updated (e.g. song title).
 
 		if(MKAgetRun(mka) <= 0)
@@ -26,11 +30,11 @@ int main(int argc, char* argv[]) {
 }
 
 //Read/handle any waiting IBus messages.
-void readIBus(PyObject* mka, const int port) {
+void readIBus(PyObject* mka, int* port) {
 	uint8_t sender, receiver;
 	uint8_t data[255];
-	const int l = readIBusData(port, &sender, &receiver, data);
+	const int l = readIBusData(*port, &sender, &receiver, data, port);
 	if(l > 0) {
-		handleIBus(mka, port, sender, receiver, data, l);
+		handleIBus(mka, *port, sender, receiver, data, l);
 	}
 }
