@@ -14,6 +14,7 @@ import ColorMenuWindow
 
 from AttributeGroup import AttributeGroup
 import ParameterList
+import CarLinkList
 
 class MKA:
 	'''Fullscreen is defined as true if running on the Pi (defined in C). Full_interface is true if the full interface is required (e.g. for non-nav vehicles).'''
@@ -47,6 +48,7 @@ class MKA:
 		self.attribute_group.option_height = defaults.OPTION_HEIGHT
 		
 		self.parameter_list = ParameterList.ParameterList()	#The assigned parameter group.
+		self.carlink_list = CarLinkList.CarLinkList(self.parameter_list)	#The assigned CarLinkList
 
 		self.airplay_conf = open(path_str + 'airplay.conf','rb').read()	#A configuration file to be sent to the dongle.
 		self.oem_logo = open(path_str + 'BMW.png', 'rb').read()	#The Android Auto icon to be sent to the dongle.
