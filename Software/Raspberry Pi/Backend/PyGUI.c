@@ -77,7 +77,9 @@ void handleIBus(PyObject* mka, const int ibus_port, const uint8_t sender, const 
 	if(l < 1)
 		return;
 
-	if(sender == IBUS_DEVICE_IKE) {
+	if(receiver == IBUS_DEVICE_CDC && data[0] == 0x1) { //Ping.
+		sendPong(ibus_port, sender, 0);
+	} else if(sender == IBUS_DEVICE_IKE) {
 		if(data[0] == IBUS_CMD_IKE_IGN_STATUS_RESP) {
 			if((data[1]&0x1) == 0)
 				MKAsetRun(mka, 0);
@@ -138,6 +140,14 @@ void handleIBus(PyObject* mka, const int ibus_port, const uint8_t sender, const 
 	if(data[0] != IBUS_CMD_IKE_IGN_STATUS_RESP)
 		MKAloop(mka);
 	#endif
+}
+
+//Send a pong message.
+void sendPong(const int ibus_port, const uint8_t receiver, const int first_pong) {
+	uint8_t data[] = {0x2, 0x0};
+	const uint16_t l = sizeof(data);
+	writeIBusData(ibus_port, IBUS_DEVICE_CDC, receiver, data, l);
+	//TODO: Change data[1] for first pong.
 }
 
 //Set the displayed time.

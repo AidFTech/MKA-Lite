@@ -35,24 +35,27 @@ class USB_Connection:
 
 		device = self.device
 
-		device.reset()
-		device.set_configuration()
-		interface = device.get_active_configuration()[(0,0)]
+		try:
+			device.reset()
+			device.set_configuration()
+			interface = device.get_active_configuration()[(0,0)]
 
-		self.rx = usb.util.find_descriptor(interface, custom_match = lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_IN)
-		if self.rx is None:
+			self.rx = usb.util.find_descriptor(interface, custom_match = lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_IN)
+			if self.rx is None:
+				return False
+			self.rx.clear_halt()
+
+			self.tx = usb.util.find_descriptor(interface, custom_match = lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_OUT)
+			if self.tx is None:
+				return False
+			self.tx.clear_halt()
+
+			self.out_locker = threading.Lock()
+			self.running = True
+			self.run_thread = threading.Thread(target=self.readThread)
+			self.run_thread.start()
+		except usb.core.USBError:
 			return False
-		self.rx.clear_halt()
-
-		self.tx = usb.util.find_descriptor(interface, custom_match = lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_OUT)
-		if self.tx is None:
-			return False
-		self.tx.clear_halt()
-
-		self.out_locker = threading.Lock()
-		self.running = True
-		self.run_thread = threading.Thread(target=self.readThread)
-		self.run_thread.start()
 		return True
 	
 	def startDongle(self):
@@ -97,8 +100,8 @@ class USB_Connection:
 				if msg_read:
 					self.carlink_list.rx_cache.append(msg)
 
-		if not self.running:
-			self.stop()
+		#if not self.running:
+		#	self.stop()
 
 	def heartbeatThread(self):
 		while self.running and self.startup:
@@ -113,7 +116,8 @@ class USB_Connection:
 			time.sleep(Mirror_Protocol.Heartbeat.lifecycle)
 		
 		if not self.running or not self.startup:
-			self.stop()
+			self.running = False
+			self.startup = False
 
 
 	def sendMessage(self, message: Mirror_Protocol.Message):
@@ -141,10 +145,12 @@ class USB_Connection:
 		self.tx = None
 		try:
 			self.run_thread.join()
-		except RuntimeError:
+		except (RuntimeError, AttributeError):
 			pass
 
 		try:
 			self.heartbeat_thread.join()
-		except RuntimeError:
+		except (RuntimeError, AttributeError):
 			pass
+
+Error = usb.core.USBError

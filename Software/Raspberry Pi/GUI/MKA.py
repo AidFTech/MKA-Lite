@@ -16,6 +16,9 @@ from AttributeGroup import AttributeGroup
 import ParameterList
 import CarLinkList
 
+import Mirror_MirrorHandler
+import Mirror_Decoder
+
 class MKA:
 	'''Fullscreen is defined as true if running on the Pi (defined in C). Full_interface is true if the full interface is required (e.g. for non-nav vehicles).'''
 	def __init__(self, fullscreen: bool, full_interface: bool, file_path: str):
@@ -50,11 +53,19 @@ class MKA:
 		self.parameter_list = ParameterList.ParameterList()	#The assigned parameter group.
 		self.carlink_list = CarLinkList.CarLinkList(self.parameter_list)	#The assigned CarLinkList
 
-		self.airplay_conf = open(path_str + 'airplay.conf','rb').read()	#A configuration file to be sent to the dongle.
-		self.oem_logo = open(path_str + 'BMW.png', 'rb').read()	#The Android Auto icon to be sent to the dongle.
-		self.icon_120 = open(path_str + 'BMW_icon.png', 'rb').read()	#A Carplay icon to be sent to the dongle.
-		self.icon_180 = open(path_str + 'BMW_icon.png', 'rb').read()	#A Carplay icon to be sent to the dongle.
-		self.icon_256 = open(path_str + 'BMW_icon.png', 'rb').read()	#A Carplay icon to be sent to the dongle.
+		self.parameter_list.fullscreen = fullscreen
+
+		airplay_conf = open(path_str + 'airplay.conf','rb').read()	#A configuration file to be sent to the dongle.
+		oem_logo = open(path_str + 'BMW.png', 'rb').read()	#The Android Auto icon to be sent to the dongle.
+		icon_120 = open(path_str + 'BMW_icon.png', 'rb').read()	#A Carplay icon to be sent to the dongle.
+		icon_180 = open(path_str + 'BMW_icon.png', 'rb').read()	#A Carplay icon to be sent to the dongle.
+		icon_256 = open(path_str + 'BMW_icon.png', 'rb').read()	#A Carplay icon to be sent to the dongle.
+
+		self.carlink_list.oem_logo = oem_logo
+		self.carlink_list.airplay_conf = airplay_conf
+		self.carlink_list.icon_120 = icon_120
+		self.carlink_list.icon_180 = icon_180
+		self.carlink_list.icon_256 = icon_256
 
 		self.active_menu = MenuWindow.MenuWindow	#The active menu window.
 		self.active_menu = None
@@ -62,11 +73,16 @@ class MKA:
 			self.active_menu = MirrorMenuWindow.MirrorMenuWindow(self.attribute_group, self.parameter_list, self.file_path)
 			self.active_menu.setSelected(1)
 
+		self.mirror = Mirror_MirrorHandler.MirrorHandler(self.carlink_list)
+
 		self.run = True	#True if the program is running.
 
 	'''Loop function, to run while the Pi is running.'''
 	def loop(self):
 		self.display_surface.fill(self.attribute_group.br)
+
+		self.mirror.loop()
+		self.parameter_list.dongle_connected = self.mirror.usb_link.startup
 
 		if self.active_menu is not None:
 			self.active_menu.displayMenu(self.display_surface)
@@ -78,6 +94,9 @@ class MKA:
 
 		self.checkNextWindow()
 		self.run = self.handleEvents()
+
+		if not self.run:
+			self.mirror.stopAll()
 
 	'''Look for the <Escape> key or Close button.'''
 	def handleEvents(self) -> bool:
@@ -109,21 +128,32 @@ class MKA:
 		if self.active_menu is None:
 			return
 
-		#TODO: Determine whether the phone mirror is active.
-		if not clockwise:
-			for i in range(count):
-				self.active_menu.incrementSelected()
+		if not self.mirror.getWindow():
+			if not clockwise:
+				for i in range(count):
+					self.active_menu.incrementSelected()
+			else:
+				for i in range(count):
+					self.active_menu.decrementSelected()
 		else:
-			for i in range(count):
-				self.active_menu.decrementSelected()
+			if not clockwise:
+				for i in range(count):
+					self.mirror.sendMirrorCommand(Mirror_Decoder.KeyEvent.BUTTON_RIGHT)
+			else:
+				for i in range(count):
+					self.mirror.sendMirrorCommand(Mirror_Decoder.KeyEvent.BUTTON_LEFT)
+
 
 	'''Enter button pressed. Normally this will call a function in the active menu.'''
 	def handleEnterButton(self):
-		#TODO: Determine whether the phone mirror is active.
-		if self.active_menu is None:
-			return
+		if not self.mirror.getWindow():
+			if self.active_menu is None:
+				return
+			else:
+				self.active_menu.makeSelection()
 		else:
-			self.active_menu.makeSelection()
+			self.mirror.sendMirrorCommand(Mirror_Decoder.KeyEvent.BUTTON_SELECT_DOWN)
+			self.mirror.sendMirrorCommand(Mirror_Decoder.KeyEvent.BUTTON_SELECT_UP)
 
 	def setNightMode(self):
 		if (self.parameter_list.headlights_on and self.parameter_list.light_level <= 0) or (self.parameter_list.light_level <= self.parameter_list.night_level and self.parameter_list.light_level > 0):

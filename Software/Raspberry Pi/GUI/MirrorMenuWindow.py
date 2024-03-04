@@ -6,8 +6,8 @@ import pygame as pg
 SETTINGS_MSG = "Settings"
 
 NO_PHONE = 0
-ANDROID = 1
-CARPLAY = 2
+ANDROID = 5
+CARPLAY = 3
 
 '''The phone mirror menu.'''
 class MirrorMenuWindow(MenuWindow):
@@ -52,7 +52,7 @@ class MirrorMenuWindow(MenuWindow):
 		pg.draw.rect(display, self.attribute_group.border_color, pg.Rect(0, WINDOW_HEIGHT - HEADER_HEIGHT - OPTION_HEIGHT, RECT_WIDTH, OPTION_HEIGHT))
 		pg.draw.rect(display, self.attribute_group.border_outline, pg.Rect(0, WINDOW_HEIGHT - HEADER_HEIGHT - OPTION_HEIGHT, RECT_WIDTH, OPTION_HEIGHT), 1)
 
-		text = font.render(getMirrorMessage(self.parameter_group.phone_name, phone_type), False, self.attribute_group.text_color)
+		text = font.render(self.getMirrorMessage(self.parameter_group.phone_name, phone_type), False, self.attribute_group.text_color)
 		display.blit(text, (RECT_WIDTH + 10,HEADER_HEIGHT + 200))
 
 		WINDOW_HEIGHT = self.attribute_group.h
@@ -83,10 +83,13 @@ class MirrorMenuWindow(MenuWindow):
 		elif self.selected == 3:
 			self.parameter_group.next_menu = ParameterList.NEXTMENU_OEM_MENU
 
-def getMirrorMessage(phone_name: str, phone_type: int) -> str:
-	if phone_type == ANDROID:
-		return "Android Auto: " + phone_name
-	elif phone_type == CARPLAY:
-		return "Apple CarPlay: " + phone_name
-	else:
-		return "Start Phone Mirroring"
+	def getMirrorMessage(self, phone_name: str, phone_type: int) -> str:
+		if phone_type == ANDROID:
+			return "Android Auto: " + phone_name
+		elif phone_type == CARPLAY:
+			return "Apple CarPlay: " + phone_name
+		else:
+			if self.parameter_group.dongle_connected:
+				return "Start Phone Mirroring"
+			else:
+				return "CarLinKit Not Connected"

@@ -21,6 +21,8 @@ int MKAgetRun(PyObject* mka);
 void MKAturnKnob(PyObject* mka, const uint8_t steps, const uint8_t clockwise);
 void MKAenterButton(PyObject* mka);
 
+void sendPong(const int ibus_port, const uint8_t receiver, const int first_pong);
+
 void handleIBus(PyObject* mka, const int ibus_port, const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l);
 void setTime(PyObject* mka, char* time_string);
 int getCharacterIndex(char* str, char desired);

@@ -17,10 +17,12 @@ class ParameterList:
 	audio_selected = False	#True if the radio has sent the "Play" command to the MKA.
 	phone_active = False	#True if the phone screen is active.
 	next_menu = NEXTMENU_NO_MENU	#The next menu to open.
+	fullscreen = False	#True if the program is rendered in fullscreen, i.e. if tested on a Pi.
 	
 	#Phone parameters.
 	phone_type = NO_PHONE	#The type of phone connected.
 	phone_name = ""	#The name of the connected phone.
+	dongle_connected = False	#Whether or not the dongle is connected.
 	
 	#Music parameters.
 	song_title = ""	#The current song title.
