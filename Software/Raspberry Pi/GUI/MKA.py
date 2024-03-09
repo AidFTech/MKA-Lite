@@ -11,6 +11,7 @@ import MenuWindow
 import MirrorMenuWindow
 import SettingsMenuWindow
 import ColorMenuWindow
+import NightModeMenuWindow
 
 from AttributeGroup import AttributeGroup
 import ParameterList
@@ -20,8 +21,8 @@ import Mirror_MirrorHandler
 import Mirror_Decoder
 
 class MKA:
-	'''Fullscreen is defined as true if running on the Pi (defined in C). Full_interface is true if the full interface is required (e.g. for non-nav vehicles).'''
 	def __init__(self, fullscreen: bool, full_interface: bool, file_path: str):
+		"""Fullscreen is defined as true if running on the Pi (defined in C). Full_interface is true if the full interface is required (e.g. for non-nav vehicles)."""
 		pg.init()
 		if fullscreen:
 			pg.display.set_mode(flags=pg.FULLSCREEN)
@@ -77,8 +78,8 @@ class MKA:
 
 		self.run = True	#True if the program is running.
 
-	'''Loop function, to run while the Pi is running.'''
 	def loop(self):
+		"""Loop function, to run while the Pi is running."""
 		self.display_surface.fill(self.attribute_group.br)
 
 		self.mirror.loop()
@@ -98,8 +99,9 @@ class MKA:
 		if not self.run:
 			self.mirror.stopAll()
 
-	'''Look for the <Escape> key or Close button.'''
+	
 	def handleEvents(self) -> bool:
+		"""Look for the <Escape> key or Close button."""
 		events = pg.event.get()
 		for e in events:
 			if e.type == pg.QUIT:
@@ -110,8 +112,8 @@ class MKA:
 		
 		return True
 	
-	'''Open a queued window.'''
 	def checkNextWindow(self):
+		"""Open a queued window."""
 		next_menu = self.parameter_list.next_menu
 		if next_menu > 0:
 			if next_menu == ParameterList.NEXTMENU_MIRROR_MENU:
@@ -120,11 +122,13 @@ class MKA:
 				self.active_menu = SettingsMenuWindow.SettingsMenuWindow(self.attribute_group, self.parameter_list, self.file_path)
 			elif next_menu == ParameterList.NEXTMENU_COLOR_MENU:
 				self.active_menu = ColorMenuWindow.ColorMenuWindow(self.attribute_group, self.parameter_list, self.file_path)
+			elif next_menu == ParameterList.NEXTMENU_NIGHT_SENS_MENU:
+				self.active_menu = NightModeMenuWindow.NightModeMenuWindow(self.attribute_group, self.parameter_list, self.file_path)
 			
 			self.parameter_list.next_menu = ParameterList.NEXTMENU_NO_MENU
 
-	'''IBus knob turn. "Clockwise" is true if the knob is turned clockwise.'''
 	def knobTurn(self, clockwise: bool, count: int):
+		"""IBus knob turn. "Clockwise" is true if the knob is turned clockwise."""
 		if self.active_menu is None:
 			return
 
@@ -136,16 +140,15 @@ class MKA:
 				for i in range(count):
 					self.active_menu.decrementSelected()
 		else:
-			if not clockwise:
+			if clockwise:
 				for i in range(count):
 					self.mirror.sendMirrorCommand(Mirror_Decoder.KeyEvent.BUTTON_RIGHT)
 			else:
 				for i in range(count):
 					self.mirror.sendMirrorCommand(Mirror_Decoder.KeyEvent.BUTTON_LEFT)
 
-
-	'''Enter button pressed. Normally this will call a function in the active menu.'''
 	def handleEnterButton(self):
+		"""Enter button pressed. Normally this will call a function in the active menu."""
 		if not self.mirror.getWindow():
 			if self.active_menu is None:
 				return
@@ -155,11 +158,31 @@ class MKA:
 			self.mirror.sendMirrorCommand(Mirror_Decoder.KeyEvent.BUTTON_SELECT_DOWN)
 			self.mirror.sendMirrorCommand(Mirror_Decoder.KeyEvent.BUTTON_SELECT_UP)
 
-	def setNightMode(self):
-		if (self.parameter_list.headlights_on and self.parameter_list.light_level <= 0) or (self.parameter_list.light_level <= self.parameter_list.night_level and self.parameter_list.light_level > 0):
-			print("Night Mode On") #TODO: Send the night mode message.
+	def handleBackButton(self):
+		"""Back button pressed. Normally this will call a function in the active menu."""
+		if not self.mirror.getWindow():
+			if self.active_menu is None:
+				return
+			else:
+				self.active_menu.goBack()
 		else:
-			print("Night Mode Off") #TODO: Send the message to cancel night mode.
+			self.mirror.sendMirrorCommand(Mirror_Decoder.KeyEvent.BUTTON_BACK)
+
+	def handleHomeButton(self):
+		"""Home button pressed. Normally this will call a function in the active menu."""
+		if not self.mirror.getWindow():
+			if self.active_menu is not MirrorMenuWindow.MirrorMenuWindow:
+				self.parameter_list.next_menu = ParameterList.NEXTMENU_MIRROR_MENU
+		else:
+			self.mirror.sendMirrorCommand(Mirror_Decoder.KeyEvent.BUTTON_HOME)
+
+
+	def setNightMode(self):
+		"""Set whether night mode is active."""
+		if (self.parameter_list.headlights_on and self.parameter_list.light_level <= 0) or (self.parameter_list.light_level <= self.parameter_list.night_level and self.parameter_list.light_level > 0):
+			self.mirror.sendMirrorCommand(Mirror_Decoder.KeyEvent.NIGHT_MODE)
+		else:
+			self.mirror.sendMirrorCommand(Mirror_Decoder.KeyEvent.DAY_MODE)
 	
 def getFileRoot(fname: str) -> str:
 	MYNAME = "MKA.py"

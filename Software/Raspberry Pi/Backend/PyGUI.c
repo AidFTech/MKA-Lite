@@ -72,6 +72,18 @@ void MKAenterButton(PyObject* mka) {
 	PyObject_CallObject(handle_enter_button, NULL);
 }
 
+//Press the back/phone button.
+void MKAbackButton(PyObject* mka) {
+	PyObject* handle_back = PyObject_GetAttrString(mka, "handleBackButton");
+	PyObject_CallObject(handle_back, NULL);
+}
+
+//Press the home button. (Hold the phone button)
+void MKAhomeButton(PyObject* mka) {
+	PyObject* handle_home = PyObject_GetAttrString(mka, "handleHomeButton");
+	PyObject_CallObject(handle_home, NULL);
+}
+
 //Handle an IBus message.
 void handleIBus(PyObject* mka, const int ibus_port, const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l) {
 	if(l < 1)
@@ -111,6 +123,10 @@ void handleIBus(PyObject* mka, const int ibus_port, const uint8_t sender, const 
 			const uint8_t button = data[1]&0x3F, state = (data[1]&0xC0)>>6;
 			if(button == 0x05 && state == 2) //Enter button.
 				MKAenterButton(mka);
+			else if(button == 0x8 && state == 2) //Phone button, released.
+				MKAbackButton(mka);
+			else if(button == 0x8 && state == 1) //Phone button, held.
+				MKAhomeButton(mka);
 		}
 	} else if(sender == IBUS_DEVICE_RAD) {
 		handleRadioIBus(mka, ibus_port, sender, receiver, data, l);
@@ -201,4 +217,60 @@ int getCharacterIndex(char* str, char desired) {
 		return i;
 	else
 		return -1;
+}
+
+//Check the parameter list and send IBus data as needed.
+void checkParameterList(PyObject* mka, ParameterList* current_parameters, const int ibus_port) {
+	PyObject* parameter_list = PyObject_GetAttrString(mka, "parameter_list");
+
+	const int8_t phone_type = PyLong_AsLong(PyObject_GetAttrString(parameter_list, "phone_type"))&0xFF;
+	const int8_t version = 5;	//TODO: Sync with GT.
+
+	const bool phone_active = PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "phone_active"));
+	const bool playing = PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "playing"));
+
+	char* song_title = PyBytes_AsString(PyUnicode_AsEncodedString(PyObject_GetAttrString(parameter_list, "song_title"), "utf-8", "strict"));
+	if(strlen(song_title) > STRING_BUF_LEN)
+		song_title[STRING_BUF_LEN - 1] = '\0';
+	
+	char* artist = PyBytes_AsString(PyUnicode_AsEncodedString(PyObject_GetAttrString(parameter_list, "artist"), "utf-8", "strict"));
+	if(strlen(artist) > STRING_BUF_LEN)
+	artist[STRING_BUF_LEN - 1] = '\0';
+
+	char* album = PyBytes_AsString(PyUnicode_AsEncodedString(PyObject_GetAttrString(parameter_list, "album"), "utf-8", "strict"));
+	if(strlen(album) > STRING_BUF_LEN)
+		album[STRING_BUF_LEN - 1] = '\0';
+
+	char* app = PyBytes_AsString(PyUnicode_AsEncodedString(PyObject_GetAttrString(parameter_list, "app"), "utf-8", "strict"));
+	if(strlen(app) > STRING_BUF_LEN)
+		app[STRING_BUF_LEN - 1] = '\0';
+
+	bool refresh = false; //True if a refresh message is required.
+
+	if(strcmp(song_title, current_parameters->song_title) != 0) {
+		strcpy(current_parameters->song_title, song_title);
+		sendRadioText(song_title, SONG_NAME, version, ibus_port);
+		refresh = true;
+	}
+
+	if(strcmp(artist, current_parameters->artist) != 0) {
+		strcpy(current_parameters->artist, artist);
+		sendRadioText(artist, ARTIST, version, ibus_port);
+		refresh = true;
+	}
+
+	if(strcmp(album, current_parameters->album) != 0) {
+		strcpy(current_parameters->album, album);
+		sendRadioText(album, ALBUM, version, ibus_port);
+		refresh = true;
+	}
+
+	if(strcmp(app, current_parameters->app_name)) {
+		strcpy(current_parameters->app_name, app);
+		sendRadioText(app, APP, version, ibus_port);
+		refresh = true;
+	}
+
+	if(refresh && version >= 5) 
+		sendRefresh(ibus_port);
 }

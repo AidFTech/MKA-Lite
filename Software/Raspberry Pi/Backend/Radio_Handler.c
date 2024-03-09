@@ -60,3 +60,43 @@ void setSelected(PyObject* parameter_list, const int selected) {
 	PyObject_SetAttrString(parameter_list, "audio_selected", PyBool_FromLong(selected));
 	//TODO: Start/stop phone music playback.
 }
+
+//Send a radio text change message. Returns number of bytes if successful, -1 if not.
+int sendRadioText(const char* text, const uint8_t position, const int8_t version, const int port) {
+	if(version >= 5) { //Newer GT.
+		uint8_t index = 0x40;
+		if(position == SONG_NAME)
+			index = 0x41;
+		else if(position == ARTIST)
+			index = 0x42;
+		else if(position == ALBUM)
+			index = 0x43;
+		else if(position == APP)
+			index = 0x44;
+		else
+			return -1;
+
+		int new_len = strlen(text);
+		if(new_len <= 0)
+			new_len = 1;
+
+		char text_message[4+new_len];
+		text_message[0] = IBUS_CMD_GT_WRITE_WITH_CURSOR;
+		text_message[1] = 0x63;
+		text_message[2] = 0x1;
+		text_message[3] = index;
+		for(int i=0;i<strlen(text);i+=1)
+			text_message[i+4] = text[i];
+
+		if(strlen(text) <= 0)
+			text_message[4] = ' ';
+
+		writeIBusData(port, IBUS_DEVICE_RAD, IBUS_DEVICE_GT, text_message, sizeof(text_message));
+		return sizeof(text_message);
+	} else return -1;
+}
+
+void sendRefresh(const int port) {
+	char refresh_msg[] = {IBUS_CMD_GT_WRITE_WITH_CURSOR, 0x63, 0x1, 0x0};
+	writeIBusData(port, IBUS_DEVICE_RAD, IBUS_DEVICE_GT, refresh_msg, sizeof(refresh_msg));
+}

@@ -30,8 +30,8 @@ class USB_Connection:
 		start_time = time.time()
 		while self.device == None:
 			self.device = usb.core.find(idVendor = vendor_id, idProduct = product_id)
-			if time.time() - start_time >= MAX_WAIT:
-				return False
+			#if time.time() - start_time >= MAX_WAIT:
+			#	return False
 
 		device = self.device
 

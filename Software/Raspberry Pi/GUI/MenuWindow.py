@@ -84,3 +84,7 @@ class MenuWindow:
 	'''Perform the selected option.'''
 	def makeSelection(self):
 		pass
+
+	'''Handle the Back button.'''
+	def goBack(self):
+		pass

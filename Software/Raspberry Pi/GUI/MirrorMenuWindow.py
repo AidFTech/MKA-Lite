@@ -9,8 +9,8 @@ NO_PHONE = 0
 ANDROID = 5
 CARPLAY = 3
 
-'''The phone mirror menu.'''
 class MirrorMenuWindow(MenuWindow):
+	"""The phone mirror menu."""
 	def __init__(self, attribute_group: AttributeGroup, parameter_group: ParameterList.ParameterList, file_path: str):
 		super().__init__(attribute_group, parameter_group, file_path)
 		self.MAX_SELECTED = 3

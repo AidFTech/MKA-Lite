@@ -12,6 +12,7 @@ int main(int argc, char* argv[]) {
 	PyObject* mka = startMKA("./GUI/MKA.py");
 
 	int run = MKAgetRun(mka); //True if the MKA is running.
+	ParameterList parameters;
 	while(run > 0) {
 		MKAloop(mka);
 		run = MKAgetRun(mka);
@@ -20,7 +21,7 @@ int main(int argc, char* argv[]) {
 			break;
 		
 		readIBus(mka, &ibus);
-		//TODO: Check for differences in the Python parameters to see if anything needs to be updated (e.g. song title).
+		checkParameterList(mka, &parameters, ibus);
 
 		if(MKAgetRun(mka) <= 0)
 			break;

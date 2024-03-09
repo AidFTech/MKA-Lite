@@ -28,6 +28,9 @@ class KeyEvent(IntEnum):
 	BUTTON_TOGGLE = 203
 	BUTTON_NEXT_TRACK = 204
 	BUTTON_PREV_TRACK = 205
+
+	NIGHT_MODE = 16
+	DAY_MODE = 17
 class Decoder:
 	class _Thread(threading.Thread):
 		def __init__(self, owner, full: bool, w=720, h=480):
@@ -81,10 +84,7 @@ class Decoder:
 		self.player.window_minimized=not window_status
 
 	def getWindow(self) -> bool:
-		if self.player.window_minimized is bool:
-			return not self.player.window_minimized
-		else:
-			return False
+		return not self.player.window_minimized
 
 	def log(self, loglevel, component, message):
 		print('[{}] {}: {}'.format(loglevel, component, message))

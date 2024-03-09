@@ -12,8 +12,9 @@ SETTINGS_MSG_BACK = "Back"
 
 DEFAULT_MAX = 5
 
-'''The settings menu.'''
+
 class SettingsMenuWindow(MenuWindow):
+	"""The settings menu."""
 	def __init__(self, attribute_group: AttributeGroup, parameter_group: ParameterList.ParameterList, file_path: str):
 		super().__init__(attribute_group, parameter_group, file_path)
 		self.MAX_SELECTED = DEFAULT_MAX
@@ -94,3 +95,8 @@ class SettingsMenuWindow(MenuWindow):
 			self.parameter_group.audio_hud = not self.parameter_group.audio_hud
 		elif SETTINGS_MSG_COLORS in self.options[selected]:
 			self.parameter_group.next_menu = ParameterList.NEXTMENU_COLOR_MENU
+		elif SETTINGS_MSG_NIGHTSENS in self.options[selected]:
+			self.parameter_group.next_menu = ParameterList.NEXTMENU_NIGHT_SENS_MENU
+
+	def goBack(self):
+		self.parameter_group.next_menu = ParameterList.NEXTMENU_MIRROR_MENU
