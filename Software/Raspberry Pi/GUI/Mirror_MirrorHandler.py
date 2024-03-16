@@ -38,35 +38,39 @@ class MirrorHandler:
 		if len(self.link_list.rx_cache) > 0:	#Message waiting.
 			for i in range(0,len(self.link_list.rx_cache)):
 				msg = self.link_list.rx_cache[i]
-				if isinstance(msg, Mirror_Protocol.Open):	#Startup message.
-					self.usb_link.sendMultiple(Mirror_Protocol.opened_info)
-					self.usb_link.sendMessage(Mirror_Protocol.MetaData(mediaDelay = 300, androidAutoSizeW = 800, AndroidAutoSizeH = 480))
-
-					self.usb_link.startDongle()
-				elif isinstance(msg, Mirror_Protocol.Plugged):	#Phone connected.
-					self.parameters.phone_type = int(msg.phone_type)
-					self.startPhoneConnection()
-				elif isinstance(msg, Mirror_Protocol.Unplugged):	#Phone disconnected.
-					self.parameters.phone_type = 0
-					self.parameters.phone_name = ""
-					self.stopPhoneConnection()
-				elif isinstance(msg, Mirror_Protocol.VideoData):	#Video data. Cache.
-					self.videomem_data = msg.data
-					if self.decoder is not None:
-						self.decoder.send(msg.data)
-				elif isinstance(msg, Mirror_Protocol.MetaData):	#Metadata. Interpret.
-					self.handleMetaData(msg)
-				elif isinstance(msg, Mirror_Protocol.AudioData):	#Audio data. Handle appropriately.
-					if msg.command == Mirror_Protocol.AudioData.Command.AUDIO_MEDIA_START and not self.parameters.audio_selected:
-						self.sendMirrorCommand(Mirror_Decoder.KeyEvent.BUTTON_PAUSE)
-					
-					if self.parameters.audio_selected:
-						if msg.command == Mirror_Protocol.AudioData.Command.AUDIO_MEDIA_START:
-							pass	#TODO: Play symbol?
-						elif msg.command == Mirror_Protocol.AudioData.Command.AUDIO_MEDIA_STOP:
-							pass	#TODO: Pause symbol?
+				self.interpretMessage(msg)
 
 			self.link_list.rx_cache.clear()
+
+	def interpretMessage(self, msg: Mirror_Protocol.Message):
+		if isinstance(msg, Mirror_Protocol.Open):	#Startup message.
+			self.usb_link.sendMultiple(Mirror_Protocol.opened_info)
+			self.usb_link.sendMessage(Mirror_Protocol.MetaData(mediaDelay = 300, androidAutoSizeW = 800, AndroidAutoSizeH = 480))
+
+			self.usb_link.startDongle()
+		elif isinstance(msg, Mirror_Protocol.Plugged):	#Phone connected.
+			self.parameters.phone_type = int(msg.phone_type)
+			self.startPhoneConnection()
+		elif isinstance(msg, Mirror_Protocol.Unplugged):	#Phone disconnected.
+			self.parameters.phone_type = 0
+			self.parameters.phone_name = ""
+			self.stopPhoneConnection()
+		elif isinstance(msg, Mirror_Protocol.VideoData):	#Video data. Cache.
+			self.videomem_data = msg.data
+			if self.decoder is not None:
+				self.decoder.send(msg.data)
+		elif isinstance(msg, Mirror_Protocol.MetaData):	#Metadata. Interpret.
+			self.handleMetaData(msg)
+		elif isinstance(msg, Mirror_Protocol.AudioData):	#Audio data. Handle appropriately.
+			#if msg.command == Mirror_Protocol.AudioData.Command.AUDIO_MEDIA_START and not self.parameters.audio_selected:
+			#	self.sendMirrorCommand(Mirror_Decoder.KeyEvent.BUTTON_PAUSE)
+			
+			#if self.parameters.audio_selected:
+			#	if msg.command == Mirror_Protocol.AudioData.Command.AUDIO_MEDIA_START:
+			#		pass	#TODO: Play symbol?
+			#	elif msg.command == Mirror_Protocol.AudioData.Command.AUDIO_MEDIA_STOP:
+			#		pass	#TODO: Pause symbol?
+			pass
 
 	def connectDongleThread(self, manufacturer_id: int, device_id: int):
 		while not self.usb_link.running and self.run:
