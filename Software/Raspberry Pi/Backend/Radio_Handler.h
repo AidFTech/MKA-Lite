@@ -20,7 +20,9 @@
 void handleRadioIBus(PyObject* mka, const int ibus_port, const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l);
 
 void sendCDStatusMessage(const int ibus_port, const uint8_t status, const uint8_t receiver);
-void setSelected(PyObject* parameter_list, const int selected);
+void setSelected(PyObject* mka, PyObject* parameter_list, const int selected);
+
+void seekTrack(PyObject* mka, const uint8_t forward);
 
 int sendRadioText(const char* text, const uint8_t position, const int8_t version, const int port);
 void sendRefresh(const int port);

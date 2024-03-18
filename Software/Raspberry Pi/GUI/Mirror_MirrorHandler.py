@@ -27,10 +27,6 @@ class MirrorHandler:
 
 	def __del__(self):
 		self.stopAll()
-		try:
-			self.startup_thread.join()
-		except AttributeError:
-			pass
 			
 	def loop(self):
 		#if not self.usb_link.running and not self.startup_thread.is_alive():
@@ -96,6 +92,7 @@ class MirrorHandler:
 			self.decoder = Mirror_Decoder.Decoder(self.parameters.fullscreen, pg.display.get_surface().get_width(), pg.display.get_surface().get_height())
 
 		self.decoder.setWindow(self.parameters.autoconnect)
+		self.usb_link.writepipe = self.decoder.getWritePipe()
 
 	def stopPhoneConnection(self):
 		self.parameters.next_menu = ParameterList.NEXTMENU_MIRROR_MENU
@@ -106,6 +103,7 @@ class MirrorHandler:
 		self.parameters.app = ""
 
 		if self.decoder is not None:
+			self.usb_link.writepipe = -1
 			self.decoder.send(self.videomem_data)
 			self.decoder.stop()
 			self.decoder = None
@@ -148,3 +146,7 @@ class MirrorHandler:
 		self.run = False
 		self.stopPhoneConnection()
 		self.usb_link.stop()
+		try:
+			self.startup_thread.join()
+		except AttributeError:
+			pass

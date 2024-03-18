@@ -94,7 +94,7 @@ class MKA:
 		pg.display.update()
 
 		self.checkNextWindow()
-		self.run = self.handleEvents()
+		self.run = self.handleEvents() and self.run
 
 		if not self.run:
 			self.mirror.stopAll()
@@ -176,6 +176,18 @@ class MKA:
 		else:
 			self.mirror.sendMirrorCommand(Mirror_Decoder.KeyEvent.BUTTON_HOME)
 
+	def handleSeekButton(self, right: bool):
+		"""One of the seek buttons pressed. "Right" is true if it was the right button that was pressed."""
+		if self.parameter_list.audio_selected:
+			if right:
+				self.mirror.sendMirrorCommand(Mirror_Decoder.KeyEvent.BUTTON_NEXT_TRACK)
+			else:
+				self.mirror.sendMirrorCommand(Mirror_Decoder.KeyEvent.BUTTON_PREV_TRACK)
+
+	def handleDirectionButton(self):
+		"""Direction button pressed. Play/pause."""
+		if self.parameter_list.audio_selected:
+			self.mirror.sendMirrorCommand(Mirror_Decoder.KeyEvent.BUTTON_TOGGLE)
 
 	def setNightMode(self):
 		"""Set whether night mode is active."""
@@ -183,6 +195,13 @@ class MKA:
 			self.mirror.sendMirrorCommand(Mirror_Decoder.KeyEvent.NIGHT_MODE)
 		else:
 			self.mirror.sendMirrorCommand(Mirror_Decoder.KeyEvent.DAY_MODE)
+
+	def setSelected(self):
+		"""Send a message to start/stop music if the source is changed."""
+		if self.parameter_list.audio_selected:
+			self.mirror.sendMirrorCommand(Mirror_Decoder.KeyEvent.BUTTON_PLAY)
+		else:
+			self.mirror.sendMirrorCommand(Mirror_Decoder.KeyEvent.BUTTON_PAUSE)
 	
 def getFileRoot(fname: str) -> str:
 	MYNAME = "MKA.py"

@@ -70,6 +70,9 @@ class USB_Connection:
 		while self.running == True:
 			msg_read = False
 
+			if not self.running:
+				break
+
 			try:
 				data = self.rx.read(Mirror_Protocol.Message.headersize)
 			except usb.core.USBError as e:

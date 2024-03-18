@@ -13,17 +13,22 @@ void handleRadioIBus(PyObject* mka, const int ibus_port, const uint8_t sender, c
 				sendCDStatusMessage(ibus_port, IBUS_CDC_STAT_STOP, sender);
 		} else if(data[1] == IBUS_CDC_CMD_STOP_PLAYING) {
 			sendCDStatusMessage(ibus_port, IBUS_CDC_STAT_STOP, sender);
-			setSelected(parameter_list, 0);
+			setSelected(mka, parameter_list, 0);
 		} else if(data[1] == IBUS_CDC_CMD_START_PLAYING || data[1] == IBUS_CDC_CMD_PAUSE_PLAYING) {
 			sendCDStatusMessage(ibus_port, IBUS_CDC_STAT_PLAYING, sender);
-			setSelected(parameter_list, 1);
+			setSelected(mka, parameter_list, 1);
 		} else if(data[1] == IBUS_CDC_CMD_CHANGE_TRACK) {
-			if(data[2] == 0x0) {
-				//TODO: Next track.
-			} else if(data[2] == 0x01) {
-				//TODO: Previous track.
+			int phone_active = PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "phone_active"));
+			if(phone_active) {
+				if(data[2] == 0x0) {
+					seekTrack(mka, 1);
+				} else if(data[2] == 0x01) {
+					seekTrack(mka, 0);
+				}
+				sendCDStatusMessage(ibus_port, IBUS_CDC_STAT_PLAYING, sender);
+			} else {
+				sendCDStatusMessage(ibus_port, IBUS_CDC_STAT_STOP, sender);
 			}
-			sendCDStatusMessage(ibus_port, IBUS_CDC_STAT_PLAYING, sender);
 		} else {
 			if(selected)
 				sendCDStatusMessage(ibus_port, IBUS_CDC_STAT_END, sender);
@@ -56,9 +61,19 @@ void sendCDStatusMessage(const int ibus_port, const uint8_t status, const uint8_
 	writeIBusData(ibus_port, IBUS_DEVICE_CDC, receiver, data, l);
 }
 
-void setSelected(PyObject* parameter_list, const int selected) {
+//Press one of the seek buttons.
+void seekTrack(PyObject* mka, const uint8_t forward) {
+	PyObject* handle_seek = PyObject_GetAttrString(mka, "handleSeekButton");
+	PyObject* tuple = PyTuple_New(1);
+	PyTuple_SetItem(tuple, 0, PyBool_FromLong(forward));
+
+	PyObject_CallObject(handle_seek, tuple);
+}
+
+void setSelected(PyObject* mka, PyObject* parameter_list, const int selected) {
 	PyObject_SetAttrString(parameter_list, "audio_selected", PyBool_FromLong(selected));
-	//TODO: Start/stop phone music playback.
+	PyObject* set_selected = PyObject_GetAttrString(mka, "setSelected");
+	PyObject_CallObject(set_selected, NULL);
 }
 
 //Send a radio text change message. Returns number of bytes if successful, -1 if not.

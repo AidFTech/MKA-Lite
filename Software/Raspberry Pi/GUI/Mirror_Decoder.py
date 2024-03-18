@@ -64,6 +64,10 @@ class Decoder:
 		self.player = self.thread.player
 		self.thread.start()
 
+		if not self.playing:
+			self.player.play('python://mirror_video')
+			self.playing = True
+
 	def stop(self):
 		# self.child.terminate()
 		self.playing = False
@@ -74,17 +78,20 @@ class Decoder:
 	def send(self, data: bytes):
 		os.write(self.writePipe, data)
 		
-		if not self.playing:
-			self.player.play('python://mirror_video')
-			self.playing = True
+	#	if not self.playing:
+	#		self.player.play('python://mirror_video')
+	#		self.playing = True
 		# self.child.stdin.write(data)
 		# self.child.stdin.flush()
-		
+
 	def setWindow(self, window_status: bool):
 		self.player.window_minimized=not window_status
 
 	def getWindow(self) -> bool:
 		return not self.player.window_minimized
+	
+	def getWritePipe(self) -> int:
+		return self.writePipe
 
 	def log(self, loglevel, component, message):
 		print('[{}] {}: {}'.format(loglevel, component, message))

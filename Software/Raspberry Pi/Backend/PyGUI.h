@@ -21,10 +21,12 @@ void pyFinalize(wchar_t* program);
 PyObject* startMKA(const char* fname);
 void MKAloop(PyObject* mka);
 int MKAgetRun(PyObject* mka);
+
 void MKAturnKnob(PyObject* mka, const uint8_t steps, const uint8_t clockwise);
 void MKAenterButton(PyObject* mka);
 void MKAbackButton(PyObject* mka);
 void MKAhomeButton(PyObject* mka);
+void MKAdirectionButton(PyObject* mka);
 
 void sendPong(const int ibus_port, const uint8_t receiver, const int first_pong);
 

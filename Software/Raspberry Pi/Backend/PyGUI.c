@@ -47,6 +47,8 @@ void MKAloop(PyObject* mka) {
 //Set the value of MKA boolean run, e.g. if the car is turned off.
 void MKAsetRun(PyObject* mka, int run) {
 	PyObject_SetAttrString(mka, "run", PyBool_FromLong(run));
+	if(run <= 0) 
+		MKAloop(mka);
 }
 
 //Get the value of MKA boolean run.
@@ -82,6 +84,12 @@ void MKAbackButton(PyObject* mka) {
 void MKAhomeButton(PyObject* mka) {
 	PyObject* handle_home = PyObject_GetAttrString(mka, "handleHomeButton");
 	PyObject_CallObject(handle_home, NULL);
+}
+
+//Press the direction button for play/pause.
+void MKAdirectionButton(PyObject* mka) {
+	PyObject* handle_dir = PyObject_GetAttrString(mka, "handleDirectionButton");
+	PyObject_CallObject(handle_dir, NULL);
 }
 
 //Handle an IBus message.
@@ -127,6 +135,8 @@ void handleIBus(PyObject* mka, const int ibus_port, const uint8_t sender, const 
 				MKAbackButton(mka);
 			else if(button == 0x8 && state == 1) //Phone button, held.
 				MKAhomeButton(mka);
+			else if(button == 0x14 && state == 2) //Tape direction button.
+				MKAdirectionButton(mka);
 		}
 	} else if(sender == IBUS_DEVICE_RAD) {
 		handleRadioIBus(mka, ibus_port, sender, receiver, data, l);
