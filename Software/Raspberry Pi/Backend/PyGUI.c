@@ -92,10 +92,23 @@ void MKAdirectionButton(PyObject* mka) {
 	PyObject_CallObject(handle_dir, NULL);
 }
 
+//Set the state of the phone LEDs on the BMBT.
+void setPhoneLight(const int ibus_port, const uint8_t state) {
+	uint8_t light_message[] = {0x2B, 0x00};
+	if(state == PHONE_LED_GREEN)
+		light_message[1] = 0x10;
+	else if(state == PHONE_LED_RED)
+		light_message[1] = 0x1;
+		
+	writeIBusData(ibus_port, IBUS_DEVICE_TEL, IBUS_DEVICE_ANZV, light_message, sizeof(light_message));
+}
+
 //Handle an IBus message.
-void handleIBus(PyObject* mka, const int ibus_port, const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l) {
+void handlePythonIBus(PyObject* mka, const int ibus_port, const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l) {
 	if(l < 1)
 		return;
+
+	PyObject* parameter_list = PyObject_GetAttrString(mka, "parameter_list");
 
 	if(receiver == IBUS_DEVICE_CDC && data[0] == 0x1) { //Ping.
 		sendPong(ibus_port, sender, 0);
@@ -106,7 +119,7 @@ void handleIBus(PyObject* mka, const int ibus_port, const uint8_t sender, const 
 			else
 				MKAsetRun(mka, 1);
 		} else if(data[0] == IBUS_CMD_IKE_RESP_VEHICLE_CONFIG) {
-			PyObject_SetAttrString(PyObject_GetAttrString(mka, "parameter_list"), "ike_24h", PyBool_FromLong(!(data[2]&0x1)));
+			PyObject_SetAttrString(parameter_list, "ike_24h", PyBool_FromLong(!(data[2]&0x1)));
 		} else if(data[0] == IBUS_CMD_IKE_OBC_TEXT) {
 			if(data[1] == 0x1) { //Time.
 				char time_string[l-2];
@@ -120,10 +133,11 @@ void handleIBus(PyObject* mka, const int ibus_port, const uint8_t sender, const 
 					date_string[i-3] = (char)(data[i]);
 				date_string[l-3] = '\0';
 
-				PyObject_SetAttrString(PyObject_GetAttrString(mka, "parameter_list"), "ike_datestring", Py_BuildValue("s", date_string));
+				PyObject_SetAttrString(parameter_list, "ike_datestring", Py_BuildValue("s", date_string));
 			}
 		}
 	} else if(sender == IBUS_DEVICE_BMBT) {
+		PyObject_SetAttrString(parameter_list, "bmbt_connected", PyBool_FromLong(1));
 		if(data[0] == IBUS_CMD_BMBT_KNOB) { //Knob turn.
 			const uint8_t steps = data[1]&0x7F, clockwise = (data[1]&0x80)>>7;
 			MKAturnKnob(mka, steps, clockwise);
@@ -142,7 +156,6 @@ void handleIBus(PyObject* mka, const int ibus_port, const uint8_t sender, const 
 		handleRadioIBus(mka, ibus_port, sender, receiver, data, l);
 	} else if(sender == IBUS_DEVICE_LCM) {
 		if(data[0] == IBUS_CMD_LCM_BULB_IND_RESP) {
-			PyObject* parameter_list = PyObject_GetAttrString(mka, "parameter_list");
 			const uint8_t last_headlights_on = PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "headlights_on"));
 			const uint8_t light_level = PyLong_AsLong(PyObject_GetAttrString(parameter_list, "light_level"));
 
@@ -155,7 +168,6 @@ void handleIBus(PyObject* mka, const int ibus_port, const uint8_t sender, const 
 	} else if(sender == IBUS_DEVICE_RLS) {
 		if(data[0] == IBUS_CMD_RLS_LIGHT_CONTROL) {
 			const uint8_t light_level = data[1]>>4;
-			PyObject* parameter_list = PyObject_GetAttrString(mka, "parameter_list");
 			PyObject_SetAttrString(parameter_list, "light_level", PyLong_FromLong(light_level));
 
 			PyObject* set_night_mode = PyObject_GetAttrString(mka, "setNightMode");
@@ -238,6 +250,7 @@ void checkParameterList(PyObject* mka, ParameterList* current_parameters, const 
 
 	const bool phone_active = PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "phone_active"));
 	const bool playing = PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "playing"));
+	const bool bmbt_connected = PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "bmbt_connected"));
 
 	char* song_title = PyBytes_AsString(PyUnicode_AsEncodedString(PyObject_GetAttrString(parameter_list, "song_title"), "utf-8", "strict"));
 	if(strlen(song_title) > STRING_BUF_LEN)
@@ -283,4 +296,24 @@ void checkParameterList(PyObject* mka, ParameterList* current_parameters, const 
 
 	if(refresh && version >= 5) 
 		sendRefresh(ibus_port);
+
+	if(bmbt_connected != current_parameters->bmbt_connected) {
+		current_parameters->bmbt_connected = bmbt_connected;
+		if(bmbt_connected) {
+			if(phone_type == PARAM_NO_PHONE)
+				setPhoneLight(ibus_port, PHONE_LED_RED);
+			else
+				setPhoneLight(ibus_port, PHONE_LED_GREEN);
+		}
+	}
+		
+	if(phone_type != current_parameters->phone_type) { //TODO: Should this message be sent if the BMBT is not connected?
+		current_parameters->phone_type = phone_type;
+		if(bmbt_connected) {
+			if(phone_type == PARAM_NO_PHONE)
+				setPhoneLight(ibus_port, PHONE_LED_RED);
+			else
+				setPhoneLight(ibus_port, PHONE_LED_GREEN);
+		}
+	}
 }

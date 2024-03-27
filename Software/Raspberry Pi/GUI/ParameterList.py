@@ -15,6 +15,7 @@ NEXTMENU_NIGHT_SENS_MENU = 5
 class ParameterList:
 	"""A list of variables to be shared between the MKA object and its windows, as well as the C backend."""
 	#General parameters.
+	bmbt_connected = False	#True if the BMBT has sent any IBus messages.
 	audio_selected = False	#True if the radio has sent the "Play" command to the MKA.
 	phone_active = False	#True if the phone screen is active.
 	next_menu = NEXTMENU_NO_MENU	#The next menu to open.

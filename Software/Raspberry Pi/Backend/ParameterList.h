@@ -6,8 +6,14 @@
 
 #define STRING_BUF_LEN 0x21
 
+#define PARAM_NO_PHONE 0
+#define PARAM_ANDROID 5
+#define PARAM_CARPLAY 3
+
 //A C parameter list to keep track of the states of the Python parameters.
 typedef struct ParameterList {
+	bool bmbt_connected;	//True if the BMBT has sent messages.
+
 	bool phone_active;  //True if the phone screen is active.
 	int8_t phone_type;  //The type of phone connected.
 

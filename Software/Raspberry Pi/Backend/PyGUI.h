@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "IBus_IO.h"
 #include "Radio_Handler.h"
@@ -14,6 +15,10 @@
 
 #ifndef pygui_h
 #define pygui_h
+
+#define PHONE_LED_OFF 0
+#define PHONE_LED_GREEN 1
+#define PHONE_LED_RED 2
 
 wchar_t* pyInit(int argc, char *argv[]);
 void pyFinalize(wchar_t* program);
@@ -28,9 +33,11 @@ void MKAbackButton(PyObject* mka);
 void MKAhomeButton(PyObject* mka);
 void MKAdirectionButton(PyObject* mka);
 
+void setPhoneLight(const int ibus_port, const uint8_t state);
+
 void sendPong(const int ibus_port, const uint8_t receiver, const int first_pong);
 
-void handleIBus(PyObject* mka, const int ibus_port, const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l);
+void handlePythonIBus(PyObject* mka, const int ibus_port, const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l);
 void setTime(PyObject* mka, char* time_string);
 int getCharacterIndex(char* str, char desired);
 

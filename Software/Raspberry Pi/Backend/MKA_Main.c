@@ -36,6 +36,6 @@ void readIBus(PyObject* mka, int* port) {
 	uint8_t data[255];
 	const int l = readIBusData(*port, &sender, &receiver, data, port);
 	if(l > 0) {
-		handleIBus(mka, *port, sender, receiver, data, l);
+		handlePythonIBus(mka, *port, sender, receiver, data, l);
 	}
 }
