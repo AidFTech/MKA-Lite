@@ -270,19 +270,19 @@ void checkParameterList(PyObject* mka, ParameterList* current_parameters, const 
 	const bool audio_selected = PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "audio_selected"));
 
 	char* song_title = PyBytes_AsString(PyUnicode_AsEncodedString(PyObject_GetAttrString(parameter_list, "song_title"), "utf-8", "strict"));
-	if(strlen(song_title) > STRING_BUF_LEN)
+	if(strlen(song_title) >= STRING_BUF_LEN)
 		song_title[STRING_BUF_LEN - 1] = '\0';
 	
 	char* artist = PyBytes_AsString(PyUnicode_AsEncodedString(PyObject_GetAttrString(parameter_list, "artist"), "utf-8", "strict"));
-	if(strlen(artist) > STRING_BUF_LEN)
-	artist[STRING_BUF_LEN - 1] = '\0';
+	if(strlen(artist) >= STRING_BUF_LEN)
+		artist[STRING_BUF_LEN - 1] = '\0';
 
 	char* album = PyBytes_AsString(PyUnicode_AsEncodedString(PyObject_GetAttrString(parameter_list, "album"), "utf-8", "strict"));
-	if(strlen(album) > STRING_BUF_LEN)
+	if(strlen(album) >= STRING_BUF_LEN)
 		album[STRING_BUF_LEN - 1] = '\0';
 
 	char* app = PyBytes_AsString(PyUnicode_AsEncodedString(PyObject_GetAttrString(parameter_list, "app"), "utf-8", "strict"));
-	if(strlen(app) > STRING_BUF_LEN)
+	if(strlen(app) >= STRING_BUF_LEN)
 		app[STRING_BUF_LEN - 1] = '\0';
 
 	bool refresh = false; //True if a refresh message is required.

@@ -159,6 +159,30 @@ void writeIBusData(const int port, const uint8_t sender, const uint8_t receiver,
 	#endif*/
 }
 
+void writePriorityIBusData(const int port, const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l) {
+	const unsigned int full_length = l+4;
+	uint8_t msg_data[full_length];
+
+	msg_data[0] = sender;
+	msg_data[1] = l + 2;
+	msg_data[2] = receiver;
+
+	for(uint8_t i=0;i<l;i+=1)
+		msg_data[3+i] = data[i];
+
+	msg_data[full_length-1] = getChecksum(sender, receiver, data, l);
+	
+	if(port >= 0) {
+		for(uint8_t i=0;i<full_length;i+=1)
+			iserialWriteByte(port, msg_data[i]);
+	}
+	/*#ifndef RPI_UART
+	for(uint8_t i=0;i<full_length;i+=1)
+		printf("%X ", msg_data[i]);
+	printf("\n");
+	#endif*/
+}
+
 //Print an IBus message to the console.
 void printIBusData(const const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l) {
 	#ifndef RPI_UART

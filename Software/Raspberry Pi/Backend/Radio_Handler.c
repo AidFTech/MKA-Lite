@@ -65,7 +65,7 @@ void sendCDStatusMessage(const int ibus_port, const uint8_t status, const uint8_
 						
 	const uint16_t l = sizeof(data);
 	
-	writeIBusData(ibus_port, IBUS_DEVICE_CDC, receiver, data, l);
+	writePriorityIBusData(ibus_port, IBUS_DEVICE_CDC, receiver, data, l);
 }
 
 //Press one of the seek buttons.

@@ -159,13 +159,14 @@
 #define MAX_DELAY 500 //500ms. I believe this is longer than an IBus message will ever take. Adjust as needed.
 
 #define IB_RX 4 //The GPIO input to use to determine whether the IBus RX is active.
-#define IB_WAIT 20 //The amount of time to wait for the IBus RX to be free before sending any data.
+#define IB_WAIT 2 //The amount of time to wait for the IBus RX to be free before sending any data.
 
 int ibusSerialInit(char* port);
 void ibusSerialClose(const int port);
 
 int readIBusData(const int port, uint8_t* sender, uint8_t* receiver, uint8_t* data, int* new_port);
 void writeIBusData(const int port, const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l);
+void writePriorityIBusData(const int port, const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l);
 
 void printIBusData(const const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l);
 
