@@ -60,6 +60,10 @@ int readIBusData(const int port, uint8_t* sender, uint8_t* receiver, uint8_t* da
 
 			for(uint8_t i=0;i<l-2;i+=1)
 				data[i] = d[i];
+
+			#ifndef RPI_UART
+			printIBusData(*sender, *receiver, data, l-2);
+			#endif
 			
 			return l-2;
 		} else
@@ -147,13 +151,33 @@ void writeIBusData(const int port, const uint8_t sender, const uint8_t receiver,
 		}
 		for(uint8_t i=0;i<full_length;i+=1)
 			iserialWriteByte(port, msg_data[i]);
-	} else {
-		#ifndef RPI_UART
-		for(uint8_t i=0;i<full_length;i+=1)
-			printf("%X ", msg_data[i]);
-		printf("\n");
-		#endif
 	}
+	/*#ifndef RPI_UART
+	for(uint8_t i=0;i<full_length;i+=1)
+		printf("%X ", msg_data[i]);
+	printf("\n");
+	#endif*/
+}
+
+//Print an IBus message to the console.
+void printIBusData(const const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l) {
+	#ifndef RPI_UART
+	const unsigned int full_length = l+4;
+	uint8_t msg_data[full_length];
+
+	msg_data[0] = sender;
+	msg_data[1] = l + 2;
+	msg_data[2] = receiver;
+
+	for(uint8_t i=0;i<l;i+=1)
+		msg_data[3+i] = data[i];
+
+	msg_data[full_length-1] = getChecksum(sender, receiver, data, l);
+
+	for(uint8_t i=0;i<full_length;i+=1)
+		printf("%X ", msg_data[i]);
+	printf("\n");
+	#endif
 }
 
 //Get an IBus checksum.

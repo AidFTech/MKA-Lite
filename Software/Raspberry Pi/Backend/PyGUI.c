@@ -138,19 +138,28 @@ void handlePythonIBus(PyObject* mka, const int ibus_port, const uint8_t sender, 
 		}
 	} else if(sender == IBUS_DEVICE_BMBT) {
 		PyObject_SetAttrString(parameter_list, "bmbt_connected", PyBool_FromLong(1));
-		if(data[0] == IBUS_CMD_BMBT_KNOB) { //Knob turn.
-			const uint8_t steps = data[1]&0x7F, clockwise = (data[1]&0x80)>>7;
-			MKAturnKnob(mka, steps, clockwise);
-		} else if(data[0] == IBUS_CMD_BMBT_BUTTON1) { //Button press.
-			const uint8_t button = data[1]&0x3F, state = (data[1]&0xC0)>>6;
-			if(button == 0x05 && state == 2) //Enter button.
-				MKAenterButton(mka);
-			else if(button == 0x8 && state == 2) //Phone button, released.
-				MKAbackButton(mka);
-			else if(button == 0x8 && state == 1) //Phone button, held.
-				MKAhomeButton(mka);
-			else if(button == 0x14 && state == 2) //Tape direction button.
-				MKAdirectionButton(mka);
+
+		if(PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "mka_active"))) {
+			if(data[0] == IBUS_CMD_BMBT_KNOB) { //Knob turn.
+				const uint8_t steps = data[1]&0x7F, clockwise = (data[1]&0x80)>>7;
+				MKAturnKnob(mka, steps, clockwise);
+			} else if(data[0] == IBUS_CMD_BMBT_BUTTON1) { //Button press.
+				const uint8_t button = data[1]&0x3F, state = (data[1]&0xC0)>>6;
+				if(button == 0x05 && state == 2) //Enter button.
+					MKAenterButton(mka);
+				else if(button == 0x8 && state == 2) //Phone button, released.
+					MKAbackButton(mka);
+				else if(button == 0x8 && state == 1) //Phone button, held.
+					MKAhomeButton(mka);
+				else if(button == 0x14 && state == 2) //Tape direction button.
+					MKAdirectionButton(mka);
+			}
+		} else {
+			if(data[0] == IBUS_CMD_BMBT_BUTTON1) { //Button press. If the MKA screen is not active, only listen for the direction button.
+				const uint8_t button = data[1]&0x3F, state = (data[1]&0xC0)>>6;
+				if(button == 0x14 && state == 2) //Tape direction button.
+					MKAdirectionButton(mka);
+			}
 		}
 	} else if(sender == IBUS_DEVICE_RAD) {
 		handleRadioIBus(mka, ibus_port, sender, receiver, data, l);
@@ -186,6 +195,13 @@ void sendPong(const int ibus_port, const uint8_t receiver, const int first_pong)
 	const uint16_t l = sizeof(data);
 	writeIBusData(ibus_port, IBUS_DEVICE_CDC, receiver, data, l);
 	//TODO: Change data[1] for first pong.
+}
+
+//Send the CD ping message to the radio.
+void sendCDPing(const int ibus_port) {
+	uint8_t data[] = {0x2, 0x1};
+	const uint16_t l = sizeof(data);
+	writeIBusData(ibus_port, IBUS_DEVICE_CDC, IBUS_DEVICE_GLO, data, l);
 }
 
 //Set the displayed time.
@@ -251,6 +267,7 @@ void checkParameterList(PyObject* mka, ParameterList* current_parameters, const 
 	const bool phone_active = PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "phone_active"));
 	const bool playing = PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "playing"));
 	const bool bmbt_connected = PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "bmbt_connected"));
+	const bool audio_selected = PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "audio_selected"));
 
 	char* song_title = PyBytes_AsString(PyUnicode_AsEncodedString(PyObject_GetAttrString(parameter_list, "song_title"), "utf-8", "strict"));
 	if(strlen(song_title) > STRING_BUF_LEN)
@@ -272,40 +289,56 @@ void checkParameterList(PyObject* mka, ParameterList* current_parameters, const 
 
 	if(strcmp(song_title, current_parameters->song_title) != 0) {
 		strcpy(current_parameters->song_title, song_title);
-		sendRadioText(song_title, SONG_NAME, version, ibus_port);
-		refresh = true;
+		if(audio_selected) {
+			sendRadioCenterText(song_title, SONG_NAME, version, ibus_port);
+			refresh = true;
+		}
 	}
 
 	if(strcmp(artist, current_parameters->artist) != 0) {
 		strcpy(current_parameters->artist, artist);
-		sendRadioText(artist, ARTIST, version, ibus_port);
-		refresh = true;
+		if(audio_selected) {
+			sendRadioCenterText(artist, ARTIST, version, ibus_port);
+			refresh = true;
+		}
 	}
 
 	if(strcmp(album, current_parameters->album) != 0) {
 		strcpy(current_parameters->album, album);
-		sendRadioText(album, ALBUM, version, ibus_port);
-		refresh = true;
+		if(audio_selected) {
+			sendRadioCenterText(album, ALBUM, version, ibus_port);
+			refresh = true;
+		}
 	}
 
-	if(strcmp(app, current_parameters->app_name)) {
+	if(strcmp(app, current_parameters->app_name) != 0) {
 		strcpy(current_parameters->app_name, app);
-		sendRadioText(app, APP, version, ibus_port);
-		refresh = true;
+		if(audio_selected) {
+			sendRadioCenterText(app, APP, version, ibus_port);
+			refresh = true;
+		}
 	}
-
-	if(refresh && version >= 5) 
-		sendRefresh(ibus_port);
 
 	if(bmbt_connected != current_parameters->bmbt_connected) {
 		current_parameters->bmbt_connected = bmbt_connected;
 		if(bmbt_connected) {
 			if(phone_type == PARAM_NO_PHONE)
 				setPhoneLight(ibus_port, PHONE_LED_RED);
-			else
+			else {
 				setPhoneLight(ibus_port, PHONE_LED_GREEN);
+				if(audio_selected) {
+					sendRadioCenterText(song_title, SONG_NAME, version, ibus_port);
+					sendRadioCenterText(artist, ARTIST, version, ibus_port);
+					sendRadioCenterText(album, ALBUM, version, ibus_port);
+					sendRadioCenterText(app, APP, version, ibus_port);
+					refresh = true;
+				}
+			}
 		}
 	}
+
+	if(refresh && version >= 5) 
+		sendRefresh(ibus_port);
 		
 	if(phone_type != current_parameters->phone_type) { //TODO: Should this message be sent if the BMBT is not connected?
 		current_parameters->phone_type = phone_type;

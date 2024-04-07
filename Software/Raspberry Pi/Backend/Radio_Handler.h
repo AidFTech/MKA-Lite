@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "IBus_IO.h"
 
@@ -24,7 +25,7 @@ void setSelected(PyObject* mka, PyObject* parameter_list, const int selected);
 
 void seekTrack(PyObject* mka, const uint8_t forward);
 
-int sendRadioText(const char* text, const uint8_t position, const int8_t version, const int port);
+int sendRadioCenterText(const char* text, const uint8_t position, const int8_t version, const int port);
 void sendRefresh(const int port);
 
 #endif

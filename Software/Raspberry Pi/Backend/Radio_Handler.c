@@ -2,8 +2,9 @@
 
 //Handle a radio-related IBus message.
 void handleRadioIBus(PyObject* mka, const int ibus_port, const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l) {
+	PyObject* parameter_list = PyObject_GetAttrString(mka, "parameter_list");
+	const bool selected = PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "audio_selected")) != 0;
 	if(receiver == IBUS_DEVICE_CDC && data[0] == IBUS_COMMAND_CDC_REQUEST) {
-		PyObject* parameter_list = PyObject_GetAttrString(mka, "parameter_list");
 		const uint8_t selected = PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "audio_selected"));
 		
 		if(data[1] == IBUS_CDC_CMD_GET_STATUS) { //Request current CD and track status.
@@ -18,8 +19,8 @@ void handleRadioIBus(PyObject* mka, const int ibus_port, const uint8_t sender, c
 			sendCDStatusMessage(ibus_port, IBUS_CDC_STAT_PLAYING, sender);
 			setSelected(mka, parameter_list, 1);
 		} else if(data[1] == IBUS_CDC_CMD_CHANGE_TRACK) {
-			int phone_active = PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "phone_active"));
-			if(phone_active) {
+			//int phone_active = PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "phone_active"));
+			if(selected) {
 				if(data[2] == 0x0) {
 					seekTrack(mka, 1);
 				} else if(data[2] == 0x01) {
@@ -34,6 +35,12 @@ void handleRadioIBus(PyObject* mka, const int ibus_port, const uint8_t sender, c
 				sendCDStatusMessage(ibus_port, IBUS_CDC_STAT_END, sender);
 			else
 				sendCDStatusMessage(ibus_port, IBUS_CDC_STAT_STOP, sender);
+		}
+	} else if(data[0] == IBUS_CMD_RAD_SCREEN_MODE_UPDATE) {
+		if(PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "mka_active")) && (data[1]&0x1 != 0)) {
+			//Audio screen was canceled. Force it back.
+			uint8_t force_audio_screen_data[] = {IBUS_CMD_GT_SCREEN_MODE_SET, 0x0};
+			writeIBusData(ibus_port, IBUS_DEVICE_GT, IBUS_DEVICE_RAD, force_audio_screen_data, sizeof(force_audio_screen_data));
 		}
 	}
 }
@@ -77,7 +84,7 @@ void setSelected(PyObject* mka, PyObject* parameter_list, const int selected) {
 }
 
 //Send a radio text change message. Returns number of bytes if successful, -1 if not.
-int sendRadioText(const char* text, const uint8_t position, const int8_t version, const int port) {
+int sendRadioCenterText(const char* text, const uint8_t position, const int8_t version, const int port) {
 	if(version >= 5) { //Newer GT.
 		uint8_t index = 0x40;
 		if(position == SONG_NAME)

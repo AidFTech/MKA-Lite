@@ -17,6 +17,7 @@ class ParameterList:
 	#General parameters.
 	bmbt_connected = False	#True if the BMBT has sent any IBus messages.
 	audio_selected = False	#True if the radio has sent the "Play" command to the MKA.
+	mka_active = True	#True if the MKA screen is active. This should force the audio screen open.
 	phone_active = False	#True if the phone screen is active.
 	next_menu = NEXTMENU_NO_MENU	#The next menu to open.
 	fullscreen = False	#True if the program is rendered in fullscreen, i.e. if tested on a Pi.
