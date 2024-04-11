@@ -336,17 +336,36 @@ void checkParameterList(PyObject* mka, ParameterList* current_parameters, const 
 			}
 		}
 	}
-
-	if(refresh && version >= 5) 
-		sendRefresh(ibus_port);
 		
 	if(phone_type != current_parameters->phone_type) { //TODO: Should this message be sent if the BMBT is not connected?
 		current_parameters->phone_type = phone_type;
 		if(bmbt_connected) {
 			if(phone_type == PARAM_NO_PHONE)
 				setPhoneLight(ibus_port, PHONE_LED_RED);
-			else
+			else {
 				setPhoneLight(ibus_port, PHONE_LED_GREEN);
+				if(audio_selected && !refresh) {
+					sendRadioCenterText(song_title, SONG_NAME, version, ibus_port);
+					sendRadioCenterText(artist, ARTIST, version, ibus_port);
+					sendRadioCenterText(album, ALBUM, version, ibus_port);
+					sendRadioCenterText(app, APP, version, ibus_port);
+					refresh = true;
+				}
+			}
 		}
 	}
+
+	if(audio_selected != current_parameters->audio_selected) {
+		current_parameters->audio_selected = audio_selected;
+		/*if(audio_selected && !refresh) {
+			sendRadioCenterText(song_title, SONG_NAME, version, ibus_port);
+			sendRadioCenterText(artist, ARTIST, version, ibus_port);
+			sendRadioCenterText(album, ALBUM, version, ibus_port);
+			sendRadioCenterText(app, APP, version, ibus_port);
+			refresh = true;
+		}*/
+	}
+
+	if(refresh && version >= 5) 
+		sendRefresh(ibus_port);
 }

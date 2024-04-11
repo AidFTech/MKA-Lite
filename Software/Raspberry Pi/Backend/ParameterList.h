@@ -15,6 +15,7 @@ typedef struct ParameterList {
 	bool bmbt_connected;	//True if the BMBT has sent messages.
 
 	bool phone_active;  //True if the phone screen is active.
+	bool audio_selected;	//True if the MKA is the selected audio device.
 	int8_t phone_type;  //The type of phone connected.
 
 	char phone_name[STRING_BUF_LEN];	//The phone name.

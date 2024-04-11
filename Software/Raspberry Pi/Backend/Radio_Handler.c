@@ -42,6 +42,45 @@ void handleRadioIBus(PyObject* mka, const int ibus_port, const uint8_t sender, c
 			uint8_t force_audio_screen_data[] = {IBUS_CMD_GT_SCREEN_MODE_SET, 0x0};
 			writeIBusData(ibus_port, IBUS_DEVICE_GT, IBUS_DEVICE_RAD, force_audio_screen_data, sizeof(force_audio_screen_data));
 		}
+	} else if(data[0] == IBUS_CMD_GT_WRITE_TITLE) { //Screen text. //TODO: Can this be triggered by 0xA5 as well?
+		if(selected) {
+			clock_t start_time = clock();
+
+			bool sent_22 = false;
+			uint8_t data[255];
+			uint8_t l, sender, receiver;
+			int p;
+			while(!sent_22 && (clock() - start_time)/(CLOCKS_PER_SEC/1000) < 750) {
+				l = readIBusData(ibus_port, &sender, &receiver, data, &p);
+				if(l <= 0)
+					continue;
+				
+				if(sender == IBUS_DEVICE_GT && data[0] == IBUS_CMD_GT_WRITE_RESPONSE) {
+					sent_22 = true;
+					break;
+				}
+			}
+
+			if(sent_22) {
+				const int8_t version = 5;	//TODO: Sync with GT. Get from Python?
+
+				PyObject* song_title_p = PyObject_GetAttrString(parameter_list, "song_title");
+				PyObject* artist_p = PyObject_GetAttrString(parameter_list, "artist");
+				PyObject* album_p = PyObject_GetAttrString(parameter_list, "album");
+				PyObject* app_p = PyObject_GetAttrString(parameter_list, "app");
+
+				const char* song_title = PyBytes_AsString(PyUnicode_AsEncodedString(song_title_p, "utf-8", "strict"));
+				const char* artist = PyBytes_AsString(PyUnicode_AsEncodedString(artist_p, "utf-8", "strict"));
+				const char* album = PyBytes_AsString(PyUnicode_AsEncodedString(album_p, "utf-8", "strict"));
+				const char* app = PyBytes_AsString(PyUnicode_AsEncodedString(app_p, "utf-8", "strict"));
+
+				sendRadioCenterText(song_title, SONG_NAME, version, ibus_port);
+				sendRadioCenterText(artist, ARTIST, version, ibus_port);
+				sendRadioCenterText(album, ALBUM, version, ibus_port);
+				sendRadioCenterText(app, APP, version, ibus_port);
+				sendRefresh(ibus_port);
+			}
+		}
 	}
 }
 
