@@ -81,10 +81,7 @@
 <layer number="114" name="Badge_Outline" color="7" fill="1" visible="no" active="yes"/>
 <layer number="115" name="ReferenceISLANDS" color="7" fill="1" visible="no" active="yes"/>
 <layer number="116" name="Patch_BOT" color="9" fill="4" visible="yes" active="yes"/>
-<layer number="117" name="BACKMAAT1" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="118" name="Rect_Pads" color="7" fill="1" visible="no" active="yes"/>
-<layer number="119" name="KAP_TEKEN" color="7" fill="1" visible="yes" active="yes"/>
-<layer number="120" name="KAP_MAAT1" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="121" name="_tsilk" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="122" name="_bsilk" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="123" name="tTestmark" color="7" fill="1" visible="yes" active="yes"/>
@@ -94,17 +91,9 @@
 <layer number="127" name="_tValues" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="128" name="_bValues" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="129" name="Mask" color="7" fill="1" visible="yes" active="yes"/>
-<layer number="130" name="SMDSTROOK" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="131" name="tAdjust" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="132" name="bAdjust" color="7" fill="1" visible="yes" active="yes"/>
-<layer number="133" name="bottom_silk" color="7" fill="1" visible="yes" active="yes"/>
-<layer number="134" name="silk_top" color="7" fill="1" visible="no" active="no"/>
-<layer number="135" name="silk_bottom" color="7" fill="1" visible="no" active="no"/>
-<layer number="136" name="silktop" color="7" fill="1" visible="yes" active="yes"/>
-<layer number="137" name="silkbottom" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="144" name="Drill_legend" color="7" fill="1" visible="yes" active="yes"/>
-<layer number="145" name="DrillLegend_01-16" color="7" fill="1" visible="yes" active="yes"/>
-<layer number="146" name="DrillLegend_01-20" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="150" name="Notes" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="151" name="HeatSink" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="152" name="_bDocu" color="7" fill="1" visible="yes" active="yes"/>
@@ -144,8 +133,6 @@
 <layer number="229" name="229bmp" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="230" name="230bmp" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="231" name="231bmp" color="7" fill="1" visible="yes" active="yes"/>
-<layer number="232" name="Eagle3D_PG2" color="7" fill="1" visible="yes" active="yes"/>
-<layer number="233" name="Eagle3D_PG3" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="248" name="Housing" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="249" name="Edge" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="250" name="Descript" color="3" fill="1" visible="no" active="no"/>
@@ -365,90 +352,6 @@ In this library the device names are the same as the pin names of the symbols, t
 </deviceset>
 </devicesets>
 </library>
-<library name="Passives">
-<packages>
-<package name="0805">
-<description>&lt;p&gt;&lt;b&gt;Generic 2012 (0805) package&lt;/b&gt;&lt;/p&gt; &lt;p&gt;0.2mm courtyard excess rounded to nearest 0.05mm.&lt;/p&gt;</description>
-<smd name="1" x="-0.9" y="0" dx="0.8" dy="1.2" layer="1"/>
-<smd name="2" x="0.9" y="0" dx="0.8" dy="1.2" layer="1"/>
-<text x="-1.6" y="0" size="1" layer="25" font="vector" ratio="15" align="center-right">&gt;NAME</text>
-<wire x1="-1.475" y1="0.775" x2="1.475" y2="0.775" width="0.05" layer="39"/>
-<wire x1="1.475" y1="0.775" x2="1.475" y2="-0.775" width="0.05" layer="39"/>
-<wire x1="1.475" y1="-0.775" x2="-1.475" y2="-0.775" width="0.05" layer="39"/>
-<wire x1="-1.475" y1="-0.775" x2="-1.475" y2="0.775" width="0.05" layer="39"/>
-<wire x1="-1.45" y1="0.75" x2="1.45" y2="0.75" width="0.1" layer="21"/>
-<wire x1="1.45" y1="0.75" x2="1.45" y2="-0.75" width="0.1" layer="21"/>
-<wire x1="1.45" y1="-0.75" x2="-1.45" y2="-0.75" width="0.1" layer="21"/>
-<wire x1="-1.45" y1="-0.75" x2="-1.45" y2="0.75" width="0.1" layer="21"/>
-</package>
-<package name="0603">
-<description>&lt;p&gt;&lt;b&gt;Generic 0603 package&lt;/b&gt;&lt;/p&gt; &lt;p&gt;0.2mm courtyard excess.&lt;/p&gt;</description>
-<wire x1="-1.375" y1="0.675" x2="1.375" y2="0.675" width="0.05" layer="39"/>
-<wire x1="1.375" y1="0.675" x2="1.375" y2="-0.675" width="0.05" layer="39"/>
-<wire x1="1.375" y1="-0.675" x2="-1.375" y2="-0.675" width="0.05" layer="39"/>
-<wire x1="-1.375" y1="-0.675" x2="-1.375" y2="0.675" width="0.05" layer="39"/>
-<smd name="1" x="-0.8" y="0" dx="0.8" dy="1" layer="1"/>
-<smd name="2" x="0.8" y="0" dx="0.8" dy="1" layer="1"/>
-<text x="-1.5" y="0" size="1" layer="25" font="vector" ratio="15" align="center-right">&gt;NAME</text>
-<rectangle x1="-0.2" y1="-0.3" x2="0.2" y2="0.3" layer="35"/>
-<wire x1="-1.35" y1="0.65" x2="1.35" y2="0.65" width="0.1" layer="21"/>
-<wire x1="1.35" y1="0.65" x2="1.35" y2="-0.65" width="0.1" layer="21"/>
-<wire x1="1.35" y1="-0.65" x2="-1.35" y2="-0.65" width="0.1" layer="21"/>
-<wire x1="-1.35" y1="-0.65" x2="-1.35" y2="0.65" width="0.1" layer="21"/>
-</package>
-</packages>
-<symbols>
-<symbol name="CAP">
-<wire x1="0" y1="2.54" x2="0" y2="2.032" width="0.1524" layer="94"/>
-<wire x1="0" y1="0" x2="0" y2="0.508" width="0.1524" layer="94"/>
-<text x="1.524" y="2.921" size="1.778" layer="95" font="vector">&gt;NAME</text>
-<text x="1.524" y="-2.159" size="1.778" layer="96" font="vector">&gt;VALUE</text>
-<rectangle x1="-2.032" y1="0.508" x2="2.032" y2="1.016" layer="94"/>
-<rectangle x1="-2.032" y1="1.524" x2="2.032" y2="2.032" layer="94"/>
-<pin name="1" x="0" y="5.08" visible="off" length="short" direction="pas" swaplevel="1" rot="R270"/>
-<pin name="2" x="0" y="-2.54" visible="off" length="short" direction="pas" swaplevel="1" rot="R90"/>
-</symbol>
-</symbols>
-<devicesets>
-<deviceset name="0.1UF" prefix="C" uservalue="yes">
-<description>&lt;p&gt;0.1uF capacitor&lt;/p&gt;</description>
-<gates>
-<gate name="G$1" symbol="CAP" x="0" y="0"/>
-</gates>
-<devices>
-<device name="" package="0805">
-<connects>
-<connect gate="G$1" pin="1" pad="1"/>
-<connect gate="G$1" pin="2" pad="2"/>
-</connects>
-<technologies>
-<technology name="">
-<attribute name="DEVICE" value="0.1uF-0805-50V" constant="no"/>
-<attribute name="MFG" value="KEMET" constant="no"/>
-<attribute name="PACKAGE" value="0805" constant="no"/>
-<attribute name="PN" value="C0805C104J5RACAUTO"/>
-<attribute name="VALUE" value="0.1uF" constant="no"/>
-</technology>
-</technologies>
-</device>
-<device name="0603" package="0603">
-<connects>
-<connect gate="G$1" pin="1" pad="1"/>
-<connect gate="G$1" pin="2" pad="2"/>
-</connects>
-<technologies>
-<technology name="">
-<attribute name="DEVICE" value="0.1UF-0603-5%-50V" constant="no"/>
-<attribute name="MFG" value="KEMET" constant="no"/>
-<attribute name="PN" value="C0603C104J5RACTU" constant="no"/>
-<attribute name="VALUE" value="0.1uF" constant="no"/>
-</technology>
-</technologies>
-</device>
-</devices>
-</deviceset>
-</devicesets>
-</library>
 </libraries>
 <attributes>
 </attributes>
@@ -463,7 +366,6 @@ In this library the device names are the same as the pin names of the symbols, t
 <part name="U$1" library="ICs" deviceset="AP63300" device=""/>
 <part name="P+1" library="supply1" library_urn="urn:adsk.eagle:library:371" deviceset="VCC" device="" value="+12V"/>
 <part name="SUPPLY1" library="supply2" library_urn="urn:adsk.eagle:library:372" deviceset="GND" device=""/>
-<part name="C1" library="Passives" deviceset="0.1UF" device="0603" value="0.1uF"/>
 </parts>
 <sheets>
 <sheet>
@@ -488,10 +390,6 @@ In this library the device names are the same as the pin names of the symbols, t
 <instance part="SUPPLY1" gate="GND" x="111.76" y="91.44" smashed="yes">
 <attribute name="VALUE" x="109.855" y="88.265" size="1.778" layer="96"/>
 </instance>
-<instance part="C1" gate="G$1" x="142.24" y="127" smashed="yes">
-<attribute name="NAME" x="143.764" y="129.921" size="1.778" layer="95" font="vector"/>
-<attribute name="VALUE" x="143.764" y="124.841" size="1.778" layer="96" font="vector"/>
-</instance>
 </instances>
 <busses>
 </busses>
@@ -515,23 +413,6 @@ In this library the device names are the same as the pin names of the symbols, t
 <segment>
 <pinref part="U$1" gate="G$1" pin="EN"/>
 <wire x1="96.52" y1="121.92" x2="78.74" y2="121.92" width="0.1524" layer="91"/>
-</segment>
-</net>
-<net name="N$2" class="0">
-<segment>
-<pinref part="U$1" gate="G$1" pin="SW"/>
-<wire x1="127" y1="121.92" x2="142.24" y2="121.92" width="0.1524" layer="91"/>
-<pinref part="C1" gate="G$1" pin="2"/>
-<wire x1="142.24" y1="121.92" x2="142.24" y2="124.46" width="0.1524" layer="91"/>
-</segment>
-</net>
-<net name="N$3" class="0">
-<segment>
-<pinref part="U$1" gate="G$1" pin="BST"/>
-<wire x1="127" y1="127" x2="127" y2="134.62" width="0.1524" layer="91"/>
-<pinref part="C1" gate="G$1" pin="1"/>
-<wire x1="127" y1="134.62" x2="142.24" y2="134.62" width="0.1524" layer="91"/>
-<wire x1="142.24" y1="134.62" x2="142.24" y2="132.08" width="0.1524" layer="91"/>
 </segment>
 </net>
 </nets>
