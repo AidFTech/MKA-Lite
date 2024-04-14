@@ -5,6 +5,7 @@ if os.path.exists("./GUI") and not os.path.exists("./MKA_Defaults.py"):
 	sys.path.append("./GUI")
 
 import pygame as pg
+import time
 import MKA_Defaults as defaults
 
 import MenuWindow
@@ -52,7 +53,9 @@ class MKA:
 		self.attribute_group.option_height = defaults.OPTION_HEIGHT
 		
 		self.parameter_list = ParameterList.ParameterList()	#The assigned parameter group.
-		self.carlink_list = CarLinkList.CarLinkList(self.parameter_list)	#The assigned CarLinkList
+		self.carlink_list = CarLinkList.CarLinkList(self.parameter_list, self.attribute_group)	#The assigned CarLinkList
+
+		self.last_radio_title = self.parameter_list.main_radio_title
 
 		self.parameter_list.fullscreen = fullscreen
 
@@ -77,6 +80,8 @@ class MKA:
 		self.mirror = Mirror_MirrorHandler.MirrorHandler(self.carlink_list)
 
 		self.run = True	#True if the program is running.
+		self.overlay_timer_run = False
+		self.overlay_timer = time.perf_counter()
 
 	def loop(self):
 		"""Loop function, to run while the Pi is running."""
@@ -92,6 +97,14 @@ class MKA:
 		pg.display.get_surface().blit(scaled_win, (0,0))
 		
 		pg.display.update()
+
+		if self.last_radio_title != self.parameter_list.main_radio_title:
+			self.last_radio_title = self.parameter_list.main_radio_title
+			self.setOverlayText(self.parameter_list.main_radio_title, True)
+
+		if self.overlay_timer_run and time.perf_counter() - self.overlay_timer >= 5:
+			self.overlay_timer_run = False
+			self.setOverlayText("", False)
 
 		self.checkNextWindow()
 		self.run = self.handleEvents() and self.run
@@ -202,6 +215,16 @@ class MKA:
 			self.mirror.sendMirrorCommand(Mirror_Decoder.KeyEvent.BUTTON_PLAY)
 		else:
 			self.mirror.sendMirrorCommand(Mirror_Decoder.KeyEvent.BUTTON_PAUSE)
+
+	def setOverlayText(self, text: str, clear: bool):
+		"""Set header overlay text. If clear is True, clear the message after a few seconds."""
+		if self.mirror.decoder is not None and self.parameter_list.audio_hud:
+			self.mirror.decoder.setOverlayText(text)
+
+			if clear:
+				self.overlay_timer_run = True
+				self.overlay_timer = time.perf_counter()
+
 	
 def getFileRoot(fname: str) -> str:
 	MYNAME = "MKA.py"

@@ -67,8 +67,16 @@ void handleRadioIBus(PyObject* mka, const int ibus_port, const uint8_t sender, c
 			}
 		} else if(!selected) {
 			char title_msg[l-3];
-			for(int i=0;i<sizeof(title_msg)/sizeof(char);i+=1)
-				title_msg[i] = (char)(data[i+3]);
+			int p = 0;
+			for(int i=0;i<sizeof(title_msg)/sizeof(char);i+=1) {
+				if(isprint(data[i+3]) && p < sizeof(title_msg)/sizeof(char)) {
+					title_msg[p] = (char)(data[i+3]);
+					p += 1;
+				}
+			}
+
+			for(int i=p;i<sizeof(title_msg)/sizeof(char);i+=1)
+				title_msg[i] = '\0';
 
 			PyObject* title_msg_p = PyUnicode_FromString(title_msg);
 			if(title_msg_p != NULL) {

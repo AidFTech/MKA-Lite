@@ -360,17 +360,23 @@ void checkParameterList(PyObject* mka, ParameterList* current_parameters, const 
 
 	if(audio_selected != current_parameters->audio_selected) {
 		current_parameters->audio_selected = audio_selected;
-		/*if(audio_selected && !refresh) {
-			sendRadioCenterText(song_title, SONG_NAME, version, ibus_port);
-			sendRadioCenterText(artist, ARTIST, version, ibus_port);
-			sendRadioCenterText(album, ALBUM, version, ibus_port);
-			sendRadioCenterText(app, APP, version, ibus_port);
-			refresh = true;
-		}*/
+		if(audio_selected ) {
+			//TODO: Anything?
+		} else {
+			PyObject* title_msg_p = PyObject_GetAttrString(parameter_list, "main_radio_title");
+
+			PyObject* refresh_tuple = PyTuple_New(2);
+			PyTuple_SetItem(refresh_tuple, 0, title_msg_p);
+			PyTuple_SetItem(refresh_tuple, 1, PyBool_FromLong(1));
+
+			PyObject* set_overlay_text = PyObject_GetAttrString(mka, "setOverlayText");
+			PyObject_CallObject(set_overlay_text, refresh_tuple);
+		}
 	}
 
 	if(strcmp(phone_name, current_parameters->phone_name) != 0) {
 		strcpy(current_parameters->phone_name, phone_name);
-		sendRadioSubtitleText(phone_name, 6, version, ibus_port, true);
+		if(audio_selected)
+			sendRadioSubtitleText(phone_name, 6, version, ibus_port, true);
 	}
 }

@@ -89,7 +89,7 @@ class MirrorHandler:
 
 	def startPhoneConnection(self):
 		if self.decoder is None:
-			self.decoder = Mirror_Decoder.Decoder(self.parameters.fullscreen, pg.display.get_surface().get_width(), pg.display.get_surface().get_height())
+			self.decoder = Mirror_Decoder.Decoder(self.parameters.fullscreen, self.link_list, pg.display.get_surface().get_width(), pg.display.get_surface().get_height())
 
 		self.decoder.setWindow(self.parameters.autoconnect)
 		self.usb_link.writepipe = self.decoder.getWritePipe()

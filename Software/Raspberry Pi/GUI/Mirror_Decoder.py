@@ -9,8 +9,11 @@ from enum import Enum, IntEnum
 from os import truncate
 from Mirror_USBLink import Error
 
+import CarLinkList
+
 import threading, os
 import mpv
+from PIL import Image, ImageDraw, ImageFont
 
 class KeyEvent(IntEnum):
 	BUTTON_SIRI = 5
@@ -54,7 +57,7 @@ class Decoder:
 					except Error:
 						print("something broke on reading the MPV input pipe")
 	
-	def __init__(self, full: bool, w=720, h=480):	
+	def __init__(self, full: bool, link_list: CarLinkList.CarLinkList, w=720, h=480):	
 		# self.child = subprocess.Popen(["mpv", "--hwdec=rpi", "--demuxer-rawvideo-fps=60", "--fps=60", "-"], stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, bufsize=1)	
 		
 		self.readPipe, self.writePipe = os.pipe()
@@ -63,6 +66,13 @@ class Decoder:
 		self.thread = self._Thread(self,full,w,h)
 		self.player = self.thread.player
 		self.thread.start()
+
+		self.link_list = link_list
+
+		self.overlay_font = ImageFont.truetype('arial.ttf', 32)
+		self.overlay = self.player.create_image_overlay()
+		#self.overlay_image = Image.new('RGBA', (self.link_list.attributes.w, self.link_list.attributes.header_height), self.link_list.attributes.header_color)
+		#self.overlay_image_draw = ImageDraw.Draw(self.overlay_image)
 
 		if not self.playing:
 			self.player.play('python://mirror_video')
@@ -86,6 +96,15 @@ class Decoder:
 
 	def setWindow(self, window_status: bool):
 		self.player.window_minimized=not window_status
+
+	def setOverlayText(self, text: str):
+		if len(text) > 0:
+			overlay_image = Image.new('RGBA', (self.link_list.attributes.w, self.link_list.attributes.header_height), self.link_list.attributes.header_color)
+			overlay_image_draw = ImageDraw.Draw(overlay_image)
+			overlay_image_draw.text((0,0), text, font= self.overlay_font, fill=self.link_list.attributes.text_color)
+			self.overlay.update(overlay_image, (0,0))
+		else:
+			self.overlay.remove()
 
 	def getWindow(self) -> bool:
 		return not self.player.window_minimized
