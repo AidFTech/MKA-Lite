@@ -46,3 +46,8 @@ class ParameterList:
 	ike_minute = -1
 	ike_datestring = "--/--/----"
 	ike_24h = True	#24hr format
+
+	#Text sent from the OE radio.
+	main_radio_title = ""	#The main text displaying the source name.
+	main_radio_subtitle = [""]*6	#The subtitle text surrounding the title.
+	center_radio_text = [""]*5	#The text shown in the center area.

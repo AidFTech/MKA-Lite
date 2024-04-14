@@ -285,7 +285,32 @@ void checkParameterList(PyObject* mka, ParameterList* current_parameters, const 
 	if(strlen(app) >= STRING_BUF_LEN)
 		app[STRING_BUF_LEN - 1] = '\0';
 
+	char* phone_name = PyBytes_AsString(PyUnicode_AsEncodedString(PyObject_GetAttrString(parameter_list, "phone_name"), "utf-8", "strict"));
+	if(strlen(phone_name) >= STRING_BUF_LEN)
+		phone_name[STRING_BUF_LEN - 1] = '\0';
+	
 	bool refresh = false; //True if a refresh message is required.
+
+	if(phone_type != current_parameters->phone_type) { //TODO: Should the phone light message be sent if the BMBT is not connected?
+		current_parameters->phone_type = phone_type;
+		if(bmbt_connected) {
+			if(phone_type == PARAM_NO_PHONE)
+				setPhoneLight(ibus_port, PHONE_LED_RED);
+			else
+				setPhoneLight(ibus_port, PHONE_LED_GREEN);
+			if(audio_selected) {
+				sendAllRadioCenterText(song_title, artist, album, app, version, ibus_port, false);
+				if(phone_type == PARAM_ANDROID){
+					sendRadioMainText("Android", version, ibus_port);
+				} else if(phone_type == PARAM_CARPLAY) {
+					sendRadioMainText("CarPlay", version, ibus_port);
+				} else {
+					sendRadioMainText("MKA", version, ibus_port);
+				}
+				refresh = true;
+			}
+		}
+	}
 
 	if(strcmp(song_title, current_parameters->song_title) != 0) {
 		strcpy(current_parameters->song_title, song_title);
@@ -319,6 +344,9 @@ void checkParameterList(PyObject* mka, ParameterList* current_parameters, const 
 		}
 	}
 
+	if(refresh && version >= 5) 
+		sendRefresh(ibus_port, 0x63);
+
 	if(bmbt_connected != current_parameters->bmbt_connected) {
 		current_parameters->bmbt_connected = bmbt_connected;
 		if(bmbt_connected) {
@@ -326,31 +354,6 @@ void checkParameterList(PyObject* mka, ParameterList* current_parameters, const 
 				setPhoneLight(ibus_port, PHONE_LED_RED);
 			else {
 				setPhoneLight(ibus_port, PHONE_LED_GREEN);
-				if(audio_selected) {
-					sendRadioCenterText(song_title, SONG_NAME, version, ibus_port);
-					sendRadioCenterText(artist, ARTIST, version, ibus_port);
-					sendRadioCenterText(album, ALBUM, version, ibus_port);
-					sendRadioCenterText(app, APP, version, ibus_port);
-					refresh = true;
-				}
-			}
-		}
-	}
-		
-	if(phone_type != current_parameters->phone_type) { //TODO: Should this message be sent if the BMBT is not connected?
-		current_parameters->phone_type = phone_type;
-		if(bmbt_connected) {
-			if(phone_type == PARAM_NO_PHONE)
-				setPhoneLight(ibus_port, PHONE_LED_RED);
-			else {
-				setPhoneLight(ibus_port, PHONE_LED_GREEN);
-				if(audio_selected && !refresh) {
-					sendRadioCenterText(song_title, SONG_NAME, version, ibus_port);
-					sendRadioCenterText(artist, ARTIST, version, ibus_port);
-					sendRadioCenterText(album, ALBUM, version, ibus_port);
-					sendRadioCenterText(app, APP, version, ibus_port);
-					refresh = true;
-				}
 			}
 		}
 	}
@@ -366,6 +369,8 @@ void checkParameterList(PyObject* mka, ParameterList* current_parameters, const 
 		}*/
 	}
 
-	if(refresh && version >= 5) 
-		sendRefresh(ibus_port);
+	if(strcmp(phone_name, current_parameters->phone_name) != 0) {
+		strcpy(current_parameters->phone_name, phone_name);
+		sendRadioSubtitleText(phone_name, 6, version, ibus_port, true);
+	}
 }

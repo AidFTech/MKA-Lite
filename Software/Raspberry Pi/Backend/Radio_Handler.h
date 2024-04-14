@@ -26,7 +26,15 @@ void setSelected(PyObject* mka, PyObject* parameter_list, const int selected);
 
 void seekTrack(PyObject* mka, const uint8_t forward);
 
+void sendRadioScreenUpdate(PyObject* parameter_list, const uint8_t version, const int port);
+
+int sendRadioMainText(const char* text, const int8_t version, const int port);
+int sendRadioSubtitleText(const char* text, const uint8_t zone, const int8_t version, const int port, const bool refresh);
+
 int sendRadioCenterText(const char* text, const uint8_t position, const int8_t version, const int port);
-void sendRefresh(const int port);
+void sendAllRadioCenterTextFromParameters(PyObject* parameter_list, const uint8_t version, const int port, const bool refresh);
+void sendAllRadioCenterText(const char* song_title, const char* artist, const char* album, const char* app, const uint8_t version, const int port, const bool refresh);
+
+void sendRefresh(const int port, const uint8_t index);
 
 #endif
