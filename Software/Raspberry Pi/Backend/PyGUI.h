@@ -38,6 +38,7 @@ void setPhoneLight(const int ibus_port, const uint8_t state);
 void sendPong(const int ibus_port, const uint8_t receiver, const int first_pong);
 
 void sendCDPing(const int ibus_port);
+void sendVersionQuery(const int ibus_port, const uint8_t receiver);
 
 void handlePythonIBus(PyObject* mka, const int ibus_port, const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l);
 void setTime(PyObject* mka, char* time_string);

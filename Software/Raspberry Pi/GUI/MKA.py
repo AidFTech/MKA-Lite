@@ -140,6 +140,11 @@ class MKA:
 			
 			self.parameter_list.next_menu = ParameterList.NEXTMENU_NO_MENU
 
+	def setVersion(self, data0: int, data1: int):
+		"""Set the GT version."""
+		version = bytearray([data0, data1])
+		self.parameter_list.version = int(version.decode())
+
 	def knobTurn(self, clockwise: bool, count: int):
 		"""IBus knob turn. "Clockwise" is true if the knob is turned clockwise."""
 		if self.active_menu is None:

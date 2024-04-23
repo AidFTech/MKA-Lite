@@ -21,6 +21,9 @@ class ParameterList:
 	phone_active = False	#True if the phone screen is active.
 	next_menu = NEXTMENU_NO_MENU	#The next menu to open.
 	fullscreen = False	#True if the program is rendered in fullscreen, i.e. if tested on a Pi.
+
+	#GT Data
+	version = 0
 	
 	#Phone parameters.
 	phone_type = NO_PHONE	#The type of phone connected.

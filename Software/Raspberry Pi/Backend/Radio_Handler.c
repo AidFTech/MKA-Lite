@@ -62,7 +62,7 @@ void handleRadioIBus(PyObject* mka, const int ibus_port, const uint8_t sender, c
 			}
 
 			if(sent_22) {
-				const int8_t version = 5;	//TODO: Sync with GT. Get from Python?
+				const int8_t version = PyLong_AsLong(PyObject_GetAttrString(parameter_list, "version"));
 				sendRadioScreenUpdate(parameter_list, version, ibus_port);
 			}
 		} else if(!selected) {

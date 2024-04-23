@@ -182,6 +182,22 @@ void handlePythonIBus(PyObject* mka, const int ibus_port, const uint8_t sender, 
 			PyObject* set_night_mode = PyObject_GetAttrString(mka, "setNightMode");
 			PyObject_CallObject(set_night_mode, NULL);
 		}
+	} else if(sender == IBUS_DEVICE_GT) {
+		bool request_version = true; //Request the version if it is not set. Set to false if we get the version message.
+
+		if(data[0] == 0xA0) { //Version message.
+			const uint8_t version_data0 = data[12], version_data1 = data[13];
+			PyObject* tuple = PyTuple_New(2);
+			PyTuple_SetItem(tuple, 0, PyLong_FromLong(version_data0));
+			PyTuple_SetItem(tuple, 1, PyLong_FromLong(version_data1));
+
+			PyObject* set_version = PyObject_GetAttrString(mka, "setVersion");
+			PyObject_CallObject(set_version, tuple);
+		}
+
+		int version = PyLong_AsLong(PyObject_GetAttrString(parameter_list, "version"));
+		if(version <= 0 && request_version) 
+			sendVersionQuery(ibus_port, IBUS_DEVICE_GT);
 	}
 	#ifndef RPI_UART
 	if(data[0] != IBUS_CMD_IKE_IGN_STATUS_RESP)
@@ -202,6 +218,13 @@ void sendCDPing(const int ibus_port) {
 	uint8_t data[] = {0x2, 0x1};
 	const uint16_t l = sizeof(data);
 	writeIBusData(ibus_port, IBUS_DEVICE_CDC, IBUS_DEVICE_GLO, data, l);
+}
+
+//Send a diagnostic query.
+void sendVersionQuery(const int ibus_port, const uint8_t receiver) {
+	uint8_t data[] = {0x0};
+	const uint16_t l = sizeof(data);
+	writeIBusData(ibus_port, IBUS_DEVICE_DIA, receiver, data, l);
 }
 
 //Set the displayed time.
@@ -262,7 +285,7 @@ void checkParameterList(PyObject* mka, ParameterList* current_parameters, const 
 	PyObject* parameter_list = PyObject_GetAttrString(mka, "parameter_list");
 
 	const int8_t phone_type = PyLong_AsLong(PyObject_GetAttrString(parameter_list, "phone_type"))&0xFF;
-	const int8_t version = 5;	//TODO: Sync with GT.
+	const int8_t version = PyLong_AsLong(PyObject_GetAttrString(parameter_list, "version"));
 
 	const bool phone_active = PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "phone_active"));
 	const bool playing = PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "playing"));
