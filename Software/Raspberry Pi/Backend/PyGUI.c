@@ -402,4 +402,13 @@ void checkParameterList(PyObject* mka, ParameterList* current_parameters, const 
 		if(audio_selected)
 			sendRadioSubtitleText(phone_name, 6, version, ibus_port, true);
 	}
+
+	if(playing != current_parameters->playing) {
+		current_parameters->playing = playing;
+
+		if(playing)
+			sendRadioSubtitleText(">", 2, version, ibus_port, true);
+		else
+			sendRadioSubtitleText("||", 2, version, ibus_port, true);
+	}
 }
