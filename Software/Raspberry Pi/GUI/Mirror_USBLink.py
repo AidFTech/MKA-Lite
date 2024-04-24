@@ -15,13 +15,15 @@ DEFAULT_PRODUCT = 0x1520
 MAX_WAIT = 20
 
 class USB_Connection:
-	def __init__(self, carlink_list: CarLinkList.CarLinkList):
+	def __init__(self, carlink_list: CarLinkList.CarLinkList, parent):
 		self.device = None
 		self.rx = None
 		self.tx = None
 		self.running = False
 		self.startup = False
 		self.carlink_list = carlink_list
+
+		self.parent = parent #TODO: Is there a way to type this variable without creating a circular import?
 
 	def __del__(self):
 		self.stop()
@@ -101,7 +103,15 @@ class USB_Connection:
 					msg_read = True
 
 				if msg_read:
-					self.carlink_list.rx_cache.append(msg)
+					#try:
+					#	msg = (Mirror_Protocol.Message(msg))
+					#except:
+					#	pass
+
+					if hasattr(msg, "msgtype") and msg.msgtype == 6: #Video data.
+						self.parent.sendVideo(msg)
+					else:
+						self.carlink_list.rx_cache.append(msg)
 
 		#if not self.running:
 		#	self.stop()

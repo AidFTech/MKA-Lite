@@ -14,7 +14,7 @@ class MirrorHandler:
 	def __init__(self, link_list: CarLinkList.CarLinkList):
 		self.link_list = link_list
 		self.parameters = link_list.parameters
-		self.usb_link = Mirror_USBLink.USB_Connection(self.link_list)
+		self.usb_link = Mirror_USBLink.USB_Connection(self.link_list, self)
 
 		self.run = True
 
@@ -141,6 +141,12 @@ class MirrorHandler:
 				self.parameters.artist = ""
 			if not hasattr(msg, "MediaAlbumName"):
 				self.parameters.album = ""
+
+	def sendVideo(self, msg: Mirror_Protocol.VideoData):
+		if self.decoder is not None:
+			self.videomem_data = msg.data
+			if self.decoder is not None:
+				self.decoder.send(msg.data)
 
 	def stopAll(self):
 		self.run = False
