@@ -43,14 +43,15 @@ class ColorMenuWindow(MenuWindow):
 			elif i == self.MAX_SELECTED - 2:
 				text = font.render(COLOR_MSG_CUSTOM, False, self.attribute_group.text_color)
 			else:
-				text = font.render(COLOR_MSG_BACK, False, self.attribute_group.text_color)
+				text = font.render("", False, self.attribute_group.text_color)
+			
 			t_x = RECT_WIDTH + 10
 			t_y = HEADER_HEIGHT + OPTION_HEIGHT*i
 
 			display.blit(text, (t_x,t_y))
 
 			if i == self.MAX_SELECTED - 1:
-				display.blit(return_img, (WINDOW_WIDTH - 170, t_y + OPTION_HEIGHT/2 - return_img.get_height()/2))
+				display.blit(return_img, (RECT_WIDTH, t_y + OPTION_HEIGHT/2 - return_img.get_height()/2))
 
 			if i == self.selected - 1:
 				pg.draw.rect(display, self.attribute_group.rect_color, pg.Rect(0, HEADER_HEIGHT + i*OPTION_HEIGHT, RECT_WIDTH, OPTION_HEIGHT))

@@ -12,6 +12,8 @@ class NightModeMenuWindow(MenuWindow):
 		for i in range(0,len(self.options)-1):
 			self.options[i] = str(i+1)
 
+		self.selected = parameter_group.night_level
+
 	def displayMenu(self, display: pg.surface):
 		WINDOW_WIDTH = self.attribute_group.w
 		WINDOW_HEIGHT = self.attribute_group.h
@@ -40,12 +42,18 @@ class NightModeMenuWindow(MenuWindow):
 
 			display.blit(text, (t_x,t_y))
 
-			if i == self.MAX_SELECTED - 2:	#Back button.
-				display.blit(return_img, (WINDOW_WIDTH - 170, t_y + OPTION_HEIGHT/2 - return_img.get_height()/2))
+			if i == self.MAX_SELECTED - 1:	#Back button.
+				display.blit(return_img, (RECT_WIDTH, t_y + OPTION_HEIGHT/2 - return_img.get_height()/2))
 
 			if i == self.selected - 1:
 				pg.draw.rect(display, self.attribute_group.rect_color, pg.Rect(0, HEADER_HEIGHT + i*OPTION_HEIGHT, RECT_WIDTH, OPTION_HEIGHT))
 				pg.draw.rect(display, self.attribute_group.rect_color, pg.Rect(0, HEADER_HEIGHT + i*OPTION_HEIGHT, WINDOW_WIDTH - RECT_WIDTH*2, OPTION_HEIGHT), 5)
+
+	def makeSelection(self):
+		selected = self.selected - 1
+		if selected < self.MAX_SELECTED - 1:
+			self.parameter_group.night_level = selected + 1
+		self.goBack()
 
 	def goBack(self):
 		self.parameter_group.next_menu = ParameterList.NEXTMENU_SETTINGS_MENU

@@ -47,14 +47,15 @@ class SettingsMenuWindow(MenuWindow):
 			pg.draw.rect(display, self.attribute_group.border_color, pg.Rect(0, HEADER_HEIGHT + i*OPTION_HEIGHT, RECT_WIDTH, OPTION_HEIGHT))
 			pg.draw.rect(display, self.attribute_group.border_outline, pg.Rect(0, HEADER_HEIGHT + i*OPTION_HEIGHT, RECT_WIDTH, OPTION_HEIGHT), 1)
 			
-			text = font.render(self.options[i], False, self.attribute_group.text_color)
 			t_x = RECT_WIDTH + 10
 			t_y = HEADER_HEIGHT + OPTION_HEIGHT*i
 
-			display.blit(text, (t_x,t_y))
+			if SETTINGS_MSG_BACK not in self.options[i]:
+				text = font.render(self.options[i], False, self.attribute_group.text_color)
+				display.blit(text, (t_x,t_y))
 
 			if SETTINGS_MSG_BACK in self.options[i]:
-				display.blit(return_img, (WINDOW_WIDTH - 170, t_y + OPTION_HEIGHT/2 - return_img.get_height()/2))
+				display.blit(return_img, (RECT_WIDTH, t_y + OPTION_HEIGHT/2 - return_img.get_height()/2))
 			elif SETTINGS_MSG_AUTOCONNECT in self.options[i]:
 				if self.parameter_group.autoconnect:
 					display.blit(check_checked, (WINDOW_WIDTH - 170, t_y + OPTION_HEIGHT/2 - check_checked.get_height()/2))
