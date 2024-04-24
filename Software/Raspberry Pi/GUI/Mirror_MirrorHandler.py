@@ -148,6 +148,14 @@ class MirrorHandler:
 			if self.decoder is not None:
 				self.decoder.send(msg.data)
 
+	def sendAudio(self, msg: Mirror_Protocol.AudioData):
+		#if msg.audioType == Mirror_Protocol.AudioData.Command.AUDIO_MEDIA_START:
+		self.parameters.playing = True
+
+		if not self.parameters.audio_selected:
+			self.sendMirrorCommand(Mirror_Decoder.KeyEvent.BUTTON_PAUSE)
+		#TODO: Send this to an audio pipe. We need to study the audio data a bit.
+
 	def stopAll(self):
 		self.run = False
 		self.stopPhoneConnection()

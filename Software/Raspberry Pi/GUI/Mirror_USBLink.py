@@ -110,6 +110,8 @@ class USB_Connection:
 
 					if hasattr(msg, "msgtype") and msg.msgtype == 6: #Video data.
 						self.parent.sendVideo(msg)
+					elif hasattr(msg, "msgtype") and msg.msgtype == 7: #Audio data.
+						self.parent.sendAudio(msg)
 					else:
 						self.carlink_list.rx_cache.append(msg)
 
