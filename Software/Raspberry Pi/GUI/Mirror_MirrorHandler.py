@@ -10,6 +10,8 @@ import Mirror_USBLink
 import Mirror_Protocol
 import Mirror_Decoder
 
+AUDIO_WAIT = 0.2 #The amount of time to wait before changing the audio symbol to a ||.
+
 class MirrorHandler:
 	def __init__(self, link_list: CarLinkList.CarLinkList):
 		self.link_list = link_list
@@ -22,6 +24,7 @@ class MirrorHandler:
 		self.startup_thread.start()
 
 		self.decoder = None
+		self.audio_timer = time.perf_counter()
 
 		self.videomem_data = bytes([0]*0)
 
@@ -37,6 +40,9 @@ class MirrorHandler:
 				self.interpretMessage(msg)
 
 			self.link_list.rx_cache.clear()
+
+		if time.perf_counter() - self.audio_timer > AUDIO_WAIT:
+			self.parameters.playing = False
 
 	def interpretMessage(self, msg: Mirror_Protocol.Message):
 		if isinstance(msg, Mirror_Protocol.Open):	#Startup message.
@@ -103,7 +109,7 @@ class MirrorHandler:
 		self.parameters.app = ""
 
 		if self.decoder is not None:
-			self.usb_link.writepipe = -1
+			#self.usb_link.writepipe = -1
 			self.decoder.send(self.videomem_data)
 			self.decoder.stop()
 			self.decoder = None
@@ -149,11 +155,19 @@ class MirrorHandler:
 				self.decoder.send(msg.data)
 
 	def sendAudio(self, msg: Mirror_Protocol.AudioData):
-		#if msg.audioType == Mirror_Protocol.AudioData.Command.AUDIO_MEDIA_START:
+		#if hasattr(msg, "audioType") and hasattr(msg, "decodeType"):
+		#	audio_msg = "AudioType: "
+		#	audio_msg += str(msg.audioType)
+		#	audio_msg += " DecodeType: "
+		#	audio_msg += str(msg.decodeType)
+
+		#	print(audio_msg)
+  
+		self.audio_timer = time.perf_counter()
 		self.parameters.playing = True
 
-		if not self.parameters.audio_selected:
-			self.sendMirrorCommand(Mirror_Decoder.KeyEvent.BUTTON_PAUSE)
+		if hasattr(msg, "audioType") and msg.audioType == 1 and not self.parameters.audio_selected:
+			pass #TODO: Force a switch to the MKA. This could be coming from Siri or Google Assistant.
 		#TODO: Send this to an audio pipe. We need to study the audio data a bit.
 
 	def stopAll(self):

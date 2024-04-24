@@ -205,6 +205,7 @@ class MKA:
 	def handleDirectionButton(self):
 		"""Direction button pressed. Play/pause."""
 		if self.parameter_list.audio_selected:
+			self.parameter_list.playing = not self.parameter_list.playing
 			self.mirror.sendMirrorCommand(Mirror_Decoder.KeyEvent.BUTTON_TOGGLE)
 
 	def setNightMode(self):
