@@ -49,6 +49,14 @@ class MirrorHandler:
 			self.usb_link.sendMultiple(Mirror_Protocol.opened_info)
 			self.usb_link.sendMessage(Mirror_Protocol.MetaData(mediaDelay = 300, androidAutoSizeW = 800, AndroidAutoSizeH = 480))
 
+			msg_91 = Mirror_Protocol.Message(9)
+			msg_91._setdata(bytes([1]))
+			self.usb_link.sendMessage(msg_91)
+
+			msg_88 = Mirror_Protocol.Message(0x88)
+			msg_88._setdata(bytes([1]))
+			self.usb_link.sendMessage(msg_88)
+
 			self.usb_link.startDongle()
 		elif isinstance(msg, Mirror_Protocol.Plugged):	#Phone connected.
 			self.parameters.phone_type = int(msg.phone_type)
