@@ -113,14 +113,14 @@ void handlePythonIBus(PyObject* mka, const int ibus_port, const uint8_t sender, 
 	if(receiver == IBUS_DEVICE_CDC && data[0] == 0x1) { //Ping.
 		sendPong(ibus_port, sender, 0);
 	} else if(sender == IBUS_DEVICE_IKE) {
-		if(data[0] == IBUS_CMD_IKE_IGN_STATUS_RESP) {
+		if(data[0] == IBUS_CMD_IKE_IGN_STATUS_RESP) { //Change the ignition status.
 			if((data[1]&0x1) == 0)
 				MKAsetRun(mka, 0);
 			else
 				MKAsetRun(mka, 1);
-		} else if(data[0] == IBUS_CMD_IKE_RESP_VEHICLE_CONFIG) {
+		} else if(data[0] == IBUS_CMD_IKE_RESP_VEHICLE_CONFIG) { //Set the 24h time mode.
 			PyObject_SetAttrString(parameter_list, "ike_24h", PyBool_FromLong(!(data[2]&0x1)));
-		} else if(data[0] == IBUS_CMD_IKE_OBC_TEXT) {
+		} else if(data[0] == IBUS_CMD_IKE_OBC_TEXT) { //Set the time or date.
 			if(data[1] == 0x1) { //Time.
 				char time_string[l-2];
 				for(uint8_t i=3;i<l;i+=1)
@@ -137,9 +137,9 @@ void handlePythonIBus(PyObject* mka, const int ibus_port, const uint8_t sender, 
 			}
 		}
 	} else if(sender == IBUS_DEVICE_BMBT) {
-		PyObject_SetAttrString(parameter_list, "bmbt_connected", PyBool_FromLong(1));
+		PyObject_SetAttrString(parameter_list, "bmbt_connected", PyBool_FromLong(1)); //Make sure Python knows the BMBT is connected.
 
-		if(PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "mka_active"))) {
+		if(PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "mka_active"))) { //Respond to these events only if the MKA is actively displaying video.
 			if(data[0] == IBUS_CMD_BMBT_KNOB) { //Knob turn.
 				const uint8_t steps = data[1]&0x7F, clockwise = (data[1]&0x80)>>7;
 				MKAturnKnob(mka, steps, clockwise);
@@ -161,9 +161,9 @@ void handlePythonIBus(PyObject* mka, const int ibus_port, const uint8_t sender, 
 					MKAdirectionButton(mka);
 			}
 		}
-	} else if(sender == IBUS_DEVICE_RAD) {
+	} else if(sender == IBUS_DEVICE_RAD) { //If the message is from the radio, handle functions in the Radio_Handler "object."
 		handleRadioIBus(mka, ibus_port, sender, receiver, data, l);
-	} else if(sender == IBUS_DEVICE_LCM) {
+	} else if(sender == IBUS_DEVICE_LCM) { //LCM. Headlights on/off.
 		if(data[0] == IBUS_CMD_LCM_BULB_IND_RESP) {
 			const uint8_t last_headlights_on = PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "headlights_on"));
 			const uint8_t light_level = PyLong_AsLong(PyObject_GetAttrString(parameter_list, "light_level"));
@@ -174,7 +174,7 @@ void handlePythonIBus(PyObject* mka, const int ibus_port, const uint8_t sender, 
 				PyObject_CallObject(set_night_mode, NULL);
 			}
 		}
-	} else if(sender == IBUS_DEVICE_RLS) {
+	} else if(sender == IBUS_DEVICE_RLS) { //RLS. Level of brightness.
 		if(data[0] == IBUS_CMD_RLS_LIGHT_CONTROL) {
 			const uint8_t light_level = data[1]>>4;
 			PyObject_SetAttrString(parameter_list, "light_level", PyLong_FromLong(light_level));
@@ -182,7 +182,7 @@ void handlePythonIBus(PyObject* mka, const int ibus_port, const uint8_t sender, 
 			PyObject* set_night_mode = PyObject_GetAttrString(mka, "setNightMode");
 			PyObject_CallObject(set_night_mode, NULL);
 		}
-	} else if(sender == IBUS_DEVICE_GT) {
+	} else if(sender == IBUS_DEVICE_GT) { //Version message from the GT.
 		bool request_version = true; //Request the version if it is not set. Set to false if we get the version message.
 
 		if(data[0] == 0xA0) { //Version message.
@@ -229,17 +229,20 @@ void sendVersionQuery(const int ibus_port, const uint8_t receiver) {
 
 //Set the displayed time.
 void setTime(PyObject* mka, char* time_string) {
-	const int colon_index = getCharacterIndex(time_string, ':');
+	const int colon_index = getCharacterIndex(time_string, ':'); //The time string should contain a colon.
 	if(colon_index < 0)
 		return;
-
+	
+	//Separate the hour and minute.
 	char hour_array[] = {time_string[colon_index - 2], time_string[colon_index - 1], '\0'};
 	char min_array[] = {time_string[colon_index + 1], time_string[colon_index + 2], '\0'};
 
+	//Convert the hour and minute to integers.
 	int hour, min;
 	sscanf(hour_array, "%d", &hour);
 	sscanf(min_array, "%d", &min);
 
+	//Find "AM" or "PM."
 	PyObject* parameter_list = PyObject_GetAttrString(mka, "parameter_list");
 	int meridian_index = getCharacterIndex(time_string, 'p');
 	if(meridian_index < 0)
@@ -249,7 +252,7 @@ void setTime(PyObject* mka, char* time_string) {
 	if(meridian_index < 0)
 		meridian_index = getCharacterIndex(time_string, 'A');
 
-	if(meridian_index < 0) {
+	if(meridian_index < 0) { //24h mode.
 		PyObject_SetAttrString(parameter_list, "ike_hour", PyLong_FromLong(hour));
 	} else {
 		int pm_index = getCharacterIndex(time_string, 'p');
@@ -284,6 +287,7 @@ int getCharacterIndex(char* str, char desired) {
 void checkParameterList(PyObject* mka, ParameterList* current_parameters, const int ibus_port) {
 	PyObject* parameter_list = PyObject_GetAttrString(mka, "parameter_list");
 
+	//Compare the C and Python parameter lists.
 	const int8_t phone_type = PyLong_AsLong(PyObject_GetAttrString(parameter_list, "phone_type"))&0xFF;
 	const int8_t version = PyLong_AsLong(PyObject_GetAttrString(parameter_list, "version"));
 
@@ -314,6 +318,7 @@ void checkParameterList(PyObject* mka, ParameterList* current_parameters, const 
 	
 	bool refresh = false; //True if a refresh message is required.
 
+	//Check if a phone was connected or disconnected.
 	if(phone_type != current_parameters->phone_type) { //TODO: Should the phone light message be sent if the BMBT is not connected?
 		current_parameters->phone_type = phone_type;
 		if(bmbt_connected) {
@@ -335,6 +340,7 @@ void checkParameterList(PyObject* mka, ParameterList* current_parameters, const 
 		}
 	}
 
+	//Check if the song title changed.
 	if(strcmp(song_title, current_parameters->song_title) != 0) {
 		strcpy(current_parameters->song_title, song_title);
 		if(audio_selected) {
@@ -343,6 +349,7 @@ void checkParameterList(PyObject* mka, ParameterList* current_parameters, const 
 		}
 	}
 
+	//Check if the artist changed.
 	if(strcmp(artist, current_parameters->artist) != 0) {
 		strcpy(current_parameters->artist, artist);
 		if(audio_selected) {
@@ -351,6 +358,7 @@ void checkParameterList(PyObject* mka, ParameterList* current_parameters, const 
 		}
 	}
 
+	//Check if the album changed.
 	if(strcmp(album, current_parameters->album) != 0) {
 		strcpy(current_parameters->album, album);
 		if(audio_selected) {
@@ -359,6 +367,7 @@ void checkParameterList(PyObject* mka, ParameterList* current_parameters, const 
 		}
 	}
 
+	//Check if the app name changed.
 	if(strcmp(app, current_parameters->app_name) != 0) {
 		strcpy(current_parameters->app_name, app);
 		if(audio_selected) {
@@ -367,9 +376,11 @@ void checkParameterList(PyObject* mka, ParameterList* current_parameters, const 
 		}
 	}
 
-	if(refresh && version >= 5) 
+	//Send the refresh message.
+	if(refresh && version >= 5) //TODO: Do earlier versions require a refresh?
 		sendRefresh(ibus_port, 0x63);
 
+	//Activate phone lights.
 	if(bmbt_connected != current_parameters->bmbt_connected) {
 		current_parameters->bmbt_connected = bmbt_connected;
 		if(bmbt_connected) {
@@ -381,6 +392,7 @@ void checkParameterList(PyObject* mka, ParameterList* current_parameters, const 
 		}
 	}
 
+	//Determine whether the MKA was selected/deselected as the source.
 	if(audio_selected != current_parameters->audio_selected) {
 		current_parameters->audio_selected = audio_selected;
 		if(audio_selected ) {
@@ -397,12 +409,14 @@ void checkParameterList(PyObject* mka, ParameterList* current_parameters, const 
 		}
 	}
 
+	//Determine whether the phone name was sent.
 	if(strcmp(phone_name, current_parameters->phone_name) != 0) {
 		strcpy(current_parameters->phone_name, phone_name);
 		if(audio_selected)
 			sendRadioSubtitleText(phone_name, 6, version, ibus_port, true);
 	}
 
+	//Determine whether the phone is playing music.
 	if(playing != current_parameters->playing) {
 		current_parameters->playing = playing;
 

@@ -143,7 +143,7 @@ void writeIBusData(const int port, const uint8_t sender, const uint8_t receiver,
 	
 	if(port >= 0) {
 		clock_t start = clock();
-		while((clock() - start)/(CLOCKS_PER_SEC/1000) < IB_WAIT) {
+		while((clock() - start)/(CLOCKS_PER_SEC/1000) < IB_WAIT) { //Make sure IBus is clear before sending anything.
 			#ifdef RPI_UART
 			if(gpioRead(IB_RX) == 0)
 				start = clock();
@@ -159,6 +159,7 @@ void writeIBusData(const int port, const uint8_t sender, const uint8_t receiver,
 	#endif*/
 }
 
+//Write an IBus message without waiting, e.g. the CD changer response 0x39.
 void writePriorityIBusData(const int port, const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l) {
 	const unsigned int full_length = l+4;
 	uint8_t msg_data[full_length];

@@ -9,6 +9,7 @@ class CarLinkList:
 		self.rx_cache = [Mirror_Protocol.Message()]*0	#The cache of messages received.
 		self.attributes = attributes	#The shared attribute list.
 
+		'''Icons for the dongle.'''
 		self.airplay_conf = bytes([0]*0)
 		self.oem_logo = bytes([0]*0)
 		self.icon_120 = bytes([0]*0)

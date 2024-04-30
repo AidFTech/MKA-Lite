@@ -37,6 +37,7 @@ NightColor.border_color = (82, 93, 255)
 NightColor.border_outline = (0, 0, 0)
 
 def setColors(paste: AttributeGroup, copy: AttributeGroup):
+	"""Set the color scheme."""
 	paste.br = copy.br
 	paste.text_color = copy.text_color
 	paste.header_color = copy.header_color

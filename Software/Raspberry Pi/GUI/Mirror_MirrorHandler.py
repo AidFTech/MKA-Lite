@@ -13,6 +13,7 @@ import Mirror_Decoder
 AUDIO_WAIT = 0.2 #The amount of time to wait before changing the audio symbol to a ||.
 
 class MirrorHandler:
+	"""Phone mirror handler object."""
 	def __init__(self, link_list: CarLinkList.CarLinkList):
 		self.link_list = link_list
 		self.parameters = link_list.parameters
@@ -32,6 +33,7 @@ class MirrorHandler:
 		self.stopAll()
 			
 	def loop(self):
+		"""Mirror loop function."""
 		#if not self.usb_link.running and not self.startup_thread.is_alive():
 		#	self.startup_thread.start()
 		if len(self.link_list.rx_cache) > 0:	#Message waiting.
@@ -45,6 +47,7 @@ class MirrorHandler:
 			self.parameters.playing = False
 
 	def interpretMessage(self, msg: Mirror_Protocol.Message):
+		"""Interpret a message from the dongle."""
 		if isinstance(msg, Mirror_Protocol.Open):	#Startup message.
 			self.usb_link.sendMultiple(Mirror_Protocol.opened_info)
 			self.usb_link.sendMessage(Mirror_Protocol.MetaData(mediaDelay = 300, androidAutoSizeW = 800, AndroidAutoSizeH = 480))
@@ -83,6 +86,7 @@ class MirrorHandler:
 			pass
 
 	def connectDongleThread(self, manufacturer_id: int, device_id: int):
+		"""Dongle connection loop."""
 		while not self.usb_link.running and self.run:
 			connected = self.usb_link.connectDongle(manufacturer_id, device_id)
 
@@ -102,6 +106,7 @@ class MirrorHandler:
 					self.usb_link.stop()
 
 	def startPhoneConnection(self):
+		"""Start a phone connection."""
 		if self.decoder is None:
 			self.decoder = Mirror_Decoder.Decoder(self.parameters.fullscreen, self.link_list, pg.display.get_surface().get_width(), pg.display.get_surface().get_height())
 
@@ -109,6 +114,7 @@ class MirrorHandler:
 		self.usb_link.writepipe = self.decoder.getWritePipe()
 
 	def stopPhoneConnection(self):
+		"""End a phone connection."""
 		self.parameters.next_menu = ParameterList.NEXTMENU_MIRROR_MENU
 
 		self.parameters.song_title = ""
@@ -123,18 +129,21 @@ class MirrorHandler:
 			self.decoder = None
 
 	def getWindow(self) -> bool:
+		"""Return whether the window is minimized or full."""
 		if self.decoder is not None:
 			return self.decoder.getWindow()
 		else:
 			return False
 		
 	def sendMirrorCommand(self, command: int):
+		"""Send a CarPlay command to the phone."""
 		command_msg = Mirror_Protocol.CarPlay()
 		command_data = struct.pack("<L", command)
 		command_msg._setdata(command_data)
 		self.usb_link.sendMessage(command_msg)
 
 	def handleMetaData(self, msg: Mirror_Protocol.MetaData):
+		"""Handle a metadata message, e.g. song title."""
 		if hasattr(msg, "MDModel"):
 			self.parameters.phone_name = str(msg.MDModel)
 		
@@ -157,12 +166,14 @@ class MirrorHandler:
 				self.parameters.album = ""
 
 	def sendVideo(self, msg: Mirror_Protocol.VideoData):
+		"""Send a video message."""
 		if self.decoder is not None:
 			self.videomem_data = msg.data
 			if self.decoder is not None:
 				self.decoder.send(msg.data)
 
 	def sendAudio(self, msg: Mirror_Protocol.AudioData):
+		"""Send or handle an audio message."""
 		#if hasattr(msg, "audioType") and hasattr(msg, "decodeType"):
 		#	audio_msg = "AudioType: "
 		#	audio_msg += str(msg.audioType)
@@ -179,6 +190,7 @@ class MirrorHandler:
 		#TODO: Send this to an audio pipe. We need to study the audio data a bit.
 
 	def stopAll(self):
+		"""Stop everything, e.g. if the car is turned off."""
 		self.run = False
 		self.stopPhoneConnection()
 		self.usb_link.stop()

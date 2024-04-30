@@ -15,6 +15,7 @@ class NightModeMenuWindow(MenuWindow):
 		self.selected = parameter_group.night_level
 
 	def displayMenu(self, display: pg.surface):
+		"""Menu display loop function."""
 		WINDOW_WIDTH = self.attribute_group.w
 		WINDOW_HEIGHT = self.attribute_group.h
 		HEADER_HEIGHT = self.attribute_group.header_height
@@ -50,10 +51,12 @@ class NightModeMenuWindow(MenuWindow):
 				pg.draw.rect(display, self.attribute_group.rect_color, pg.Rect(0, HEADER_HEIGHT + i*OPTION_HEIGHT, WINDOW_WIDTH - RECT_WIDTH*2, OPTION_HEIGHT), 5)
 
 	def makeSelection(self):
+		"""Select the night mode level."""
 		selected = self.selected - 1
 		if selected < self.MAX_SELECTED - 1:
 			self.parameter_group.night_level = selected + 1
 		self.goBack()
 
 	def goBack(self):
+		"""Return to the settings menu."""
 		self.parameter_group.next_menu = ParameterList.NEXTMENU_SETTINGS_MENU

@@ -15,6 +15,7 @@ DEFAULT_PRODUCT = 0x1520
 MAX_WAIT = 20
 
 class USB_Connection:
+	"""USB connection object. All USB functions are handled through this."""
 	def __init__(self, carlink_list: CarLinkList.CarLinkList, parent):
 		self.device = None
 		self.rx = None
@@ -29,6 +30,7 @@ class USB_Connection:
 		self.stop()
 
 	def connectDongle(self, vendor_id = DEFAULT_VENDOR, product_id = DEFAULT_PRODUCT) -> bool:
+		"""Connect the dongle, return whether successful."""
 		start_time = time.time()
 		while self.device == None:
 			self.device = usb.core.find(idVendor = vendor_id, idProduct = product_id)
@@ -61,6 +63,7 @@ class USB_Connection:
 		return True
 	
 	def startDongle(self):
+		"""Start the connected dongle."""
 		if not self.running:
 			return
 		
@@ -69,6 +72,7 @@ class USB_Connection:
 		self.heartbeat_thread.start()
 
 	def readThread(self):
+		"""The message read thread loop."""
 		while self.running == True:
 			msg_read = False
 
@@ -119,6 +123,7 @@ class USB_Connection:
 		#	self.stop()
 
 	def heartbeatThread(self):
+		"""The dongle heartbeat loop. A heartbeat message must be sent regularly."""
 		while self.running and self.startup:
 			try:
 				self.sendMessage(Mirror_Protocol.Heartbeat())
@@ -136,6 +141,7 @@ class USB_Connection:
 
 
 	def sendMessage(self, message: Mirror_Protocol.Message):
+		"""Send a message to the dongle."""
 		if self.tx is not None:
 			data = message.serialise()
 			while not self.out_locker.acquire():
@@ -149,10 +155,12 @@ class USB_Connection:
 				self.out_locker.release()
 
 	def sendMultiple(self, messages: list[Mirror_Protocol.Message]):
+		"""Send multiple messages to the dongle."""
 		for m in messages:
 			self.sendMessage(m)
 	
 	def stop(self):
+		"""End the dongle connection."""
 		self.running = False
 		self.startup = False
 		self.device = None

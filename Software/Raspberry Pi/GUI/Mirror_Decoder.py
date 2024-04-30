@@ -35,7 +35,9 @@ class KeyEvent(IntEnum):
 	NIGHT_MODE = 16
 	DAY_MODE = 17
 class Decoder:
+	"""Video decoder object."""
 	class _Thread(threading.Thread):
+		"""Video decoder thread."""
 		def __init__(self, owner, full: bool, w=720, h=480):
 			super().__init__()
 			self.owner = owner
@@ -47,6 +49,7 @@ class Decoder:
 			player.fullscreen = full
 			
 		def run(self):
+			"""Thread loop function."""
 			player = self.player
 		
 			@player.python_stream('mirror_video')
@@ -79,6 +82,7 @@ class Decoder:
 			self.playing = True
 
 	def stop(self):
+		"""Stop playing video."""
 		# self.child.terminate()
 		self.playing = False
 		self.thread.shutdown = True
@@ -86,6 +90,7 @@ class Decoder:
 		self.player.terminate()
 
 	def send(self, data: bytes):
+		"""Send video data."""
 		os.write(self.writePipe, data)
 		
 	#	if not self.playing:
@@ -95,9 +100,11 @@ class Decoder:
 		# self.child.stdin.flush()
 
 	def setWindow(self, window_status: bool):
+		"""Set whether the window is minimized, i.e. the phone screen is active."""
 		self.player.window_minimized=not window_status
 
 	def setOverlayText(self, text: str):
+		"""Set overlay text on the window."""
 		if len(text) > 0:
 			overlay_image = Image.new('RGBA', (self.link_list.attributes.w, self.link_list.attributes.header_height), self.link_list.attributes.header_color)
 			overlay_image_draw = ImageDraw.Draw(overlay_image)
@@ -107,9 +114,11 @@ class Decoder:
 			self.overlay.remove()
 
 	def getWindow(self) -> bool:
+		"""Returns whether the window is minimized."""
 		return not self.player.window_minimized
 	
 	def getWritePipe(self) -> int:
+		"""Return the write pipe- this may be leftover..."""
 		return self.writePipe
 
 	def log(self, loglevel, component, message):

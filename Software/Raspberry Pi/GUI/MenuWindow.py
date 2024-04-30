@@ -2,8 +2,8 @@ from AttributeGroup import AttributeGroup
 from ParameterList import ParameterList
 import pygame as pg
 
-'''Generic PyGame menu window.'''
 class MenuWindow:
+	"""Generic PyGame menu window."""
 	def __init__(self, attribute_group: AttributeGroup, parameter_group: ParameterList, file_path: str):
 		self.attribute_group = attribute_group	#The color group to be used.
 		self.parameter_group = parameter_group	#The parameter group to be used.
@@ -12,12 +12,12 @@ class MenuWindow:
 		self.selected = 0	#The selected option.
 		self.MAX_SELECTED = 1
 
-	'''Generic window display message.'''
 	def displayMenu(self, display: pg.surface):
+		"""Generic window display message."""
 		display.fill(self.attribute_group.br)
 
-	'''Draw the clock.'''
 	def drawClock(self, display: pg.surface):
+		"""Draw the clock."""
 		time_str = "--:--"
 		if self.parameter_group.ike_hour >= 0 and self.parameter_group.ike_minute >= 0:
 			if self.parameter_group.ike_24h or (self.parameter_group.ike_hour >=1 and self.parameter_group.ike_hour <= 12):
@@ -50,8 +50,8 @@ class MenuWindow:
 		date_text = font.render(date_str, False, self.attribute_group.text_color)
 		display.blit(date_text, (self.attribute_group.w - date_text.get_width() - 20, self.attribute_group.h-self.attribute_group.header_height-3))
 
-	'''Choose the selected option.'''
 	def setSelected(self, new_selected: int):
+		"""Choose the selected option."""
 		if new_selected < 0:
 			new_selected = 0
 		elif new_selected > self.MAX_SELECTED:
@@ -59,12 +59,12 @@ class MenuWindow:
 
 		self.selected = new_selected
 
-	'''Get the selected option.'''
 	def getSelected(self) -> int:
+		"""Get the selected option."""
 		return self.selected
 
-	'''Increment the selected option.'''
 	def incrementSelected(self):
+		"""Increment the selected option."""
 		new_selected = self.selected + 1
 		if new_selected > self.MAX_SELECTED:
 			new_selected = 1
@@ -72,8 +72,8 @@ class MenuWindow:
 
 		self.selected = new_selected
 	
-	'''Decrement the selected option.'''
 	def decrementSelected(self):
+		"""Decrement the selected option."""
 		new_selected = self.selected - 1
 		if new_selected < 1:
 			new_selected = self.MAX_SELECTED
@@ -81,10 +81,10 @@ class MenuWindow:
 
 		self.selected = new_selected
 
-	'''Perform the selected option.'''
 	def makeSelection(self):
+		"""Perform the selected option."""
 		pass
 
-	'''Handle the Back button.'''
 	def goBack(self):
+		"""Handle the Back button."""
 		pass

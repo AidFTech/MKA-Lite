@@ -18,6 +18,7 @@ class MirrorMenuWindow(MenuWindow):
 		self.selected = 1
 
 	def displayMenu(self, display: pg.surface):
+		"""Menu display loop function."""
 		carplay_img = pg.image.load(self.file_path + 'Apple_CarPlay_Logo_100.png')
 		android_img = pg.image.load(self.file_path + 'Android_Auto_icon_100.png')
 		return_img = pg.image.load(self.file_path + 'return.png')
@@ -75,6 +76,7 @@ class MirrorMenuWindow(MenuWindow):
 			pg.draw.rect(display, self.attribute_group.rect_color, pg.Rect(0, r_y, WINDOW_WIDTH - RECT_WIDTH*2, r_h), 5)
 
 	def makeSelection(self):
+		"""Select the main menu option."""
 		if self.selected == 1: #Start phone mirroring.
 			if self.parameter_group.phone_type != NO_PHONE:
 				self.parameter_group.phone_active = True
@@ -84,6 +86,7 @@ class MirrorMenuWindow(MenuWindow):
 			self.parameter_group.next_menu = ParameterList.NEXTMENU_OEM_MENU
 
 	def getMirrorMessage(self, phone_name: str, phone_type: int) -> str:
+		"""Get the string for the phone mirroring option."""
 		if phone_type == ANDROID:
 			return "Android Auto: " + phone_name
 		elif phone_type == CARPLAY:

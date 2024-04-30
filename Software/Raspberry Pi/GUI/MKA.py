@@ -233,6 +233,7 @@ class MKA:
 
 	
 def getFileRoot(fname: str) -> str:
+	"""Return the root Python is running from."""
 	MYNAME = "MKA.py"
 	if fname.find(MYNAME) < 0: #File is being called from the same directory as the C file.
 		return ""

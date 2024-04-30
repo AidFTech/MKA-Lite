@@ -4,7 +4,7 @@
 void handleRadioIBus(PyObject* mka, const int ibus_port, const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l) {
 	PyObject* parameter_list = PyObject_GetAttrString(mka, "parameter_list");
 	const bool selected = PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "audio_selected")) != 0;
-	if(receiver == IBUS_DEVICE_CDC && data[0] == IBUS_COMMAND_CDC_REQUEST) {
+	if(receiver == IBUS_DEVICE_CDC && data[0] == IBUS_COMMAND_CDC_REQUEST) { //CD request message.
 		const uint8_t selected = PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "audio_selected"));
 		
 		if(data[1] == IBUS_CDC_CMD_GET_STATUS) { //Request current CD and track status.
@@ -12,13 +12,13 @@ void handleRadioIBus(PyObject* mka, const int ibus_port, const uint8_t sender, c
 				sendCDStatusMessage(ibus_port, IBUS_CDC_STAT_PLAYING, sender);
 			else
 				sendCDStatusMessage(ibus_port, IBUS_CDC_STAT_STOP, sender);
-		} else if(data[1] == IBUS_CDC_CMD_STOP_PLAYING) {
+		} else if(data[1] == IBUS_CDC_CMD_STOP_PLAYING) { //Stop the MKA.
 			sendCDStatusMessage(ibus_port, IBUS_CDC_STAT_STOP, sender);
 			setSelected(mka, parameter_list, 0);
-		} else if(data[1] == IBUS_CDC_CMD_START_PLAYING || data[1] == IBUS_CDC_CMD_PAUSE_PLAYING) {
+		} else if(data[1] == IBUS_CDC_CMD_START_PLAYING || data[1] == IBUS_CDC_CMD_PAUSE_PLAYING) { //Start the MKA.
 			sendCDStatusMessage(ibus_port, IBUS_CDC_STAT_PLAYING, sender);
 			setSelected(mka, parameter_list, 1);
-		} else if(data[1] == IBUS_CDC_CMD_CHANGE_TRACK) {
+		} else if(data[1] == IBUS_CDC_CMD_CHANGE_TRACK) { //Change the song.
 			//int phone_active = PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "phone_active"));
 			if(selected) {
 				if(data[2] == 0x0) {
@@ -30,13 +30,13 @@ void handleRadioIBus(PyObject* mka, const int ibus_port, const uint8_t sender, c
 			} else {
 				sendCDStatusMessage(ibus_port, IBUS_CDC_STAT_STOP, sender);
 			}
-		} else {
+		} else { //N/A message- send the "wait" signal.
 			if(selected)
 				sendCDStatusMessage(ibus_port, IBUS_CDC_STAT_END, sender);
 			else
 				sendCDStatusMessage(ibus_port, IBUS_CDC_STAT_STOP, sender);
 		}
-	} else if(data[0] == IBUS_CMD_RAD_SCREEN_MODE_UPDATE) {
+	} else if(data[0] == IBUS_CMD_RAD_SCREEN_MODE_UPDATE) { //Audio screen changed.
 		if(PyObject_IsTrue(PyObject_GetAttrString(parameter_list, "mka_active")) && (data[1]&0x1 != 0)) {
 			//Audio screen was canceled. Force it back.
 			uint8_t force_audio_screen_data[] = {IBUS_CMD_GT_SCREEN_MODE_SET, 0x0};
@@ -236,7 +236,7 @@ int sendRadioCenterText(const char* text, const uint8_t position, const int8_t v
 	return sizeof(text_message);
 }
 
-//Send multiple radio text change messages.
+//Send multiple radio text change messages from the Python parameter list.
 void sendAllRadioCenterTextFromParameters(PyObject* parameter_list, const uint8_t version, const int port, const bool refresh) {
 	PyObject* song_title_p = PyObject_GetAttrString(parameter_list, "song_title");
 	PyObject* artist_p = PyObject_GetAttrString(parameter_list, "artist");

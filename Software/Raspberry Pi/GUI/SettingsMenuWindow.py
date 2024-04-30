@@ -24,6 +24,7 @@ class SettingsMenuWindow(MenuWindow):
 		self.selected = 1
 
 	def displayMenu(self, display: pg.surface):
+		"""Menu display loop function."""
 		WINDOW_WIDTH = self.attribute_group.w
 		WINDOW_HEIGHT = self.attribute_group.h
 		HEADER_HEIGHT = self.attribute_group.header_height
@@ -72,6 +73,7 @@ class SettingsMenuWindow(MenuWindow):
 				pg.draw.rect(display, self.attribute_group.rect_color, pg.Rect(0, HEADER_HEIGHT + i*OPTION_HEIGHT, WINDOW_WIDTH - RECT_WIDTH*2, OPTION_HEIGHT), 5)
 
 	def loadDefaultOptions(self):
+		"""Load the default setting options."""
 		self.MAX_SELECTED = DEFAULT_MAX
 		self.options = [""]*self.MAX_SELECTED
 		add = 0
@@ -87,6 +89,7 @@ class SettingsMenuWindow(MenuWindow):
 		self.options[add + 4] = SETTINGS_MSG_BACK
 
 	def makeSelection(self):
+		"""Select the desired setting."""
 		selected = self.selected - 1
 		if SETTINGS_MSG_BACK in self.options[selected]:
 			self.parameter_group.next_menu = ParameterList.NEXTMENU_MIRROR_MENU
@@ -100,4 +103,5 @@ class SettingsMenuWindow(MenuWindow):
 			self.parameter_group.next_menu = ParameterList.NEXTMENU_NIGHT_SENS_MENU
 
 	def goBack(self):
+		"""Return to the main menu."""
 		self.parameter_group.next_menu = ParameterList.NEXTMENU_MIRROR_MENU
