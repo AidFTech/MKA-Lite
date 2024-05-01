@@ -56,7 +56,7 @@ class Decoder:
 			def reader():
 				while not self.shutdown:
 					try:
-						yield os.read(self.owner.readPipe, 1000000)
+						yield os.read(self.owner.readPipe, 2048)
 					except Error:
 						print("something broke on reading the MPV input pipe")
 	
