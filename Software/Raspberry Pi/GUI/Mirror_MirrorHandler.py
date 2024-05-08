@@ -9,6 +9,7 @@ import pygame as pg
 import Mirror_USBLink
 import Mirror_Protocol
 import Mirror_Decoder
+import Mirror_AudioDecoder
 
 AUDIO_WAIT = 0.2 #The amount of time to wait before changing the audio symbol to a ||.
 
@@ -27,6 +28,7 @@ class MirrorHandler:
 		self.startup_thread.start()
 
 		self.decoder = None
+		self.audio_decoder = Mirror_AudioDecoder.AudioDecoder()
 		self.audio_timer = time.perf_counter()
 
 		self.videomem_data = bytes([0]*0)
@@ -112,8 +114,10 @@ class MirrorHandler:
 		if self.decoder is None:
 			self.decoder = Mirror_Decoder.Decoder(self.parameters.fullscreen, self.link_list, self.file_path, pg.display.get_surface().get_width(), pg.display.get_surface().get_height())
 
+		if not self.audio_decoder.running():
+			self.audio_decoder.start()
+
 		self.decoder.setWindow(self.parameters.autoconnect)
-		self.usb_link.writepipe = self.decoder.getWritePipe()
 
 	def stopPhoneConnection(self):
 		"""End a phone connection."""
@@ -129,6 +133,8 @@ class MirrorHandler:
 			self.decoder.send(self.videomem_data)
 			self.decoder.stop()
 			self.decoder = None
+
+		self.audio_decoder.stop()
 
 	def getWindow(self) -> bool:
 		"""Return whether the window is minimized or full."""
@@ -176,20 +182,18 @@ class MirrorHandler:
 
 	def sendAudio(self, msg: Mirror_Protocol.AudioData):
 		"""Send or handle an audio message."""
-		#if hasattr(msg, "audioType") and hasattr(msg, "decodeType"):
-		#	audio_msg = "AudioType: "
-		#	audio_msg += str(msg.audioType)
-		#	audio_msg += " DecodeType: "
-		#	audio_msg += str(msg.decodeType)
-
-		#	print(audio_msg)
-  
 		self.audio_timer = time.perf_counter()
 		self.parameters.playing = True
 
 		if hasattr(msg, "audioType") and msg.audioType == 1 and not self.parameters.audio_selected:
 			pass #TODO: Force a switch to the MKA. This could be coming from Siri or Google Assistant.
-		#TODO: Send this to an audio pipe. We need to study the audio data a bit.
+		
+		if hasattr(msg, "data"):
+			try:
+				self.audio_decoder.sendAudioData(msg.data)
+			except Exception as e:
+				print(f"exception: {e}")
+
 
 	def stopAll(self):
 		"""Stop everything, e.g. if the car is turned off."""
