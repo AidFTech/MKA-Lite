@@ -420,9 +420,11 @@ void checkParameterList(PyObject* mka, ParameterList* current_parameters, const 
 	if(playing != current_parameters->playing) {
 		current_parameters->playing = playing;
 
-		if(playing)
-			sendRadioSubtitleText(">", 2, version, ibus_port, true);
-		else
-			sendRadioSubtitleText("||", 2, version, ibus_port, true);
+		if(audio_selected) {
+			if(playing)
+				sendRadioSubtitleText(">", 2, version, ibus_port, true);
+			else
+				sendRadioSubtitleText("||", 2, version, ibus_port, true);
+		}
 	}
 }

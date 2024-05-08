@@ -77,7 +77,7 @@ class MKA:
 			self.active_menu = MirrorMenuWindow.MirrorMenuWindow(self.attribute_group, self.parameter_list, self.file_path)
 			self.active_menu.setSelected(1)
 
-		self.mirror = Mirror_MirrorHandler.MirrorHandler(self.carlink_list)
+		self.mirror = Mirror_MirrorHandler.MirrorHandler(self.carlink_list, self.file_path)
 
 		self.run = True	#True if the program is running.
 		self.overlay_timer_run = False

@@ -60,7 +60,7 @@ class Decoder:
 					except Error:
 						print("something broke on reading the MPV input pipe")
 	
-	def __init__(self, full: bool, link_list: CarLinkList.CarLinkList, w=720, h=480):	
+	def __init__(self, full: bool, link_list: CarLinkList.CarLinkList, filepath: str, w=720, h=480):	
 		# self.child = subprocess.Popen(["mpv", "--hwdec=rpi", "--demuxer-rawvideo-fps=60", "--fps=60", "-"], stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, bufsize=1)	
 		
 		self.readPipe, self.writePipe = os.pipe()
@@ -72,7 +72,7 @@ class Decoder:
 
 		self.link_list = link_list
 
-		self.overlay_font = ImageFont.truetype('arial.ttf', 32)
+		self.overlay_font = ImageFont.truetype(filepath + "ariblk.ttf", 28)
 		self.overlay = self.player.create_image_overlay()
 		#self.overlay_image = Image.new('RGBA', (self.link_list.attributes.w, self.link_list.attributes.header_height), self.link_list.attributes.header_color)
 		#self.overlay_image_draw = ImageDraw.Draw(self.overlay_image)
@@ -108,7 +108,7 @@ class Decoder:
 		if len(text) > 0:
 			overlay_image = Image.new('RGBA', (self.link_list.attributes.w, self.link_list.attributes.header_height), self.link_list.attributes.header_color)
 			overlay_image_draw = ImageDraw.Draw(overlay_image)
-			overlay_image_draw.text((0,0), text, font= self.overlay_font, fill=self.link_list.attributes.text_color)
+			overlay_image_draw.text((0,0), text, font=self.overlay_font, fill=self.link_list.attributes.text_color)
 			self.overlay.update(overlay_image, (0,0))
 		else:
 			self.overlay.remove()

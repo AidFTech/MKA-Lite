@@ -14,10 +14,12 @@ AUDIO_WAIT = 0.2 #The amount of time to wait before changing the audio symbol to
 
 class MirrorHandler:
 	"""Phone mirror handler object."""
-	def __init__(self, link_list: CarLinkList.CarLinkList):
+	def __init__(self, link_list: CarLinkList.CarLinkList, file_path: str):
 		self.link_list = link_list
 		self.parameters = link_list.parameters
 		self.usb_link = Mirror_USBLink.USB_Connection(self.link_list, self)
+
+		self.file_path = file_path #Filepath for the decoder overlay font.
 
 		self.run = True
 
@@ -108,7 +110,7 @@ class MirrorHandler:
 	def startPhoneConnection(self):
 		"""Start a phone connection."""
 		if self.decoder is None:
-			self.decoder = Mirror_Decoder.Decoder(self.parameters.fullscreen, self.link_list, pg.display.get_surface().get_width(), pg.display.get_surface().get_height())
+			self.decoder = Mirror_Decoder.Decoder(self.parameters.fullscreen, self.link_list, self.file_path, pg.display.get_surface().get_width(), pg.display.get_surface().get_height())
 
 		self.decoder.setWindow(self.parameters.autoconnect)
 		self.usb_link.writepipe = self.decoder.getWritePipe()
