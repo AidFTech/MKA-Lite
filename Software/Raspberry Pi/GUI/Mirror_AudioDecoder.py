@@ -1,20 +1,42 @@
-import subprocess
+import socket
+from os import path, remove
+from subprocess import Popen
 
-class AudioDecoder:
-	def __init__(self):
-		self.decoder = None
-		
-	def start(self):
-		self.decoder = subprocess.Popen(["ffplay", "-f", "s16le", "-ac", "2", "-ar", "44100", "-nodisp", "-"], stdin = subprocess.PIPE, stdout = subprocess.DEVNULL, stderr=subprocess.DEVNULL, bufsize = 1)
-	
-	def stop(self):
-		if self.decoder is not None:
-			self.decoder.terminate()
+class AudioDecoder (object):
 
-	def sendAudioData(self, data: bytes):
-		if self.decoder is not None:
-			self.decoder.stdin.write(data)
-			self.decoder.stdin.flush()
+    SOCKET_PATH = '/run/mka_audio.sock'
 
-	def running(self) -> bool:
-		return self.decoder is not None
+    def __init__(self):
+        self.decoder = None
+        if path.exists(self.SOCKET_PATH):
+            remove(self.SOCKET_PATH)
+        self.socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.socket.bind(self.SOCKET_PATH)
+
+        def start(self):
+            self.decoder = Popen(
+                [
+                    "ffplay", 
+                    "-f",
+                    "s16le",
+                    "-ac",
+                    "2",
+                    "-ar",
+                    "44100",
+                    "-nodisp",
+                    'unix:%s' % self.SOCKET_PATH
+                ],
+            )
+
+        def stop(self):
+            if self.decoder is not None:
+                self.decoder.terminate()
+                self.socket.close()
+                remove(self.SOCKET_PATH)
+
+        def sendAudioData(self, data: bytes):
+            if self.decoder is not None:
+                self.socket.send(data)
+
+        def running(self) -> bool:
+            return self.decoder is not None
