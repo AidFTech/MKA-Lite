@@ -32,14 +32,16 @@ class USB_Connection:
         """Connect the dongle, return whether successful."""
         start_time = time()
         has_new_device = False
-        while self.device == None:
+        while self.device == None and not has_new_device:
             for vendor_id, product_ids in CARLINK_DEVICES.items():
                 for product_id in product_ids:
                     self.device = usb.core.find(
                         idVendor = vendor_id,
                         idProduct = product_id
                     )
-                    has_new_device = True
+                    if self.device:
+                        has_new_device = True
+                        break
                 if time() - start_time >= MAX_WAIT:
                     return False
         if has_new_device:

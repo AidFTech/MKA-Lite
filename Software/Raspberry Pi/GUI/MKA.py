@@ -236,7 +236,7 @@ class MKA:
                 self.overlay_timer = time.perf_counter()
 
 if __name__ == '__main__':
-    mka = MKA(True, False)
+    mka = MKA(False, False)
     try:
         while mka.run:
             mka.loop()
