@@ -28,28 +28,32 @@ class USB_Connection:
 
         self.parent = parent #TODO: Is there a way to type this variable without creating a circular import?
 
-    def __del__(self):
-        self.stop()
-
     def connectDongle(self) -> bool:
         """Connect the dongle, return whether successful."""
         start_time = time()
+        has_new_device = False
         while self.device == None:
             for vendor_id, product_ids in CARLINK_DEVICES.items():
-                for product_id in product_ids: 
+                for product_id in product_ids:
                     self.device = usb.core.find(
-                        idVendor = vendor_id, 
+                        idVendor = vendor_id,
                         idProduct = product_id
                     )
+                    has_new_device = True
                 if time() - start_time >= MAX_WAIT:
                     return False
-        try:
-            self.device.reset()
-            self.device.set_configuration()
+        if has_new_device:
+            for interface_num in range(0, len(self.device[0].interfaces())):
+                if self.device.is_kernel_driver_active(interface_num):
+                    self.device.detach_kernel_driver(interface_num)
+            try:
+                self.device.get_active_configuration()
+            except usb.core.USBError:
+                self.device.set_configuration()
             interface = self.device.get_active_configuration()[(0,0)]
 
             self.rx = usb.util.find_descriptor(
-                interface, 
+                interface,
                 custom_match = lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_IN
             )
             if self.rx is None:
@@ -68,9 +72,8 @@ class USB_Connection:
             self.running = True
             self.run_thread = threading.Thread(target=self.readThread)
             self.run_thread.start()
-        except usb.core.USBError:
-            return False
-        return True
+            return True
+        return False
 
     def startDongle(self):
         """Start the connected dongle."""
@@ -129,7 +132,7 @@ class USB_Connection:
         while self.running and self.startup:
             try:
                 self.sendMessage(Mirror_Protocol.Heartbeat())
-            except usb.core.USBError as e:
+            except usb.core.USBError:
                 self.running = False
                 self.startup = False
                 break
@@ -159,9 +162,12 @@ class USB_Connection:
         """Send multiple messages to the dongle."""
         for m in messages:
             self.sendMessage(m)
-    
+
     def stop(self):
         """End the dongle connection."""
+        if self.device:
+            self.device.reset()
+            usb.util.dispose_resources(self.device)
         self.running = False
         self.startup = False
         self.device = None

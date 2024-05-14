@@ -24,7 +24,8 @@ class MirrorHandler:
 
         self.run = True
 
-        self.startup_thread = threading.Thread(target = self.connectDongleThread) 
+        self.startup_thread = threading.Thread(target = self.connectDongleThread)
+        self.startup_thread.start()
 
         self.decoder = None
         self.audio_decoder = Mirror_AudioDecoder.AudioDecoder()
@@ -32,22 +33,17 @@ class MirrorHandler:
 
         self.videomem_data = bytes([0]*0)
 
-    def __del__(self):
-        self.stopAll()
-
     def loop(self):
         """Mirror loop function."""
-        #if not self.usb_link.running and not self.startup_thread.is_alive():
-        #	self.startup_thread.start()
-        if len(self.link_list.rx_cache) > 0:	#Message waiting.
-            for i in range(0,len(self.link_list.rx_cache)):
-                msg = self.link_list.rx_cache[i]
-                self.interpretMessage(msg)
-
-                self.link_list.rx_cache.clear()
-
-            if time.perf_counter() - self.audio_timer > AUDIO_WAIT:
-                self.parameters.playing = False
+        cache_len = len(self.link_list.rx_cache)
+        if cache_len == 0:
+            return
+        for i in range(0, cache_len):
+            msg = self.link_list.rx_cache[i]
+            self.interpretMessage(msg)
+        self.link_list.rx_cache.clear()
+        if time.perf_counter() - self.audio_timer > AUDIO_WAIT:
+            self.parameters.playing = False
 
     def interpretMessage(self, msg: Mirror_Protocol.Message):
         """Interpret a message from the dongle."""
@@ -78,13 +74,12 @@ class MirrorHandler:
         elif isinstance(msg, Mirror_Protocol.MetaData):	#Metadata. Interpret.
             self.handleMetaData(msg)
         elif isinstance(msg, Mirror_Protocol.AudioData):	#Audio data. Handle appropriately.
-            pass
+            self.sendAudio(msg)
 
-    def connectDongleThread(self, manufacturer_id: int, device_id: int):
+    def connectDongleThread(self):
         """Dongle connection loop."""
         while not self.usb_link.running and self.run:
             connected = self.usb_link.connectDongle()
-
             if connected:
                 while self.usb_link.running and not self.usb_link.startup and self.run:
                     self.usb_link.sendMultiple(Mirror_Protocol.startup_info)
@@ -102,7 +97,13 @@ class MirrorHandler:
     def startPhoneConnection(self):
         """Start a phone connection."""
         if self.decoder is None:
-            self.decoder = Mirror_Decoder.Decoder(self.parameters.fullscreen, self.link_list, self.file_path, pg.display.get_surface().get_width(), pg.display.get_surface().get_height())
+            self.decoder = Mirror_Decoder.Decoder(
+                self.parameters.fullscreen,
+                self.link_list,
+                self.file_path,
+                pg.display.get_surface().get_width(),
+                pg.display.get_surface().get_height()
+            )
 
             if not self.audio_decoder.running():
                 self.audio_decoder.start()

@@ -18,8 +18,9 @@ from AttributeGroup import AttributeGroup
 import ParameterList
 import CarLinkList
 
-import Mirror_MirrorHandler
 import Mirror_Decoder
+
+from Mirror_MirrorHandler import MirrorHandler
 
 class MKA:
     def __init__(self, fullscreen: bool, full_interface: bool):
@@ -75,11 +76,17 @@ class MKA:
             self.active_menu = MirrorMenuWindow.MirrorMenuWindow(self.attribute_group, self.parameter_list, self.file_path)
             self.active_menu.setSelected(1)
 
-        self.mirror = Mirror_MirrorHandler.MirrorHandler(self.carlink_list, self.file_path)
+        self.mirror = MirrorHandler(self.carlink_list, self.file_path)
 
         self.run = True	#True if the program is running.
         self.overlay_timer_run = False
         self.overlay_timer = time.perf_counter()
+
+    def stop(self):
+        """ Stop everything """
+        pg.display.quit()
+        pg.quit()
+        self.mirror.stopAll()
 
     def loop(self):
         """Loop function, to run while the Pi is running."""
@@ -229,5 +236,10 @@ class MKA:
                 self.overlay_timer = time.perf_counter()
 
 if __name__ == '__main__':
-    mka = MKA(True, True)
-    mka.loop()
+    mka = MKA(True, False)
+    try:
+        while mka.run:
+            mka.loop()
+    except KeyboardInterrupt:
+        mka.stop()
+        sys.exit(0)
