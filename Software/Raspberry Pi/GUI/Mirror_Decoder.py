@@ -7,7 +7,7 @@
 
 from enum import Enum, IntEnum
 from os import truncate
-from Mirror_USBLink import Error
+from usb.core import USBError as Error
 
 import CarLinkList
 
