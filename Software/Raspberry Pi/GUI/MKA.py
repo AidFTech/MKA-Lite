@@ -235,11 +235,3 @@ class MKA:
                 self.overlay_timer_run = True
                 self.overlay_timer = time.perf_counter()
 
-if __name__ == '__main__':
-    mka = MKA(False, False)
-    try:
-        while mka.run:
-            mka.loop()
-    except KeyboardInterrupt:
-        mka.stop()
-        sys.exit(0)
