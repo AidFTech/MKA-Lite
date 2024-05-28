@@ -2,6 +2,7 @@
 	"files.associations": {
 		"ibus_handler.h": "c",
 		"stdint.h": "c",
-		"stdio.h": "c"
+		"stdio.h": "c",
+		"mka_backend.h": "c"
 	}
 }

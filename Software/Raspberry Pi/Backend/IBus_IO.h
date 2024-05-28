@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "IBus_Serial.h"
+#include "IBus_Message.h"
 
 #if __has_include(<pigpio.h>) //Including an "if has include" so we can test this on a desktop if need be.
 #include <pigpio.h>
@@ -164,13 +165,13 @@
 int ibusSerialInit(char* port);
 void ibusSerialClose(const int port);
 
-int readIBusData(const int port, uint8_t* sender, uint8_t* receiver, uint8_t* data, int* new_port);
-void writeIBusData(const int port, const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l);
-void writePriorityIBusData(const int port, const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l);
+int readIBusData(const int port, IBus_Message* ib_msg, int* new_port);
+void writeIBusData(const int port, IBus_Message* ib_msg);
+void writePriorityIBusData(const int port, IBus_Message* ib_msg);
 
-void printIBusData(const const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l);
+void printIBusData(IBus_Message* ib_msg);
 
-uint8_t getChecksum(const uint8_t sender, const uint8_t receiver, uint8_t* data, const unsigned int l);
+uint8_t getChecksum(IBus_Message* ib_msg);
 
 #ifndef RPI_UART
 uint16_t charToNumber(char c);
