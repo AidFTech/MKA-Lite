@@ -1,1 +1,1 @@
-gcc ./Backend/*.c -o ./MKA_Lite $(python3-config --embed --ldflags) -lpigpio -lrt
+gcc ./Backend/*.c -o ./MKA_Lite -lpigpio -lrt
