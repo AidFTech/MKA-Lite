@@ -6,6 +6,10 @@ int main(int argc, char* argv[]) {
     #else
     int ibus = ibusSerialInit("");
     #endif
+    MKA mka;
+
+    mka.mka_socket = createSocket();
+
     clock_t ping_start = clock();
 
     bool running = true;
@@ -13,9 +17,16 @@ int main(int argc, char* argv[]) {
 
     while(running) {
         if(readIBusData(ibus, ib_data, &ibus) > 0) {
-            printIBusData(ib_data);
+            //TODO: Handle IBus.
+        }
+
+        uint8_t sock_data[1024];
+        const int size = readSocket(mka.mka_socket, sock_data, sizeof(sock_data));
+        if(size > 0) {
+        	//TODO: Handle socket input.
         }
     }
 
     clearMessage(ib_data);
+    clearSocket(mka.mka_socket);
 }

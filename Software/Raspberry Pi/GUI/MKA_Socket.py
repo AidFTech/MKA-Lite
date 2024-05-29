@@ -8,15 +8,12 @@ class SocketHandler:
     SOCKET_PATH = '/run/mka_to_backend.sock'
 
     def __init__(self, mka: MKA):
-        if path.exists(self.SOCKET_PATH):
-            remove(self.SOCKET_PATH)
+        #if path.exists(self.SOCKET_PATH):
+        #    remove(self.SOCKET_PATH)
 
         #Socket:
         self.socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self.socket.bind(self.SOCKET_PATH)
-        self.socket.listen(5)
-
-        self.client_socket = None
+        self.socket.connect(self.SOCKET_PATH)
         
         self.mka = mka
 
@@ -25,8 +22,7 @@ class SocketHandler:
         self.rx_thread.start()
 
     def handleSocket(self):
-        self.client_socket, address = self.socket.accept()
         while self.running:
-            msg = self.client_socket.recvfrom(1024)
+            msg = self.socket.recvfrom(1024)
             print(msg)
-        self.client_socket.close()
+        self.socket.close()

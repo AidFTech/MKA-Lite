@@ -96,7 +96,7 @@ int readIBusData(const int port, IBus_Message* ib_msg, int* new_port) {
                 num <<= 4;
                 num |= charToNumber(c);
             } else if(c == '/') {
-                char* port_name;
+                char port_name[255];
                 scanf("%[^\n]s", port_name);
 
                 char new_port_name[strlen(port_name) + 2];
