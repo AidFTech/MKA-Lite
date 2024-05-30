@@ -17,4 +17,6 @@ void clearMessage(IBus_Message* msg);
 void refreshIBusMessage(IBus_Message *msg, uint16_t newl, const uint8_t sender, const uint8_t receiver);
 void fillIBusData(IBus_Message *msg, uint8_t* data);
 
+unsigned int getBytes(IBus_Message* msg, uint8_t* data);
+
 #endif

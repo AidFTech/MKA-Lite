@@ -35,3 +35,24 @@ void fillIBusData(IBus_Message *msg, uint8_t* data) {
     for(unsigned int i=0;i<msg->l;i+=1)
         msg->data[i] = data[i];
 }
+
+//Get bytes from an IBus message. Returns the size of the byte array.
+unsigned int getBytes(IBus_Message* msg, uint8_t* data) {
+    const unsigned int l = msg->l + 4;
+    
+    data[0] = msg->sender;
+    data[1] = msg->l + 2;
+    data[2] = msg->receiver;
+    for(unsigned int i=0;i<msg->l;i+=1)
+        data[i+3] = msg->data[i];
+    
+    uint8_t checksum = msg->sender;
+    checksum ^= msg->l + 2;
+    checksum ^= msg->receiver;
+    for(unsigned int i=0;i<msg->l;i+=1)
+        checksum ^= msg->data[i];
+        
+    data[msg->l + 3] = checksum;
+    
+    return l;
+}

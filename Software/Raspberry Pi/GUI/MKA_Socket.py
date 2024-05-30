@@ -26,3 +26,14 @@ class SocketHandler:
             msg = self.socket.recvfrom(1024)
             print(msg)
         self.socket.close()
+
+class SocketMessage:
+    SOCKET_START = "MKASock"
+
+    def __init__(self, opcode: int, length: int):
+        self.opcode = opcode
+        self.length = length
+
+        self.data = bytes([0]*length)
+        
+    

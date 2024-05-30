@@ -17,14 +17,14 @@ int main(int argc, char* argv[]) {
 
     while(running) {
         if(readIBusData(ibus, ib_data, &ibus) > 0) {
-            //TODO: Handle IBus.
+            writeIBusToSocket(mka.mka_socket, ib_data);
         }
 
-        uint8_t sock_data[1024];
-        const int size = readSocket(mka.mka_socket, sock_data, sizeof(sock_data));
+        /*uint8_t sock_data[1024];
+        const int size = readSocketBytes(mka.mka_socket, sock_data, sizeof(sock_data));
         if(size > 0) {
         	//TODO: Handle socket input.
-        }
+        }*/
     }
 
     clearMessage(ib_data);
