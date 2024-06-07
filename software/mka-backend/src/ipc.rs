@@ -1,23 +1,24 @@
 // Socket implementation
 use std::io::prelude::*;
+use std::io::Error;
 use std::os::unix::net::UnixStream;
-use std::ptr::null;
 
 const SOCKET_PATH: &str = "/run/mka_to_backend.sock";
+const SOCKET_START: &str = "MKASock";
 
-fn initSocket() -> Option<UnixStream> {
-    let stream = UnixStream::connect(SOCKET_PATH);
-    match stream {
-        Ok(stream) => {
-            return Some(stream);
-        }
-        Err(_err) => {
-            return None;
-        }
-    }
+pub struct SocketMessage {
+	pub opcode: u8,
+	pub data: Vec<u8>,
 }
 
-fn readSocketMessage(stream: &mut UnixStream, data: &mut [u8]) -> usize {
+//Get a UnixStream object.
+pub fn initSocket() -> Result<UnixStream, Error> {
+    let stream = UnixStream::connect(SOCKET_PATH);
+    return stream;
+}
+
+//Read bytes from a socket.
+fn readSocketBytes(stream: &mut UnixStream, data: &mut [u8]) -> usize {
     let l = stream.read(data);
     match l {
         Ok(l) => {
@@ -29,7 +30,8 @@ fn readSocketMessage(stream: &mut UnixStream, data: &mut [u8]) -> usize {
     }
 }
 
-fn writeSocketMessage(stream: &mut UnixStream, data: &mut [u8]) -> usize {
+//Write bytes to a socket.
+fn writeSocketBytes(stream: &mut UnixStream, data: &mut [u8]) -> usize {
     let bytes_written = stream.write(data);
     match bytes_written {
         Ok(bytes_written) => {
@@ -39,4 +41,42 @@ fn writeSocketMessage(stream: &mut UnixStream, data: &mut [u8]) -> usize {
             return 0;
         }
     }
+}
+
+//Read a full message from the socket.
+pub fn readSocketMessage(stream: &mut UnixStream, message: &mut SocketMessage) -> usize {
+	let mut data : [u8; 1024] = [0; 1024];
+	let full_l = readSocketBytes(stream, &mut data);
+	
+	if full_l < SOCKET_START.len() {
+        return 0;
+    }
+
+    let socket_start_msg = SOCKET_START.as_bytes();
+    for i in 0..socket_start_msg.len() {
+        if data[i] != socket_start_msg[i] {
+            return 0;
+        }
+    }
+	
+	message.opcode = data[socket_start_msg.len()];
+    let data_l: u8 = data[socket_start_msg.len() + 1]-1;
+    let start = socket_start_msg.len() + 2;
+
+    let mut checksum = 0;
+    for i in 0..full_l - 1 {
+        checksum ^= data[i];
+    }
+
+    if checksum != data[full_l-1] {
+        return 0;
+    }
+    
+    message.data = Vec::new();
+    
+    for i in start..full_l - 1 {
+        message.data.push(data[i]);
+    }
+
+    return data_l as usize;
 }
