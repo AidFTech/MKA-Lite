@@ -31,7 +31,7 @@ fn readSocketBytes(stream: &mut UnixStream, data: &mut [u8]) -> usize {
 }
 
 //Write bytes to a socket.
-fn writeSocketBytes(stream: &mut UnixStream, data: &mut [u8]) -> usize {
+fn writeSocketBytes(stream: &mut UnixStream, data: &mut Vec<u8>) -> usize {
     let bytes_written = stream.write(data);
     match bytes_written {
         Ok(bytes_written) => {
@@ -79,4 +79,31 @@ pub fn readSocketMessage(stream: &mut UnixStream, message: &mut SocketMessage) -
     }
 
     return data_l as usize;
+}
+
+//Write a full message to the socket.
+pub fn writeSocketMessage(stream: &mut UnixStream, message: SocketMessage) {
+    let socket_start_msg = SOCKET_START.as_bytes();
+    let mut data: Vec<u8> = vec![0; message.data.len() + socket_start_msg.len() + 3];
+
+    for i in 0..socket_start_msg.len() {
+        data[i] = socket_start_msg[i];
+    }
+
+    data[socket_start_msg.len()] = message.opcode;
+    data[socket_start_msg.len() + 1] = (message.data.len() + 1) as u8;
+
+    for i in 0..message.data.len() {
+        data[i + socket_start_msg.len() + 2] = message.data[i];
+    }
+    
+    let mut checksum: u8 = 0;
+    for i in 0..data.len() - 1 {
+        checksum ^= data[i];
+    }
+    
+    let checksum_index = data.len() - 1;
+    data[checksum_index] = checksum;
+
+    let _ = writeSocketBytes(stream, &mut data);
 }
