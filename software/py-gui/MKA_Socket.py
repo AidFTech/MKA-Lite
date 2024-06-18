@@ -8,10 +8,7 @@ class SocketHandler:
     SOCKET_PATH = '/run/mka_to_backend.sock'
 
     def __init__(self, mka: MKA):
-        #if path.exists(self.SOCKET_PATH):
-        #    remove(self.SOCKET_PATH)
-
-        #Socket:
+        #Socket Client:
         self.socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.socket.connect(self.SOCKET_PATH)
         

@@ -14,6 +14,17 @@
 #define SOCKET_PATH "/run/mka_to_backend.sock"
 #define SOCKET_START "MKASock"
 
+#define OPCODE_SEND_IBUS 0x18
+#define OPCODE_RECV_IBUS 0x68
+
+#define OPCODE_PHONE_ACTIVE 0x21
+#define OPCODE_MKA_ACTIVE 0x22
+#define OPCODE_AUDIO_SELECTED 0x23
+#define OPCODE_PHONE_TYPE 0x2B
+#define OPCODE_PHONE_NAME 0x2C
+#define OPCODE_PLAYING 0x39
+#define OPCODE_BMBT_CONNECTED 0xF0
+
 //Socket messages.
 typedef struct Socket_Message {
     uint8_t opcode;
