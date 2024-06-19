@@ -77,7 +77,7 @@ int readSocketMessage(MKA_Socket* socket, Socket_Message* message, const int len
     if(message_size <= 0)
         return message_size;
 
-    if(message_size < sizeof(SOCKET_START))
+    if(message_size < sizeof(SOCKET_START) + 2)
         return -1;
 
     for(uint8_t i=0;i<sizeof(SOCKET_START)-1;i+=1) {
@@ -85,11 +85,11 @@ int readSocketMessage(MKA_Socket* socket, Socket_Message* message, const int len
             return -1;
     }
 
-    const uint8_t opcode = read_data[7], msg_length = read_data[8]-1;
+    const uint8_t opcode = read_data[sizeof(SOCKET_START) - 1], msg_length = read_data[sizeof(SOCKET_START)]-1;
 
     refreshSocketMessage(message, opcode, msg_length);
     for(uint8_t i=0;i<msg_length;i+=1)
-        message->data[i] = read_data[9+i];
+        message->data[i] = read_data[sizeof(SOCKET_START) + 1 + i];
 
     return msg_length;
 }
