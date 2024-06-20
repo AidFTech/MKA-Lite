@@ -31,6 +31,7 @@ int main(int argc, char* argv[]) {
     clearSocket(mka.mka_socket);
 }
 
+//Socket-handling function.
 void *socketThread(void* mka_v) {
     MKA* mka = (MKA*)mka_v;
     Socket_Message* recv_msg = createSocketMessage(0x68, 1024);
@@ -74,4 +75,21 @@ void *socketThread(void* mka_v) {
     }
 
     clearSocketMessage(recv_msg);
+}
+
+//Handle an IBus message as needed.
+bool handleIBus(MKA* mka, IBus_Message* ib_data) {
+    const int ibus_port = mka->ibus_port;
+
+    if(ib_data->receiver == IBUS_DEVICE_CDC && ib_data->l >= 1 && ib_data->data[0] == 0x1) { //Ping.
+        uint8_t pong_data[] = {0x2, 0x0};
+        IBus_Message* pong_msg = createMessage(sizeof(pong_data), IBUS_DEVICE_CDC, ib_data->sender);
+
+        fillIBusData(pong_msg, pong_data);
+        writeIBusData(ibus_port, pong_msg);
+
+        clearMessage(pong_msg);
+    } else if(ib_data->sender == IBUS_DEVICE_RAD && ib_data->receiver == IBUS_DEVICE_CDC) { //Radio to CD changer.
+        handleRadioIBus(&mka->parameter_list, ib_data, ibus_port);
+    }
 }

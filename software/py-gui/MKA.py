@@ -19,6 +19,7 @@ import ParameterList
 import CarLinkList
 
 import Mirror_Decoder
+import MKA_Socket
 
 from Mirror_MirrorHandler import MirrorHandler
 
@@ -82,8 +83,11 @@ class MKA:
         self.overlay_timer_run = False
         self.overlay_timer = time.perf_counter()
 
+        self.socket_handler = MKA_Socket.SocketHandler(self.active_menu)
+
     def stop(self):
         """ Stop everything """
+        self.socket_handler.running = False
         pg.display.quit()
         pg.quit()
         self.mirror.stopAll()
