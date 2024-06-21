@@ -2,13 +2,29 @@
 use std::io::prelude::*;
 use std::io::Error;
 use std::os::unix::net::UnixStream;
+use std::str;
+
+use crate::getIBusMessage;
+use crate::IBusMessage;
+use crate::ParameterList;
 
 const SOCKET_PATH: &str = "/run/mka_to_backend.sock";
 const SOCKET_START: &str = "MKASock";
 
+const OPCODE_PHONE_ACTIVE: u8 = 0x21;
+const OPCODE_MKA_ACTIVE: u8 = 0x22;
+const OPCODE_AUDIO_SELECTED: u8 = 0x23;
+const OPCODE_PHONE_TYPE: u8 = 0x2B;
+const OPCODE_PHONE_NAME: u8 = 0x2C;
+const OPCODE_PLAYING: u8 = 0x39;
+const OPCODE_BMBT_CONNECTED: u8 = 0xF0;
+
+const OPCODE_IBUS_SEND: u8 = 0x18;
+const OPCODE_IBUS_RECV: u8 = 0x68;
+
 pub struct SocketMessage {
-	pub opcode: u8,
-	pub data: Vec<u8>,
+    pub opcode: u8,
+    pub data: Vec<u8>,
 }
 
 //Get a UnixStream object.
@@ -45,10 +61,10 @@ fn writeSocketBytes(stream: &mut UnixStream, data: &mut Vec<u8>) -> usize {
 
 //Read a full message from the socket.
 pub fn readSocketMessage(stream: &mut UnixStream, message: &mut SocketMessage) -> usize {
-	let mut data : [u8; 1024] = [0; 1024];
-	let full_l = readSocketBytes(stream, &mut data);
-	
-	if full_l < SOCKET_START.len() {
+    let mut data : [u8; 1024] = [0; 1024];
+    let full_l = readSocketBytes(stream, &mut data);
+    
+    if full_l < SOCKET_START.len() {
         return 0;
     }
 
@@ -58,8 +74,8 @@ pub fn readSocketMessage(stream: &mut UnixStream, message: &mut SocketMessage) -
             return 0;
         }
     }
-	
-	message.opcode = data[socket_start_msg.len()];
+    
+    message.opcode = data[socket_start_msg.len()];
     let data_l: u8 = data[socket_start_msg.len() + 1]-1;
     let start = socket_start_msg.len() + 2;
 
@@ -106,4 +122,46 @@ pub fn writeSocketMessage(stream: &mut UnixStream, message: SocketMessage) {
     data[checksum_index] = checksum;
 
     let _ = writeSocketBytes(stream, &mut data);
+}
+
+pub fn writeIBusMessage(stream: &mut UnixStream, message: IBusMessage) {
+    let bytes = message.getBytes();
+
+    let mut socket_msg = SocketMessage {
+        opcode: 0x68,
+        data: vec![0;bytes.len()+3],
+    };
+
+    for i in 0..bytes.len() {
+        socket_msg.data[i] = bytes[i];
+    }
+
+    writeSocketMessage(stream, socket_msg);
+}
+
+pub fn handleSocketMessage(parameter_list: &mut ParameterList, message: SocketMessage) {
+    let opcode = message.opcode;
+    let socket_bool: bool = message.data.len() > 0 && message.data[0] != 0;
+    if opcode == OPCODE_PHONE_ACTIVE {
+        parameter_list.phone_active = socket_bool;
+    } else if opcode == OPCODE_MKA_ACTIVE {
+        parameter_list.mka_active = socket_bool;
+    } else if opcode == OPCODE_AUDIO_SELECTED {
+        parameter_list.audio_selected = socket_bool;
+    } else if opcode == OPCODE_PHONE_TYPE && message.data.len() >= 1 {
+        parameter_list.phone_type = message.data[0];
+    } else if opcode == OPCODE_PHONE_NAME {
+        parameter_list.phone_name = String::from(str::from_utf8(&message.data).unwrap())
+    } else if opcode == OPCODE_PLAYING {
+        parameter_list.playing = socket_bool;
+    } else if opcode == OPCODE_BMBT_CONNECTED {
+        parameter_list.bmbt_connected = socket_bool;
+    } else if opcode == OPCODE_IBUS_RECV {
+        let ib_msg = getIBusMessage(message.data);
+
+        if ib_msg.l() > 0 {
+            parameter_list.ibus_cache = ib_msg;
+            parameter_list.ibus_waiting = true;
+        }
+    }
 }

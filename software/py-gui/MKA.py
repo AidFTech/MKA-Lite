@@ -146,7 +146,8 @@ class MKA:
             elif next_menu == ParameterList.NEXTMENU_NIGHT_SENS_MENU:
                 self.active_menu = NightModeMenuWindow.NightModeMenuWindow(self.attribute_group, self.parameter_list, self.file_path)
 
-                self.parameter_list.next_menu = ParameterList.NEXTMENU_NO_MENU
+            self.parameter_list.next_menu = ParameterList.NEXTMENU_NO_MENU
+            self.socket_handler.menu_window = self.active_menu
 
     def setVersion(self, data0: int, data1: int):
         """Set the GT version."""

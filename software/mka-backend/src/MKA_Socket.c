@@ -36,6 +36,8 @@ void refreshSocketMessage(Socket_Message* message, const uint8_t opcode, const u
 
 //Create a new socket with server and client ports.
 MKA_Socket* createSocket() {
+    remove(SOCKET_PATH);
+
     MKA_Socket* the_return;
     the_return = (MKA_Socket*) malloc(sizeof(MKA_Socket));
 

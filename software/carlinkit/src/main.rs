@@ -1,8 +1,12 @@
 mod ipc;
+mod ibus;
+mod parameter_list;
 
 use std::os::unix::net::UnixStream;
 
 use ipc::*;
+use ibus::*;
+use parameter_list::*;
 
 fn main() {
     let mut stream: UnixStream;
@@ -15,6 +19,8 @@ fn main() {
         }
     }
 
+    let mut parameter_list: ParameterList = getParameterList();
+
     loop {
         let mut socket_msg = SocketMessage {
             opcode: 0,
@@ -23,7 +29,14 @@ fn main() {
         let l = readSocketMessage(&mut stream, &mut socket_msg);
 
         if l > 0 {
-            println!("{:x?}", &socket_msg.data[0..l]);
+            handleSocketMessage(&mut parameter_list, socket_msg);
+        }
+
+        if parameter_list.ibus_waiting {
+            parameter_list.ibus_waiting = false;
+
+            println!("{:X?}", parameter_list.ibus_cache.getBytes());
+            //TODO: Interpret the IBus message.
         }
     }
 }
