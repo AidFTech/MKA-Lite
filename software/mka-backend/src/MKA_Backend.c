@@ -78,7 +78,7 @@ void *socketThread(void* mka_v) {
 }
 
 //Handle an IBus message as needed.
-bool handleIBus(MKA* mka, IBus_Message* ib_data) {
+void handleIBus(MKA* mka, IBus_Message* ib_data) {
     const int ibus_port = mka->ibus_port;
 
     if(ib_data->receiver == IBUS_DEVICE_CDC && ib_data->l >= 1 && ib_data->data[0] == 0x1) { //Ping.

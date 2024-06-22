@@ -1,7 +1,7 @@
 #include "Radio_Handler.h"
 
 //Handle a radio-related IBus message.
-bool handleRadioIBus(ParameterList* parameter_list, IBus_Message* ib_data, const int ibus_port) {
+void handleRadioIBus(ParameterList* parameter_list, IBus_Message* ib_data, const int ibus_port) {
     if(ib_data->data[0] == IBUS_COMMAND_CDC_REQUEST) { //CD changer request. Must reply.
         const bool selected = parameter_list->audio_selected;
         if(ib_data->data[1] == IBUS_CDC_CMD_GET_STATUS  //Request current CD and track status.

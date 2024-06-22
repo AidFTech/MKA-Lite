@@ -22,6 +22,6 @@ typedef struct MKA {
 int main(int argc, char* argv[]);
 void *socketThread(void* mka_v);
 
-bool handleIBus(MKA* mka, IBus_Message* ib_data);
+void handleIBus(MKA* mka, IBus_Message* ib_data);
 
 #endif
