@@ -14,6 +14,9 @@
 
 #define SOCKET_PATH "/run/mka_to_backend.sock"
 #define SOCKET_START "MKASock"
+#define SOCKET_MAX_CLIENTS 16
+#define SOCKET_MAX_DATA_SIZE 255
+#define SOCKET_FRAME_SIZE 10
 
 #define OPCODE_SEND_IBUS 0x18
 #define OPCODE_RECV_IBUS 0x68
@@ -26,33 +29,30 @@
 #define OPCODE_PLAYING 0x39
 #define OPCODE_BMBT_CONNECTED 0xF0
 
-//Socket messages.
-typedef struct Socket_Message {
+// Socket handler.
+typedef struct MKASocket {
+    int32_t server;
+    int32_t clients[SOCKET_MAX_CLIENTS];
+} MKASocket;
+
+// Socket messages.
+typedef struct SocketMessage {
     uint8_t opcode;
-    uint16_t l;
-    
-    uint8_t* data;
-} Socket_Message;
+    uint16_t len;
+    uint8_t *data;
+} SocketMessage;
 
-Socket_Message* createSocketMessage(const uint8_t opcode, const uint16_t length);
-void clearSocketMessage(Socket_Message* message);
-void fillSocketMessageBytes(Socket_Message* message, uint8_t* data);
-void refreshSocketMessage(Socket_Message* message, const uint8_t opcode, const uint16_t length);
+SocketMessage *SocketCreateMessage(const uint8_t opcode, const uint16_t length);
+void SocketClearMessage(SocketMessage * message);
+void SocketFillMessageBytes(SocketMessage * message, uint8_t* data);
+void SocketRefreshMessage(SocketMessage * message, const uint8_t opcode, const uint16_t length);
 
-//Socket handler.
-typedef struct MKA_Socket {
-    int server_socket, client_socket;
-} MKA_Socket;
-
-MKA_Socket* createSocket();
-void clearSocket(MKA_Socket* socket);
-
-ssize_t readSocketBytes(MKA_Socket* socket, uint8_t* data, const int length);
-void writeSocketBytes(MKA_Socket* socket, uint8_t* data, const int length);
-
-int readSocketMessage(MKA_Socket* socket, Socket_Message* message, const int length);
-void writeSocketMessage(MKA_Socket* socket, Socket_Message* message);
-
-void writeIBusToSocket(MKA_Socket* socket, IBus_Message* message);
+MKASocket *SocketCreate();
+void SocketClear(MKASocket *socket);
+ssize_t SocketReadBytes(MKASocket *socket, uint8_t *data, const int length);
+void SocketWriteBytes(MKASocket *socket, uint8_t *data, const int length);
+int SocketReadMessage(MKASocket *socket, SocketMessage *message, const int length);
+void SocketWriteMessage(MKASocket *socket, SocketMessage *message);
+void writeIBusToSocket(MKASocket *socket, IBus_Message *message);
 
 #endif

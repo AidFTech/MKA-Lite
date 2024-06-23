@@ -30,22 +30,23 @@ void sendCDStatusMessage(const int ibus_port, const uint8_t status, const uint8_
     uint8_t pseudo_status = 0x89;
     if(status == IBUS_CDC_STAT_STOP)
         pseudo_status = 0x82;
-    
-    uint8_t data[] = {IBUS_COMMAND_CDC_RESPONSE,
-                        status,
-                        pseudo_status,
-                        0x00,
-                        0x3F,
-                        0x00,
-                        0x1,
-                        0x1,
-                        0x0,
-                        0x1,
-                        0x1,
-                        0x1};
-                        
+
+    uint8_t data[] = {
+        IBUS_COMMAND_CDC_RESPONSE,
+        status,
+        pseudo_status,
+        0x00,
+        0x3F,
+        0x00,
+        0x1,
+        0x1,
+        0x0,
+        0x1,
+        0x1,
+        0x1
+    };
+
     IBus_Message* status_msg = createMessage(sizeof(data), IBUS_DEVICE_CDC, receiver);
     writeIBusData(ibus_port, status_msg);
-    
     clearMessage(status_msg);
 }

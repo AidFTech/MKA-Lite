@@ -13,7 +13,7 @@
 
 typedef struct MKA {
     int ibus_port;
-    MKA_Socket* mka_socket;
+    MKASocket* mka_socket;
     ParameterList parameter_list;
 
     bool* running;

@@ -8,7 +8,7 @@ int main(int argc, char* argv[]) {
     mka.ibus_port = ibusSerialInit("");
     #endif
 
-    mka.mka_socket = createSocket();
+    mka.mka_socket = SocketCreate();
 
     clock_t ping_start = clock();
 
@@ -28,53 +28,60 @@ int main(int argc, char* argv[]) {
     pthread_join(socket_thread, NULL);
 
     clearMessage(ib_data);
-    clearSocket(mka.mka_socket);
+    SocketClear(mka.mka_socket);
 }
 
 //Socket-handling function.
 void *socketThread(void* mka_v) {
     MKA* mka = (MKA*)mka_v;
-    Socket_Message* recv_msg = createSocketMessage(0x68, 1024);
-    while(*mka->running) {
-        if(readSocketMessage(mka->mka_socket, recv_msg, 1024) > 0) {
-            if(recv_msg->l >= 1) {
-                if(recv_msg->opcode == OPCODE_RECV_IBUS) { //Send an IBus message.
-                    IBus_Message* ib_data = createMessage(recv_msg->l - 4, recv_msg->data[0], recv_msg->data[2]);
-                    for(unsigned int i=3;i<recv_msg->l-1;i+=1)
-                        ib_data->data[i-3] = recv_msg->data[i];
+    SocketMessage* recv_msg = SocketCreateMessage(0x68, 1024);
+    while (*mka->running) {
+        if (SocketReadMessage(mka->mka_socket, recv_msg, 1024) > 0) {
+            if (recv_msg->len == 0) {\
+                continue;
+            }
+            if (recv_msg->opcode == OPCODE_RECV_IBUS) {
+                //Send an IBus message.
+                IBus_Message *ib_data = createMessage(recv_msg->len - 4, recv_msg->data[0], recv_msg->data[2]);
+                for(unsigned int i = 3; i < recv_msg->len - 1; i += 1)
+                    ib_data->data[i-3] = recv_msg->data[i];
 
-                    writeIBusData(mka->ibus_port, ib_data);
+                writeIBusData(mka->ibus_port, ib_data);
 
-                    clearMessage(ib_data);
-                } else if(recv_msg->opcode == OPCODE_PHONE_NAME) { //Set the phone name.
-                    strncpy(mka->parameter_list.phone_name, recv_msg->data, sizeof(mka->parameter_list.phone_name)/sizeof(char) - 1);
-                } else {
-                    switch(recv_msg->opcode) {
-                    case OPCODE_PHONE_ACTIVE:
-                        mka->parameter_list.phone_active = recv_msg->data[0] != 0;
-                        break;
-                    case OPCODE_MKA_ACTIVE:
-                        mka->parameter_list.mka_active = recv_msg->data[0] != 0;
-                        break;
-                    case OPCODE_AUDIO_SELECTED:
-                        mka->parameter_list.audio_selected = recv_msg->data[0] != 0;
-                        break;
-                    case OPCODE_PHONE_TYPE:
-                        mka->parameter_list.phone_type = recv_msg->data[0];
-                        break;
-                    case OPCODE_PLAYING:
-                        mka->parameter_list.playing = recv_msg->data[0] != 0;
-                        break;
-                    case OPCODE_BMBT_CONNECTED:
-                        mka->parameter_list.bmbt_connected = recv_msg->data[0] != 0;
-                    }
+                clearMessage(ib_data);
+            } else if(recv_msg->opcode == OPCODE_PHONE_NAME) {
+                // Set the phone name
+                strncpy(
+                    mka->parameter_list.phone_name,
+                    (const char *) recv_msg->data,
+                    (sizeof(mka->parameter_list.phone_name) / sizeof(char)) - 1
+                );
+            } else {
+                switch(recv_msg->opcode) {
+                case OPCODE_PHONE_ACTIVE:
+                    mka->parameter_list.phone_active = recv_msg->data[0] != 0;
+                    break;
+                case OPCODE_MKA_ACTIVE:
+                    mka->parameter_list.mka_active = recv_msg->data[0] != 0;
+                    break;
+                case OPCODE_AUDIO_SELECTED:
+                    mka->parameter_list.audio_selected = recv_msg->data[0] != 0;
+                    break;
+                case OPCODE_PHONE_TYPE:
+                    mka->parameter_list.phone_type = recv_msg->data[0];
+                    break;
+                case OPCODE_PLAYING:
+                    mka->parameter_list.playing = recv_msg->data[0] != 0;
+                    break;
+                case OPCODE_BMBT_CONNECTED:
+                    mka->parameter_list.bmbt_connected = recv_msg->data[0] != 0;
                 }
             }
-            
+
         }
     }
 
-    clearSocketMessage(recv_msg);
+    SocketClearMessage(recv_msg);
 }
 
 //Handle an IBus message as needed.
