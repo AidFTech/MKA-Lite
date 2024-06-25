@@ -1,15 +1,17 @@
 mod ipc;
 mod ibus;
 mod parameter_list;
+mod Mirror_USBLink;
 
 use std::os::unix::net::UnixStream;
 
 use ipc::*;
 use ibus::*;
 use parameter_list::*;
+use Mirror_USBLink::*;
 
 fn main() {
-    let mut stream: UnixStream;
+    /*let mut stream: UnixStream;
     match ipc::initSocket() {
         Ok(ret_stream) => {
             stream = ret_stream;
@@ -17,11 +19,11 @@ fn main() {
         Err(_err) => {
             return;
         }
-    }
+    }*/
 
     let mut parameter_list: ParameterList = getParameterList();
 
-    loop {
+    /*loop {
         let mut socket_msg = SocketMessage {
             opcode: 0,
             data: Vec::new(),
@@ -38,5 +40,7 @@ fn main() {
             println!("{:X?}", parameter_list.ibus_cache.getBytes());
             //TODO: Interpret the IBus message.
         }
-    }
+    }*/
+    let mut mirror_link = getUSBConnection(parameter_list);
+    mirror_link.readThread();
 }
