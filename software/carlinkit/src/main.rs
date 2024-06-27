@@ -2,6 +2,7 @@ mod ipc;
 mod ibus;
 mod parameter_list;
 mod Mirror_USBLink;
+mod mirror_mirrorhandler;
 
 use std::os::unix::net::UnixStream;
 
@@ -9,6 +10,7 @@ use ipc::*;
 use ibus::*;
 use parameter_list::*;
 use Mirror_USBLink::*;
+use mirror_mirrorhandler::*;
 
 fn main() {
     /*let mut stream: UnixStream;
@@ -41,6 +43,6 @@ fn main() {
             //TODO: Interpret the IBus message.
         }
     }*/
-    let mut mirror_link = getUSBConnection(parameter_list);
+    let mut mirror_link = getUSBConnection(&mut parameter_list);
     mirror_link.readThread();
 }

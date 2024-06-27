@@ -26,10 +26,10 @@ pub struct USBConnection {
     pub rx: u8,
     pub tx: u8,
 
-    pub parameters: ParameterList,
+    pub parameters: *mut ParameterList,
 }
 
-pub fn getUSBConnection(parameters: ParameterList) -> USBConnection {
+pub fn getUSBConnection(parameters: *mut ParameterList) -> USBConnection {
     let mut the_return = USBConnection {
         running: false,
 
@@ -134,7 +134,7 @@ impl USBConnection {
         let handle = self.device_handle.as_mut().unwrap();
 
         while self.running {
-            let mut buffer: [u8;256] = [0; 256];
+            let mut buffer: [u8;65536] = [0; 65536];
             match handle.read_bulk(self.rx, &mut buffer, Duration::from_secs(1)) {
                 Ok(len) => {
                     println!(" - read: {:?}", &buffer[..len]);
@@ -143,6 +143,13 @@ impl USBConnection {
                     continue;
                 }
             }
+        }
+    }
+
+    //Heartbeat thread loop.
+    fn heartbeatThread(&mut self) {
+        while self.running {
+
         }
     }
 }
