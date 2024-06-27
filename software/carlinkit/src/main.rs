@@ -12,6 +12,9 @@ use parameter_list::*;
 use Mirror_USBLink::*;
 use mirror_mirrorhandler::*;
 
+use std::sync::Arc;
+use std::sync::Mutex;
+
 fn main() {
     /*let mut stream: UnixStream;
     match ipc::initSocket() {
@@ -43,6 +46,7 @@ fn main() {
             //TODO: Interpret the IBus message.
         }
     }*/
-    let mut mirror_link = getUSBConnection(&mut parameter_list);
+    let mutex_parameter_list: Arc<Mutex<ParameterList>> = Arc::new(Mutex::new(parameter_list));
+    let mut mirror_link = getUSBConnection(&mutex_parameter_list);
     mirror_link.readThread();
 }

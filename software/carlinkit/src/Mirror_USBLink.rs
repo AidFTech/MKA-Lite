@@ -40,11 +40,11 @@ pub fn getUSBConnection(parameters: &Arc<Mutex<ParameterList>>) -> USBConnection
         rx: 0,
         tx: 0,
 
-        parameters,
+        parameters: parameters,
     };
 
     while !the_return.connectDongle() {
-
+        
     }
 
     return the_return;
@@ -150,7 +150,7 @@ impl USBConnection <'_> {
     //Heartbeat thread loop.
     fn heartbeatThread(&mut self) {
         while self.running {
-
+            
         }
     }
 }
