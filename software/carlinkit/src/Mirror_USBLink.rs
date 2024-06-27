@@ -1,4 +1,5 @@
-use rusb::*;
+use std::sync::{Arc, Mutex};
+use rusb::{Context, Device, DeviceDescriptor, DeviceHandle, Direction, TransferType, UsbContext};
 use std::time::Duration;
 use std::time::SystemTime;
 
@@ -8,7 +9,7 @@ const VENDOR_ID: u16 = 0x1314;
 const DEVICE_ID_WIRED: u16 = 0x1520;
 const DEVICE_ID_WIRELESS: u16 = 0x1521;
 
-//Verbatim from rusb example.
+// Verbatim from rusb example.
 struct Endpoint {
     config: u8,
     iface: u8,
@@ -17,19 +18,19 @@ struct Endpoint {
     rx_address: u8,
 }
 
-pub struct USBConnection {
+pub struct USBConnection <'a>{
     pub running: bool,
-    
+
     pub device: Option<Device<Context>>,
     pub device_handle: Option<DeviceHandle<Context>>,
 
     pub rx: u8,
     pub tx: u8,
 
-    pub parameters: *mut ParameterList,
+    pub parameters: &'a Arc<Mutex<ParameterList>>,
 }
 
-pub fn getUSBConnection(parameters: *mut ParameterList) -> USBConnection {
+pub fn getUSBConnection(parameters: &Arc<Mutex<ParameterList>>) -> USBConnection {
     let mut the_return = USBConnection {
         running: false,
 
@@ -39,7 +40,7 @@ pub fn getUSBConnection(parameters: *mut ParameterList) -> USBConnection {
         rx: 0,
         tx: 0,
 
-        parameters: parameters,
+        parameters,
     };
 
     while !the_return.connectDongle() {
@@ -49,7 +50,7 @@ pub fn getUSBConnection(parameters: *mut ParameterList) -> USBConnection {
     return the_return;
 }
 
-impl USBConnection {
+impl USBConnection <'_> {
     fn connectDongle(&mut self) -> bool {
         let start_time = SystemTime::now();
         let mut has_new_device = false;
