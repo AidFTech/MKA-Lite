@@ -46,7 +46,7 @@ fn main() {
             //TODO: Interpret the IBus message.
         }
     }*/
-    let mutex_parameter_list: Arc<Mutex<ParameterList>> = Arc::new(Mutex::new(parameter_list));
-    let mut mirror_link = getUSBConnection(&mutex_parameter_list);
-    mirror_link.readThread();
+    let mutex_parameter_list: &'static Arc<Mutex<ParameterList>> = &Arc::new(Mutex::new(parameter_list));
+    let mut mirror_handler = getMirrorHandler(&mutex_parameter_list);
+    mirror_handler.connect_dongle_thread();
 }

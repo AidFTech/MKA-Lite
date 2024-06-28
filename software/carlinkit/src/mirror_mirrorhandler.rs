@@ -6,24 +6,28 @@ use crate::getUSBConnection;
 use crate::ParameterList;
 use crate::USBConnection;
 
-pub struct MirrorHandler <'a> {
-    parameter_list: &'a Arc<Mutex<ParameterList>>,
-    usb_link: USBConnection<'a>,
+pub struct MirrorHandler {
+    parameter_list: &'static Arc<Mutex<ParameterList>>,
+    usb_link: USBConnection,
     run: bool,
 
     startup_join_handle: JoinHandle<()>,
 }
 
-impl <'a> MirrorHandler<'static> {
-    fn connect_dongle_thread(&mut self) {
+impl MirrorHandler {
+    pub fn connect_dongle_thread(&mut self) {
         while !self.usb_link.running && self.run {
             // Send messages.
         }
     }
+
+    pub fn getRun(&mut self) -> bool {
+        return self.run;
+    }
 }
 
-pub fn getMirrorHandler<'a>(parameter_list: &Arc<Mutex<ParameterList>>) -> MirrorHandler <'static> {
-    let new_usb_link = getUSBConnection(parameter_list);
+pub fn getMirrorHandler (parameter_list: &'static Arc<Mutex<ParameterList>>) -> MirrorHandler {
+    let new_usb_link = getUSBConnection(&parameter_list);
 
     let mut handler = MirrorHandler {
         parameter_list: parameter_list,
@@ -31,13 +35,9 @@ pub fn getMirrorHandler<'a>(parameter_list: &Arc<Mutex<ParameterList>>) -> Mirro
         run: true,
 
         startup_join_handle: thread::spawn(move || {
-
+            
         }),
     };
-
-	handler.startup_join_handle = thread::spawn(move || {
-		//handler.connect_dongle_thread();
-	});
 
     return handler;
 }
