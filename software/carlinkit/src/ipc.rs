@@ -48,6 +48,7 @@ fn readSocketBytes(stream: &mut UnixStream, data: &mut [u8]) -> usize {
 
 //Write bytes to a socket.
 fn writeSocketBytes(stream: &mut UnixStream, data: &mut Vec<u8>) -> usize {
+
     let bytes_written = stream.write(data);
     match bytes_written {
         Ok(bytes_written) => {

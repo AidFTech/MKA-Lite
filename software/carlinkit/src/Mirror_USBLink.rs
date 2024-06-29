@@ -18,7 +18,7 @@ struct Endpoint {
     rx_address: u8,
 }
 
-pub struct USBConnection {
+pub struct USBConnection<'a> {
     pub running: bool,
 
     pub device: Option<Device<Context>>,
@@ -27,10 +27,10 @@ pub struct USBConnection {
     pub rx: u8,
     pub tx: u8,
 
-    pub parameters: &'static Arc<Mutex<ParameterList>>,
+    pub parameters: &'a Arc<Mutex<ParameterList>>,
 }
 
-pub fn getUSBConnection<'a>(parameters: &'static Arc<Mutex<ParameterList>>) -> USBConnection {
+pub fn getUSBConnection<'a>(parameters: &'a Arc<Mutex<ParameterList>>) -> USBConnection {
     let mut the_return = USBConnection {
         running: false,
 
@@ -50,7 +50,7 @@ pub fn getUSBConnection<'a>(parameters: &'static Arc<Mutex<ParameterList>>) -> U
     return the_return;
 }
 
-impl USBConnection {
+impl <'a> USBConnection <'a> {
     fn connectDongle(&mut self) -> bool {
         let start_time = SystemTime::now();
         let mut has_new_device = false;
@@ -123,7 +123,6 @@ impl USBConnection {
             self.rx = endpoint.rx_address;
             self.running = true;
 
-            println!("Found and connected!");
             return true;
         }
 
