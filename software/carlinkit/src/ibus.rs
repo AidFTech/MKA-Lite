@@ -10,7 +10,7 @@ impl IBusMessage {
         return self.data.len();
     }
     
-    pub fn getBytes(&self) -> Vec<u8> {
+    pub fn get_bytes(&self) -> Vec<u8> {
         let mut data: Vec<u8> = vec![0; self.data.len() + 4];
         
         data[0] = self.sender;
@@ -34,7 +34,7 @@ impl IBusMessage {
     }
 }
 
-pub fn getIBusMessage(data: Vec<u8>) -> IBusMessage {
+pub fn get_ibus_message(data: Vec<u8>) -> IBusMessage {
     let mut checksum = 0;
     for i in 0..data.len() - 1 {
         checksum ^= data[i];

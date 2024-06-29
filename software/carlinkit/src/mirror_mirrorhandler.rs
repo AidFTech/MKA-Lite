@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex};
 
-use crate::getUSBConnection;
+use crate::connect_usb_dongle;
+use crate::get_usb_connection;
 use crate::ParameterList;
 use crate::USBConnection;
 
@@ -11,21 +12,27 @@ pub struct MirrorHandler<'a> {
 }
 
 impl<'a> MirrorHandler<'a> {
-    pub fn connect_dongle(&mut self) {
-        while !self.usb_link.running && self.run {
-            // Send messages.
+    pub fn full_loop(&mut self) {
+        if !self.usb_link.get_running() {
+            let run = connect_usb_dongle(&mut self.usb_link);
+
+            if !run {
+                return; //TODO: Should we still run full_loop even if no dongle is connected?
+            }
         }
+
+        self.usb_link.full_loop();
     }
 
-    pub fn getRun(&mut self) -> bool {
+    pub fn get_run(&mut self) -> bool {
         return self.run;
     }
 }
 
-pub fn getMirrorHandler<'a> (parameter_list: &'a Arc<Mutex<ParameterList>>) -> MirrorHandler<'a> {
-    let new_usb_link = getUSBConnection(&parameter_list);
+pub fn get_mirror_handler<'a> (parameter_list: &'a Arc<Mutex<ParameterList>>) -> MirrorHandler<'a> {
+    let new_usb_link = get_usb_connection(&parameter_list);
 
-    let mut handler = MirrorHandler {
+    let handler = MirrorHandler {
         parameter_list: parameter_list,
         usb_link: new_usb_link,
         run: true,

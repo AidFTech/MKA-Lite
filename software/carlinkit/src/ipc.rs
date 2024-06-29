@@ -1,10 +1,9 @@
 // Socket implementation
 use std::io::prelude::*;
-use std::io::Error;
 use std::os::unix::net::UnixStream;
 use std::str;
 
-use crate::getIBusMessage;
+use crate::get_ibus_message;
 use crate::IBusMessage;
 use crate::ParameterList;
 
@@ -27,14 +26,25 @@ pub struct SocketMessage {
     pub data: Vec<u8>,
 }
 
+pub fn init_default_socket() -> Option<UnixStream> {
+    return init_socket(SOCKET_PATH.to_string());
+}
+
 //Get a UnixStream object.
-pub fn initSocket() -> Result<UnixStream, Error> {
-    let stream = UnixStream::connect(SOCKET_PATH);
-    return stream;
+pub fn init_socket(socket_path: String) -> Option<UnixStream> {
+    let stream = match UnixStream::connect(socket_path) {
+        Ok(stream) => stream,
+        Err(_) => {
+            return None;
+        }
+    };
+
+    let _ = stream.set_nonblocking(true);
+    return Some(stream);
 }
 
 //Read bytes from a socket.
-fn readSocketBytes(stream: &mut UnixStream, data: &mut [u8]) -> usize {
+fn read_socket_bytes(stream: &mut UnixStream, data: &mut [u8]) -> usize {
     let l = stream.read(data);
     match l {
         Ok(l) => {
@@ -47,7 +57,7 @@ fn readSocketBytes(stream: &mut UnixStream, data: &mut [u8]) -> usize {
 }
 
 //Write bytes to a socket.
-fn writeSocketBytes(stream: &mut UnixStream, data: &mut Vec<u8>) -> usize {
+fn write_socket_bytes(stream: &mut UnixStream, data: &mut Vec<u8>) -> usize {
 
     let bytes_written = stream.write(data);
     match bytes_written {
@@ -61,9 +71,9 @@ fn writeSocketBytes(stream: &mut UnixStream, data: &mut Vec<u8>) -> usize {
 }
 
 //Read a full message from the socket.
-pub fn readSocketMessage(stream: &mut UnixStream, message: &mut SocketMessage) -> usize {
+pub fn read_socket_message(stream: &mut UnixStream, message: &mut SocketMessage) -> usize {
     let mut data : [u8; 1024] = [0; 1024];
-    let full_l = readSocketBytes(stream, &mut data);
+    let full_l = read_socket_bytes(stream, &mut data);
     
     if full_l < SOCKET_START.len() {
         return 0;
@@ -99,7 +109,7 @@ pub fn readSocketMessage(stream: &mut UnixStream, message: &mut SocketMessage) -
 }
 
 //Write a full message to the socket.
-pub fn writeSocketMessage(stream: &mut UnixStream, message: SocketMessage) {
+pub fn write_socket_message(stream: &mut UnixStream, message: SocketMessage) {
     let socket_start_msg = SOCKET_START.as_bytes();
     let mut data: Vec<u8> = vec![0; message.data.len() + socket_start_msg.len() + 3];
 
@@ -122,11 +132,11 @@ pub fn writeSocketMessage(stream: &mut UnixStream, message: SocketMessage) {
     let checksum_index = data.len() - 1;
     data[checksum_index] = checksum;
 
-    let _ = writeSocketBytes(stream, &mut data);
+    let _ = write_socket_bytes(stream, &mut data);
 }
 
-pub fn writeIBusMessage(stream: &mut UnixStream, message: IBusMessage) {
-    let bytes = message.getBytes();
+pub fn write_ibus_message(stream: &mut UnixStream, message: IBusMessage) {
+    let bytes = message.get_bytes();
 
     let mut socket_msg = SocketMessage {
         opcode: 0x68,
@@ -137,10 +147,10 @@ pub fn writeIBusMessage(stream: &mut UnixStream, message: IBusMessage) {
         socket_msg.data[i] = bytes[i];
     }
 
-    writeSocketMessage(stream, socket_msg);
+    write_socket_message(stream, socket_msg);
 }
 
-pub fn handleSocketMessage(parameter_list: &mut ParameterList, message: SocketMessage) {
+pub fn handle_socket_message(parameter_list: &mut ParameterList, message: SocketMessage) {
     let opcode = message.opcode;
     let socket_bool: bool = message.data.len() > 0 && message.data[0] != 0;
     if opcode == OPCODE_PHONE_ACTIVE {
@@ -158,7 +168,7 @@ pub fn handleSocketMessage(parameter_list: &mut ParameterList, message: SocketMe
     } else if opcode == OPCODE_BMBT_CONNECTED {
         parameter_list.bmbt_connected = socket_bool;
     } else if opcode == OPCODE_IBUS_RECV {
-        let ib_msg = getIBusMessage(message.data);
+        let ib_msg = get_ibus_message(message.data);
 
         if ib_msg.l() > 0 {
             parameter_list.ibus_cache = ib_msg;

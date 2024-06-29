@@ -28,10 +28,12 @@ pub struct USBConnection<'a> {
     pub tx: u8,
 
     pub parameters: &'a Arc<Mutex<ParameterList>>,
+
+    heartbeat_time: SystemTime,
 }
 
-pub fn getUSBConnection<'a>(parameters: &'a Arc<Mutex<ParameterList>>) -> USBConnection {
-    let mut the_return = USBConnection {
+pub fn get_usb_connection<'a>(parameters: &'a Arc<Mutex<ParameterList>>) -> USBConnection {
+    let the_return = USBConnection {
         running: false,
 
         device: None,
@@ -41,17 +43,15 @@ pub fn getUSBConnection<'a>(parameters: &'a Arc<Mutex<ParameterList>>) -> USBCon
         tx: 0,
 
         parameters: parameters,
-    };
 
-    while !the_return.connectDongle() {
-        
-    }
+        heartbeat_time: SystemTime::now(),
+    };
 
     return the_return;
 }
 
 impl <'a> USBConnection <'a> {
-    fn connectDongle(&mut self) -> bool {
+    fn connect_dongle(&mut self) -> bool {
         let start_time = SystemTime::now();
         let mut has_new_device = false;
         let mut device_id: u16;
@@ -113,8 +113,8 @@ impl <'a> USBConnection <'a> {
             };
 
             let descriptor = device.device_descriptor().unwrap();
-            let endpoint = match getUSBEndpoint(device, descriptor) {
-                Some(T) => T,
+            let endpoint = match get_usb_endpoint(device, descriptor) {
+                Some(t) => t,
                 None => {
                     return false;
                 }
@@ -129,32 +129,48 @@ impl <'a> USBConnection <'a> {
         return false;
     }
 
+    //Public full loop function.
+    pub fn full_loop(&mut self) {
+        self.heartbeat_loop();
+        self.read_loop();
+    }
+
     //Message read thread loop.
-    pub fn readThread(&mut self) {
+    fn read_loop(&mut self) {
+        if !self.running {
+            return;
+        }
+        
         let handle = self.device_handle.as_mut().unwrap();
 
-        while self.running {
-            let mut buffer: [u8;65536] = [0; 65536];
-            match handle.read_bulk(self.rx, &mut buffer, Duration::from_secs(1)) {
-                Ok(len) => {
-                    println!(" - read: {:?}", &buffer[..len]);
-                }
-                Err(_) => {
-                    continue;
-                }
+        let mut buffer: [u8;65536] = [0; 65536];
+        match handle.read_bulk(self.rx, &mut buffer, Duration::from_secs(1)) {
+            Ok(len) => {
+                println!(" - read: {:?}", &buffer[..len]);
+            }
+            Err(_) => {
+                return;
             }
         }
     }
 
     //Heartbeat thread loop.
-    fn heartbeatThread(&mut self) {
-        while self.running {
-            
+    fn heartbeat_loop(&mut self) {
+        if !self.running {
+            return;
         }
+
+        if self.heartbeat_time.elapsed().unwrap().as_millis() > 2000 {
+            //Send heartbeat message.
+        }
+    }
+
+    pub fn get_running(&mut self) -> bool {
+        return self.running;
     }
 }
 
-fn getUSBEndpoint<T: UsbContext>(device: &mut Device<T>, device_descriptor: DeviceDescriptor) -> Option<Endpoint> {
+fn get_usb_endpoint<T: UsbContext>(device: &mut Device<T>, device_descriptor: DeviceDescriptor) -> Option<Endpoint> {
     for config in 0..device_descriptor.num_configurations() {
         let config_descriptor = match device.config_descriptor(config) {
             Ok(descriptor) => descriptor,
@@ -200,4 +216,8 @@ fn getUSBEndpoint<T: UsbContext>(device: &mut Device<T>, device_descriptor: Devi
     }
 
     return None;
+}
+
+pub fn connect_usb_dongle(usb_link: &mut USBConnection) -> bool {
+    return usb_link.connect_dongle();
 }

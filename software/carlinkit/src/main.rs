@@ -15,47 +15,34 @@ use mirror_mirrorhandler::*;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use std::thread;
-
 fn main() {
-    let mut stream: UnixStream;
-    match ipc::initSocket() {
-        Ok(ret_stream) => {
-            let _ = ret_stream.set_nonblocking(true);
-            stream = ret_stream;
-        }
-        Err(_err) => {
-            return;
-        }
-    }
+    let mut stream: UnixStream = init_default_socket().unwrap();
 
-    let mut parameter_list: ParameterList = getParameterList();
+    let parameter_list: ParameterList = get_parameter_list();
 
     let mutex_parameter_list: Arc<Mutex<ParameterList>> = Arc::new(Mutex::new(parameter_list));
-    let mut mirror_handler = getMirrorHandler(&mutex_parameter_list);
+    let mut mirror_handler = get_mirror_handler(&mutex_parameter_list);
 
-    //let socket_thread = thread::spawn(move || {
-        while mirror_handler.getRun() {
-            let mut socket_msg = SocketMessage {
-                opcode: 0,
-                data: Vec::new(),
-            };
-            let l = readSocketMessage(&mut stream, &mut socket_msg);
+    while mirror_handler.get_run() {
+        let mut socket_msg = SocketMessage {
+            opcode: 0,
+            data: Vec::new(),
+        };
+        let l = read_socket_message(&mut stream, &mut socket_msg);
 
-            let mut new_parameter_list = mutex_parameter_list.lock().unwrap();
+        let mut new_parameter_list = mutex_parameter_list.lock().unwrap();
 
-            if l > 0 {
-                handleSocketMessage(&mut new_parameter_list, socket_msg);
-            }
-
-            if new_parameter_list.ibus_waiting {
-                new_parameter_list.ibus_waiting = false;
-
-                println!("{:X?}", new_parameter_list.ibus_cache.getBytes());
-                //TODO: Interpret the IBus message.
-            }
+        if l > 0 {
+            handle_socket_message(&mut new_parameter_list, socket_msg);
         }
-    //});
 
-    //socket_thread.join().unwrap();
+        if new_parameter_list.ibus_waiting {
+            new_parameter_list.ibus_waiting = false;
+
+            println!("{:X?}", new_parameter_list.ibus_cache.get_bytes());
+            //TODO: Interpret the IBus message.
+        }
+
+        mirror_handler.full_loop();
+    }
 }

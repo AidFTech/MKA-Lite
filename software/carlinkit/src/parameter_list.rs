@@ -17,7 +17,7 @@ pub struct ParameterList {
 	pub ibus_cache: IBusMessage,
 }
 
-pub fn getParameterList() -> ParameterList {
+pub fn get_parameter_list() -> ParameterList {
 	return ParameterList {
 		bmbt_connected: false,
 		audio_selected: false,
