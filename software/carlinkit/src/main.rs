@@ -1,16 +1,18 @@
 mod ipc;
 mod ibus;
 mod parameter_list;
-mod Mirror_USBLink;
+mod mirror_usblink;
 mod mirror_mirrorhandler;
+mod mirror_messages;
 
 use std::os::unix::net::UnixStream;
 
 use ipc::*;
 use ibus::*;
 use parameter_list::*;
-use Mirror_USBLink::*;
+use mirror_usblink::*;
 use mirror_mirrorhandler::*;
+use mirror_messages::*;
 
 use std::sync::Arc;
 use std::sync::Mutex;

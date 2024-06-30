@@ -3,7 +3,9 @@ use rusb::{Context, Device, DeviceDescriptor, DeviceHandle, Direction, TransferT
 use std::time::Duration;
 use std::time::SystemTime;
 
+use crate::get_new_mirror_message;
 use crate::ParameterList;
+use crate::mirror_messages;
 
 const VENDOR_ID: u16 = 0x1314;
 const DEVICE_ID_WIRED: u16 = 0x1520;
@@ -143,13 +145,36 @@ impl <'a> USBConnection <'a> {
         
         let handle = self.device_handle.as_mut().unwrap();
 
-        let mut buffer: [u8;65536] = [0; 65536];
-        match handle.read_bulk(self.rx, &mut buffer, Duration::from_secs(1)) {
-            Ok(len) => {
-                println!(" - read: {:?}", &buffer[..len]);
-            }
+        let mut buffer: [u8;mirror_messages::HEADERSIZE] = [0;mirror_messages::HEADERSIZE];
+        let len = match handle.read_bulk(self.rx, &mut buffer, Duration::from_secs(1)) {
+            Ok(len) => len,
             Err(_) => {
                 return;
+            }
+        };
+
+        if len == mirror_messages::HEADERSIZE {
+            let mut header = get_new_mirror_message();
+            let valid = header.deserialize(buffer.to_vec());
+            let mut msg_read = false;
+
+            if valid {
+                let n = header.data.len();
+                let mut data_buffer: Vec<u8> = vec![0;n];
+                let n_comp = match handle.read_bulk(self.rx, &mut data_buffer, Duration::from_secs(1)) {
+                    Ok(len) => len,
+                    Err(_) => {
+                        return;
+                    }
+                };
+
+                if n_comp == n {
+                    msg_read = true;
+                }
+            }
+
+            if msg_read { 
+                //Cache and interpret the message.
             }
         }
     }
