@@ -184,7 +184,7 @@ impl <'a> USBConnection <'a> {
         let handle = self.device_handle.as_mut().unwrap();
 
         let mut buffer: [u8;mirror_messages::HEADERSIZE] = [0;mirror_messages::HEADERSIZE];
-        let len = match handle.read_bulk(self.rx, &mut buffer, Duration::from_secs(1)) {
+        let len = match handle.read_bulk(self.rx, &mut buffer, Duration::from_millis(200)) {
             Ok(len) => len,
             Err(_) => {
                 //TODO: In the original Python code, an errno other than 110 would stop the USB handler from running.
@@ -256,7 +256,7 @@ impl <'a> USBConnection <'a> {
         let header = &data[0..HEADERSIZE];
         let usb_data = &data[HEADERSIZE..data.len()];
 
-        match handle.write_bulk(self.tx, header, Duration::from_millis(500)) {
+        match handle.write_bulk(self.tx, header, Duration::from_millis(200)) {
             Ok(_) => {
 
             }
@@ -266,7 +266,7 @@ impl <'a> USBConnection <'a> {
         }
 
         if usb_data.len() > 0 {
-           match handle.write_bulk(self.tx, usb_data, Duration::from_millis(500)) {
+           match handle.write_bulk(self.tx, usb_data, Duration::from_millis(200)) {
                 Ok(_) => {
 
                 }
@@ -275,7 +275,6 @@ impl <'a> USBConnection <'a> {
                 }
             }
         }
-        println!("Sent!");
     }
 
     pub fn get_running(&mut self) -> bool {

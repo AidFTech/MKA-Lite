@@ -18,12 +18,14 @@ impl<'a> MirrorHandler<'a> {
 
             if !run {
                 return; //TODO: Should we still run full_loop even if no dongle is connected?
+            } else {
+                self.run = true;
             }
         }
 
         self.usb_link.full_loop();
 
-        let mut parameters = self.parameter_list.lock().unwrap();
+        /*let mut parameters = self.parameter_list.lock().unwrap();
         if parameters.rx_cache.len() > 0 {
             for m in 0..parameters.rx_cache.len() {
                 let message = &parameters.rx_cache[m];
@@ -32,7 +34,7 @@ impl<'a> MirrorHandler<'a> {
             }
 
             parameters.rx_cache = Vec::new();
-        }
+        }*/
     }
 
     pub fn get_run(&mut self) -> bool {
