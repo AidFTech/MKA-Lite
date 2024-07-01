@@ -124,6 +124,41 @@ impl <'a> USBConnection <'a> {
                     return false;
                 }
             };
+            
+            match device_handle.kernel_driver_active(endpoint.iface) {
+                Ok(true) => {
+                    device_handle.detach_kernel_driver(endpoint.iface).ok();
+                }
+                _ => {
+
+                }
+            };
+            
+            //Done in read_device.rs under configure_endpoint.
+            match device_handle.set_active_configuration(endpoint.config) {
+                Ok(_) => {
+                }
+                Err(_) => {
+                    return false;
+                }
+            }
+            
+            match device_handle.claim_interface(endpoint.iface) {
+                Ok(_) => {
+                }
+                Err(_) => {
+                    return false;
+                }
+            }
+            
+            match device_handle.set_alternate_setting(endpoint.iface, endpoint.setting) {
+                Ok(_) => {
+                }
+                Err(_) => {
+                    return false;
+                }
+            }
+            
             self.tx = endpoint.tx_address;
             self.rx = endpoint.rx_address;
             self.running = true;
@@ -206,13 +241,14 @@ impl <'a> USBConnection <'a> {
             return;
         }
 
+        println!("{}", self.heartbeat_time.elapsed().unwrap().as_millis());
         if self.heartbeat_time.elapsed().unwrap().as_millis() > 2000 {
             self.heartbeat_time = SystemTime::now();
-            println!("Sending...");
             self.write_message(get_heartbeat_message());
         }
     }
 
+    //Write a message to the socket.
     pub fn write_message(&mut self, message: MirrorMessage) {
         let data = message.serialize();
         let handle = self.device_handle.as_mut().unwrap();
