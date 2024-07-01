@@ -3,9 +3,12 @@ use rusb::{Context, Device, DeviceDescriptor, DeviceHandle, Direction, TransferT
 use std::time::Duration;
 use std::time::SystemTime;
 
-use crate::get_new_mirror_message;
+use crate::get_heartbeat_message;
+use crate::get_mirror_message_from_header;
+use crate::MirrorMessage;
 use crate::ParameterList;
 use crate::mirror_messages;
+use crate::HEADERSIZE;
 
 const VENDOR_ID: u16 = 0x1314;
 const DEVICE_ID_WIRED: u16 = 0x1520;
@@ -149,14 +152,26 @@ impl <'a> USBConnection <'a> {
         let len = match handle.read_bulk(self.rx, &mut buffer, Duration::from_secs(1)) {
             Ok(len) => len,
             Err(_) => {
+                //TODO: In the original Python code, an errno other than 110 would stop the USB handler from running.
                 return;
             }
         };
 
         if len == mirror_messages::HEADERSIZE {
-            let mut header = get_new_mirror_message();
-            let valid = header.deserialize(buffer.to_vec());
             let mut msg_read = false;
+            let mut header = match get_mirror_message_from_header(buffer.to_vec()){
+                Some(msg) => {
+                    msg_read = true;
+                    msg
+                }
+                None =>
+                    MirrorMessage {
+                        message_type: 0,
+                        data: Vec::new(),
+                    },
+            };
+            let valid = header.deserialize(buffer.to_vec());
+
 
             if valid {
                 let n = header.data.len();
@@ -170,11 +185,17 @@ impl <'a> USBConnection <'a> {
 
                 if n_comp == n {
                     msg_read = true;
+
+                    for i in 0..n {
+                        header.data[i] = data_buffer[i];
+                    }
                 }
             }
 
             if msg_read { 
-                //Cache and interpret the message.
+                //TODO: Socket video and audio.
+                let mut parameters = self.parameters.lock().unwrap();
+                parameters.rx_cache.push(header);
             }
         }
     }
@@ -186,8 +207,39 @@ impl <'a> USBConnection <'a> {
         }
 
         if self.heartbeat_time.elapsed().unwrap().as_millis() > 2000 {
-            //Send heartbeat message.
+            self.heartbeat_time = SystemTime::now();
+            println!("Sending...");
+            self.write_message(get_heartbeat_message());
         }
+    }
+
+    pub fn write_message(&mut self, message: MirrorMessage) {
+        let data = message.serialize();
+        let handle = self.device_handle.as_mut().unwrap();
+        
+        let header = &data[0..HEADERSIZE];
+        let usb_data = &data[HEADERSIZE..data.len()];
+
+        match handle.write_bulk(self.tx, header, Duration::from_millis(500)) {
+            Ok(_) => {
+
+            }
+            Err(_) => {
+                return; //TODO: Stop running?
+            }
+        }
+
+        if usb_data.len() > 0 {
+           match handle.write_bulk(self.tx, usb_data, Duration::from_millis(500)) {
+                Ok(_) => {
+
+                }
+                Err(_) => {
+                    return; //TODO: Stop running?
+                }
+            }
+        }
+        println!("Sent!");
     }
 
     pub fn get_running(&mut self) -> bool {
