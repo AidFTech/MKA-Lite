@@ -180,7 +180,7 @@ impl <'a> USBConnection <'a> {
         if !self.running {
             return;
         }
-        
+
         let handle = self.device_handle.as_mut().unwrap();
 
         let mut buffer: [u8;mirror_messages::HEADERSIZE] = [0;mirror_messages::HEADERSIZE];
@@ -211,7 +211,7 @@ impl <'a> USBConnection <'a> {
             if valid {
                 let n = header.data.len();
                 let mut data_buffer: Vec<u8> = vec![0;n];
-                let n_comp = match handle.read_bulk(self.rx, &mut data_buffer, Duration::from_secs(1)) {
+                let n_comp = match handle.read_bulk(self.rx, &mut data_buffer, Duration::from_millis(200)) {
                     Ok(len) => len,
                     Err(_) => {
                         return;
@@ -229,8 +229,15 @@ impl <'a> USBConnection <'a> {
 
             if msg_read { 
                 //TODO: Socket video and audio.
-                let mut parameters = self.parameters.lock().unwrap();
-                parameters.rx_cache.push(header);
+                match self.parameters.try_lock() {
+                    Ok(mut parameters) => {
+                        parameters.rx_cache.push(header);
+                        println!("{}", parameters.rx_cache.len());
+                    }
+                    Err(_) => {
+                        println!("USB: Parameter list is locked.");
+                    }
+                }
             }
         }
     }

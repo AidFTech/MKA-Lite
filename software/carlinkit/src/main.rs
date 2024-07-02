@@ -26,13 +26,19 @@ fn main() {
     let mut mirror_handler = get_mirror_handler(&mutex_parameter_list);
 
     while mirror_handler.get_run() {
+		let mut new_parameter_list = match mutex_parameter_list.try_lock() {
+			Ok(new_parameter_list) => new_parameter_list,
+			Err(_) => {
+				println!("Main: Parameter list is locked.");
+				continue;
+			}
+		};
+		
         let mut socket_msg = SocketMessage {
             opcode: 0,
             data: Vec::new(),
         };
         let l = read_socket_message(&mut stream, &mut socket_msg);
-
-        let mut new_parameter_list = mutex_parameter_list.lock().unwrap();
 
         if l > 0 {
             handle_socket_message(&mut new_parameter_list, socket_msg);
@@ -44,6 +50,8 @@ fn main() {
             println!("{:X?}", new_parameter_list.ibus_cache.get_bytes());
             //TODO: Interpret the IBus message.
         }
+
+        std::mem::drop(new_parameter_list);
 
         mirror_handler.full_loop();
     }
