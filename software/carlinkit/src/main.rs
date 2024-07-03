@@ -9,7 +9,7 @@ use std::os::unix::net::UnixStream;
 
 use ipc::*;
 use ibus::*;
-use context::*;
+use context::Context;
 use mirror_usblink::*;
 use mirror_mirrorhandler::*;
 use mirror_messages::*;
@@ -19,11 +19,12 @@ use std::sync::Mutex;
 
 fn main() {
     let mut stream: UnixStream = init_default_socket().unwrap();
-    let context: Context = context_create();
+    let context: Context = Context::new();
     let mutex_context: Arc<Mutex<Context>> = Arc::new(Mutex::new(context));
-    let mut mirror_handler = get_mirror_handler(&mutex_context);
+    let mut usb_conn = USBConnection::new(&mutex_context);
+    let mut mirror_handler = MirrorHandler::new(&mutex_context, &mut usb_conn);
 
-    while mirror_handler.get_run() {
+    loop {
 		let mut new_context = match mutex_context.try_lock() {
 			Ok(new_context) => new_context,
 			Err(_) => {
@@ -44,13 +45,10 @@ fn main() {
 
         if new_context.ibus_waiting {
             new_context.ibus_waiting = false;
-
             println!("{:X?}", new_context.ibus_cache.get_bytes());
             //TODO: Interpret the IBus message.
         }
-
         std::mem::drop(new_context);
-
-        mirror_handler.full_loop();
+        mirror_handler.process();
     }
 }

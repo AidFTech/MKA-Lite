@@ -17,30 +17,32 @@ pub struct Context {
 	pub ibus_cache: IBusMessage,
 }
 
-pub fn context_create() -> Context {
-	let new_msg = MirrorMessage {
-		message_type: 0,
-		data: vec![0;0],
-	};
+impl Context {
+    pub fn new() -> Self {
+        let new_msg = MirrorMessage {
+            message_type: 0,
+            data: vec![0;0],
+        };
 
-	return Context {
-		bmbt_connected: false,
-		audio_selected: false,
-		mka_active: false,
-		phone_active: false,
-		fullscreen: false,
-		playing: false,
+        return Self {
+            bmbt_connected: false,
+            audio_selected: false,
+            mka_active: false,
+            phone_active: false,
+            fullscreen: false,
+            playing: false,
 
-		phone_type: 0,
-		phone_name: "".to_string(),
+            phone_type: 0,
+            phone_name: "".to_string(),
 
-		rx_cache: vec![new_msg ; 0],
+            rx_cache: vec![new_msg ; 0],
 
-		ibus_waiting: false,
-		ibus_cache: IBusMessage {
-			sender: 0,
-			receiver: 0,
-			data: Vec::new(),
-		}
-	};
+            ibus_waiting: false,
+            ibus_cache: IBusMessage {
+                sender: 0,
+                receiver: 0,
+                data: Vec::new(),
+            }
+        };
+    }
 }

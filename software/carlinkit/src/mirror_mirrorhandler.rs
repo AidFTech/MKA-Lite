@@ -1,21 +1,31 @@
 use std::sync::{Arc, Mutex};
 
-use crate::connect_usb_dongle;
-use crate::get_usb_connection;
 use crate::Context;
 use crate::USBConnection;
 
 pub struct MirrorHandler<'a> {
     context: &'a Arc<Mutex<Context>>,
-    usb_link: USBConnection<'a>,
+    usb_conn: &'a mut USBConnection<'a>,
     run: bool,
     startup: bool,
 }
 
 impl<'a> MirrorHandler<'a> {
-    pub fn full_loop(&mut self) {
-        if !self.usb_link.get_running() {
-            let run = connect_usb_dongle(&mut self.usb_link);
+    pub fn new(context: &'a Arc<Mutex<Context>>, usb_conn: &'a mut USBConnection <'a>) -> MirrorHandler <'a> {
+        return MirrorHandler {
+            context,
+            usb_conn,
+            run: true,
+            startup: false,
+        };
+    }
+
+    pub fn process(&mut self) {
+        if !self.run {
+            return;
+        }
+        if !self.usb_conn.get_running() {
+            let run = self.usb_conn.connect_dongle();
 
             if !run {
                 return; //TODO: Should we still run full_loop even if no dongle is connected?
@@ -25,8 +35,7 @@ impl<'a> MirrorHandler<'a> {
         } else if !self.startup {
 
         }
-
-        self.usb_link.full_loop();
+        self.usb_conn.full_loop();
 
         match self.context.try_lock() {
             Ok(mut ctx) => {
@@ -43,21 +52,5 @@ impl<'a> MirrorHandler<'a> {
                 println!("Mirror: Parameter list is locked.");
             }
         };
-
-    }
-
-    pub fn get_run(&mut self) -> bool {
-        return self.run;
     }
 }
-
-pub fn get_mirror_handler<'a> (context: &'a Arc<Mutex<Context>>) -> MirrorHandler<'a> {
-    let new_usb_link = get_usb_connection(&context);
-    return MirrorHandler {
-        context,
-        usb_link: new_usb_link,
-        run: true,
-        startup: false,
-    };
-}
-

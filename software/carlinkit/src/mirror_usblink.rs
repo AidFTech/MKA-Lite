@@ -37,24 +37,25 @@ pub struct USBConnection<'a> {
     heartbeat_time: SystemTime,
 }
 
-pub fn get_usb_connection<'a>(context: &'a Arc<Mutex<Context>>) -> USBConnection {
-    return USBConnection {
-        running: false,
-
-        device: None,
-        device_handle: None,
-
-        rx: 0,
-        tx: 0,
-
-        context,
-
-        heartbeat_time: SystemTime::now(),
-    };
-}
-
 impl <'a> USBConnection <'a> {
-    fn connect_dongle(&mut self) -> bool {
+
+    pub fn new(context: &'a Arc<Mutex<Context>>) -> USBConnection <'a> {
+        return USBConnection {
+            running: false,
+
+            device: None,
+            device_handle: None,
+
+            rx: 0,
+            tx: 0,
+
+            context,
+
+            heartbeat_time: SystemTime::now(),
+        }
+    }
+
+    pub fn connect_dongle(&mut self) -> bool {
         let start_time = SystemTime::now();
         let mut has_new_device = false;
         let mut device_id: u16;
@@ -71,7 +72,7 @@ impl <'a> USBConnection <'a> {
             };
 
             for id in 0..2 {
-                if id%2 == 1 {
+                if id % 2 == 1 {
                     device_id = DEVICE_ID_WIRELESS;
                 } else {
                     device_id = DEVICE_ID_WIRED;
@@ -333,8 +334,4 @@ fn get_usb_endpoint<T: UsbContext>(device: &mut Device<T>, device_descriptor: De
     }
 
     return None;
-}
-
-pub fn connect_usb_dongle(usb_link: &mut USBConnection) -> bool {
-    return usb_link.connect_dongle();
 }
