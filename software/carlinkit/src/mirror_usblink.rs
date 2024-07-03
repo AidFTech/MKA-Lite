@@ -24,15 +24,15 @@ struct Endpoint {
 }
 
 pub struct USBConnection<'a> {
-    pub running: bool,
+    running: bool,
 
-    pub device: Option<Device<Context>>,
-    pub device_handle: Option<DeviceHandle<Context>>,
+    device: Option<Device<Context>>,
+    device_handle: Option<DeviceHandle<Context>>,
 
-    pub rx: u8,
-    pub tx: u8,
+    rx: u8,
+    tx: u8,
 
-    pub parameters: &'a Arc<Mutex<ParameterList>>,
+    parameters: &'a Arc<Mutex<ParameterList>>,
 
     heartbeat_time: SystemTime,
 }

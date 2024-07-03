@@ -9,6 +9,7 @@ pub struct MirrorHandler<'a> {
     parameter_list: &'a Arc<Mutex<ParameterList>>,
     usb_link: USBConnection<'a>,
     run: bool,
+    startup: bool,
 }
 
 impl<'a> MirrorHandler<'a> {
@@ -21,6 +22,8 @@ impl<'a> MirrorHandler<'a> {
             } else {
                 self.run = true;
             }
+        } else if !self.startup {
+            
         }
 
         self.usb_link.full_loop();
@@ -56,6 +59,7 @@ pub fn get_mirror_handler<'a> (parameter_list: &'a Arc<Mutex<ParameterList>>) ->
         parameter_list: parameter_list,
         usb_link: new_usb_link,
         run: true,
+        startup: false,
     };
 
     return handler;

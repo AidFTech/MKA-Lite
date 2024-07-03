@@ -123,3 +123,64 @@ pub fn get_heartbeat_message() -> MirrorMessage {
         data: vec![0;0],
     };
 }
+
+pub struct SendFileMessage {
+    file_name: String,
+    file_data: Vec<u8>,
+}
+
+impl SendFileMessage {
+    pub fn get_mirror_message(&mut self) -> MirrorMessage {
+        let mut send_file_message = MirrorMessage {
+            message_type: 153,
+            data: vec![0;0],
+        };
+
+        let full_filename = self.file_name.as_bytes();
+        let filename_len = (full_filename.len() as u32 + 1).to_le_bytes();
+
+        for i in 0..filename_len.len() {
+            send_file_message.data.push(filename_len[i]);
+        }
+
+        for i in 0..full_filename.len() {
+            send_file_message.data.push(full_filename[i]);
+        }
+
+        send_file_message.data.push(0);
+
+        let data_len = (self.file_data.len() as u32).to_le_bytes();
+
+        for i in 0..data_len.len() {
+            send_file_message.data.push(data_len[i]);
+        }
+
+        for i in 0..self.file_data.len() {
+            send_file_message.data.push(self.file_data[i]);
+        }
+
+        return send_file_message;
+    }
+}
+
+pub fn get_sendfile_message(filename: String, filedata: Vec<u8>) -> SendFileMessage {
+    return SendFileMessage { file_name: filename, file_data: filedata };
+}
+
+pub fn get_sendstring_message(filename: String, filedata: String) -> SendFileMessage {
+    return SendFileMessage { file_name: filename, file_data: filedata.as_bytes().to_vec() };
+}
+
+pub fn get_sendint_message(filename: String, filedata: u32) -> SendFileMessage {
+    let mut new_int_message = SendFileMessage {
+        file_name: filename,
+        file_data: vec![0;0],
+    };
+
+    let new_int_bytes = filedata.to_le_bytes();
+    for i in 0..new_int_bytes.len() {
+        new_int_message.file_data.push(new_int_bytes[i]);
+    }
+
+    return new_int_message;
+}
