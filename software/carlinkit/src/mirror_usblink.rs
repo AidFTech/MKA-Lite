@@ -1,12 +1,12 @@
 use std::sync::{Arc, Mutex};
-use rusb::{Context, Device, DeviceDescriptor, DeviceHandle, Direction, TransferType, UsbContext};
+use rusb::{Context as USBContext, Device, DeviceDescriptor, DeviceHandle, Direction, TransferType, UsbContext};
 use std::time::Duration;
 use std::time::SystemTime;
 
 use crate::get_heartbeat_message;
 use crate::get_mirror_message_from_header;
+use crate::Context;
 use crate::MirrorMessage;
-use crate::ParameterList;
 use crate::mirror_messages;
 use crate::HEADERSIZE;
 
@@ -26,19 +26,19 @@ struct Endpoint {
 pub struct USBConnection<'a> {
     running: bool,
 
-    device: Option<Device<Context>>,
-    device_handle: Option<DeviceHandle<Context>>,
+    device: Option<Device<USBContext>>,
+    device_handle: Option<DeviceHandle<USBContext>>,
 
     rx: u8,
     tx: u8,
 
-    parameters: &'a Arc<Mutex<ParameterList>>,
+    context: &'a Arc<Mutex<Context>>,
 
     heartbeat_time: SystemTime,
 }
 
-pub fn get_usb_connection<'a>(parameters: &'a Arc<Mutex<ParameterList>>) -> USBConnection {
-    let the_return = USBConnection {
+pub fn get_usb_connection<'a>(context: &'a Arc<Mutex<Context>>) -> USBConnection {
+    return USBConnection {
         running: false,
 
         device: None,
@@ -47,12 +47,10 @@ pub fn get_usb_connection<'a>(parameters: &'a Arc<Mutex<ParameterList>>) -> USBC
         rx: 0,
         tx: 0,
 
-        parameters: parameters,
+        context,
 
         heartbeat_time: SystemTime::now(),
     };
-
-    return the_return;
 }
 
 impl <'a> USBConnection <'a> {
@@ -62,7 +60,7 @@ impl <'a> USBConnection <'a> {
         let mut device_id: u16;
 
         while !has_new_device {
-            let context = match Context::new() {
+            let context = match USBContext::new() {
                 Ok(context) => context,
                 Err(_e) => continue,
             };
@@ -124,7 +122,7 @@ impl <'a> USBConnection <'a> {
                     return false;
                 }
             };
-            
+
             match device_handle.kernel_driver_active(endpoint.iface) {
                 Ok(true) => {
                     device_handle.detach_kernel_driver(endpoint.iface).ok();
@@ -133,7 +131,7 @@ impl <'a> USBConnection <'a> {
 
                 }
             };
-            
+
             //Done in read_device.rs under configure_endpoint.
             match device_handle.set_active_configuration(endpoint.config) {
                 Ok(_) => {
@@ -142,7 +140,7 @@ impl <'a> USBConnection <'a> {
                     return false;
                 }
             }
-            
+
             match device_handle.claim_interface(endpoint.iface) {
                 Ok(_) => {
                 }
@@ -150,7 +148,7 @@ impl <'a> USBConnection <'a> {
                     return false;
                 }
             }
-            
+
             match device_handle.set_alternate_setting(endpoint.iface, endpoint.setting) {
                 Ok(_) => {
                 }
@@ -158,7 +156,7 @@ impl <'a> USBConnection <'a> {
                     return false;
                 }
             }
-            
+
             self.tx = endpoint.tx_address;
             self.rx = endpoint.rx_address;
             self.running = true;
@@ -209,8 +207,8 @@ impl <'a> USBConnection <'a> {
 
 
             if valid {
-                let n = header.data.len();
-                let mut data_buffer: Vec<u8> = vec![0;n];
+                let data_len = header.data.len();
+                let mut data_buffer: Vec<u8> = vec![0;data_len];
                 let n_comp = match handle.read_bulk(self.rx, &mut data_buffer, Duration::from_millis(200)) {
                     Ok(len) => len,
                     Err(_) => {
@@ -218,21 +216,21 @@ impl <'a> USBConnection <'a> {
                     }
                 };
 
-                if n_comp == n {
+                if n_comp == data_len {
                     msg_read = true;
 
-                    for i in 0..n {
+                    for i in 0..data_len {
                         header.data[i] = data_buffer[i];
                     }
                 }
             }
 
-            if msg_read { 
+            if msg_read {
                 //TODO: Socket video and audio.
-                match self.parameters.try_lock() {
-                    Ok(mut parameters) => {
-                        parameters.rx_cache.push(header);
-                        println!("{}", parameters.rx_cache.len());
+                match self.context.try_lock() {
+                    Ok(mut context) => {
+                        context.rx_cache.push(header);
+                        println!("{}", context.rx_cache.len());
                     }
                     Err(_) => {
                         println!("USB: Parameter list is locked.");
@@ -259,7 +257,7 @@ impl <'a> USBConnection <'a> {
     pub fn write_message(&mut self, message: MirrorMessage) {
         let data = message.serialize();
         let handle = self.device_handle.as_mut().unwrap();
-        
+
         let header = &data[0..HEADERSIZE];
         let usb_data = &data[HEADERSIZE..data.len()];
 

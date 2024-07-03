@@ -1,8 +1,6 @@
-//Parameter list.
-
 use crate::{IBusMessage, MirrorMessage};
 
-pub struct ParameterList {
+pub struct Context {
 	pub bmbt_connected: bool,
 	pub audio_selected: bool,
 	pub mka_active: bool,
@@ -19,20 +17,20 @@ pub struct ParameterList {
 	pub ibus_cache: IBusMessage,
 }
 
-pub fn get_parameter_list() -> ParameterList {
+pub fn context_create() -> Context {
 	let new_msg = MirrorMessage {
 		message_type: 0,
 		data: vec![0;0],
 	};
-	
-	return ParameterList {
+
+	return Context {
 		bmbt_connected: false,
 		audio_selected: false,
 		mka_active: false,
 		phone_active: false,
 		fullscreen: false,
 		playing: false,
-		
+
 		phone_type: 0,
 		phone_name: "".to_string(),
 

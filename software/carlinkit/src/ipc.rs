@@ -1,11 +1,10 @@
-// Socket implementation
 use std::io::prelude::*;
 use std::os::unix::net::UnixStream;
 use std::str;
 
 use crate::get_ibus_message;
 use crate::IBusMessage;
-use crate::ParameterList;
+use crate::Context;
 
 const SOCKET_PATH: &str = "/run/mka_to_backend.sock";
 const SOCKET_START: &str = "MKASock";
@@ -74,7 +73,7 @@ fn write_socket_bytes(stream: &mut UnixStream, data: &mut Vec<u8>) -> usize {
 pub fn read_socket_message(stream: &mut UnixStream, message: &mut SocketMessage) -> usize {
     let mut data : [u8; 1024] = [0; 1024];
     let full_l = read_socket_bytes(stream, &mut data);
-    
+
     if full_l < SOCKET_START.len() {
         return 0;
     }
@@ -85,7 +84,7 @@ pub fn read_socket_message(stream: &mut UnixStream, message: &mut SocketMessage)
             return 0;
         }
     }
-    
+
     message.opcode = data[socket_start_msg.len()];
     let data_l: u8 = data[socket_start_msg.len() + 1]-1;
     let start = socket_start_msg.len() + 2;
@@ -98,9 +97,9 @@ pub fn read_socket_message(stream: &mut UnixStream, message: &mut SocketMessage)
     if checksum != data[full_l-1] {
         return 0;
     }
-    
+
     message.data = Vec::new();
-    
+
     for i in start..full_l - 1 {
         message.data.push(data[i]);
     }
@@ -123,12 +122,12 @@ pub fn write_socket_message(stream: &mut UnixStream, message: SocketMessage) {
     for i in 0..message.data.len() {
         data[i + socket_start_msg.len() + 2] = message.data[i];
     }
-    
+
     let mut checksum: u8 = 0;
     for i in 0..data.len() - 1 {
         checksum ^= data[i];
     }
-    
+
     let checksum_index = data.len() - 1;
     data[checksum_index] = checksum;
 
@@ -150,29 +149,29 @@ pub fn write_ibus_message(stream: &mut UnixStream, message: IBusMessage) {
     write_socket_message(stream, socket_msg);
 }
 
-pub fn handle_socket_message(parameter_list: &mut ParameterList, message: SocketMessage) {
+pub fn handle_socket_message(context: &mut Context, message: SocketMessage) {
     let opcode = message.opcode;
     let socket_bool: bool = message.data.len() > 0 && message.data[0] != 0;
     if opcode == OPCODE_PHONE_ACTIVE {
-        parameter_list.phone_active = socket_bool;
+        context.phone_active = socket_bool;
     } else if opcode == OPCODE_MKA_ACTIVE {
-        parameter_list.mka_active = socket_bool;
+        context.mka_active = socket_bool;
     } else if opcode == OPCODE_AUDIO_SELECTED {
-        parameter_list.audio_selected = socket_bool;
+        context.audio_selected = socket_bool;
     } else if opcode == OPCODE_PHONE_TYPE && message.data.len() >= 1 {
-        parameter_list.phone_type = message.data[0];
+        context.phone_type = message.data[0];
     } else if opcode == OPCODE_PHONE_NAME {
-        parameter_list.phone_name = String::from(str::from_utf8(&message.data).unwrap())
+        context.phone_name = String::from(str::from_utf8(&message.data).unwrap())
     } else if opcode == OPCODE_PLAYING {
-        parameter_list.playing = socket_bool;
+        context.playing = socket_bool;
     } else if opcode == OPCODE_BMBT_CONNECTED {
-        parameter_list.bmbt_connected = socket_bool;
+        context.bmbt_connected = socket_bool;
     } else if opcode == OPCODE_IBUS_RECV {
         let ib_msg = get_ibus_message(message.data);
 
         if ib_msg.l() > 0 {
-            parameter_list.ibus_cache = ib_msg;
-            parameter_list.ibus_waiting = true;
+            context.ibus_cache = ib_msg;
+            context.ibus_waiting = true;
         }
     }
 }
