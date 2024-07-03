@@ -3,12 +3,14 @@ use rusb::{Context as USBContext, Device, DeviceDescriptor, DeviceHandle, Direct
 use std::time::Duration;
 use std::time::SystemTime;
 
-use crate::get_heartbeat_message;
-use crate::get_mirror_message_from_header;
+use crate::mirror::messages::{
+    HEADERSIZE,
+    MirrorMessage,
+    get_heartbeat_message,
+    get_mirror_message_from_header,
+
+};
 use crate::Context;
-use crate::MirrorMessage;
-use crate::mirror_messages;
-use crate::HEADERSIZE;
 
 const VENDOR_ID: u16 = 0x1314;
 const DEVICE_ID_WIRED: u16 = 0x1520;
@@ -182,7 +184,7 @@ impl <'a> USBConnection <'a> {
 
         let handle = self.device_handle.as_mut().unwrap();
 
-        let mut buffer: [u8;mirror_messages::HEADERSIZE] = [0;mirror_messages::HEADERSIZE];
+        let mut buffer: [u8;HEADERSIZE] = [0;HEADERSIZE];
         let len = match handle.read_bulk(self.rx, &mut buffer, Duration::from_millis(200)) {
             Ok(len) => len,
             Err(_) => {
@@ -191,7 +193,7 @@ impl <'a> USBConnection <'a> {
             }
         };
 
-        if len == mirror_messages::HEADERSIZE {
+        if len == HEADERSIZE {
             let mut msg_read = false;
             let mut header = match get_mirror_message_from_header(buffer.to_vec()){
                 Some(msg) => {

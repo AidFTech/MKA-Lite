@@ -1,21 +1,16 @@
 mod ipc;
 mod ibus;
 mod context;
-mod mirror_usblink;
-mod mirror_mirrorhandler;
-mod mirror_messages;
+mod mirror;
 
 use std::os::unix::net::UnixStream;
+use std::sync::{Arc, Mutex};
 
 use ipc::*;
 use ibus::*;
 use context::Context;
-use mirror_usblink::*;
-use mirror_mirrorhandler::*;
-use mirror_messages::*;
-
-use std::sync::Arc;
-use std::sync::Mutex;
+use mirror::handler::MirrorHandler;
+use mirror::usb::USBConnection;
 
 fn main() {
     let mut stream: UnixStream = init_default_socket().unwrap();
@@ -49,6 +44,7 @@ fn main() {
             //TODO: Interpret the IBus message.
         }
         std::mem::drop(new_context);
+        // TODO: Return a Result() and act on errors (like run being false)
         mirror_handler.process();
     }
 }

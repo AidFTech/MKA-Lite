@@ -10,5 +10,4 @@ rusb = "0.9.4"
 
 #[dependencies]
 #libsoxr = "0.2"
-#rusb = "0.9.4"
 #mpv = "0.2.3"

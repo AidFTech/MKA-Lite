@@ -1,4 +1,6 @@
-use crate::{IBusMessage, MirrorMessage};
+use crate::IBusMessage;
+
+use crate::mirror::messages::MirrorMessage;
 
 pub struct Context {
 	pub bmbt_connected: bool,
