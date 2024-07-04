@@ -100,6 +100,7 @@ impl MirrorMessage {
     }
 }
 
+//Create a new, blank mirror message.
 pub fn get_new_mirror_message() -> MirrorMessage {
     return MirrorMessage {
         message_type: 0,
@@ -107,6 +108,7 @@ pub fn get_new_mirror_message() -> MirrorMessage {
     }
 }
 
+//Get a mirror message from a USB header.
 pub fn get_mirror_message_from_header(data: Vec<u8>) -> Option<MirrorMessage> {
     let mut mirror = get_new_mirror_message();
 
@@ -117,11 +119,93 @@ pub fn get_mirror_message_from_header(data: Vec<u8>) -> Option<MirrorMessage> {
     }
 }
 
+//Get a heartbeat mirror message.
 pub fn get_heartbeat_message() -> MirrorMessage {
     return MirrorMessage {
         message_type: 170,
         data: vec![0;0],
     };
+}
+
+//Get an Open message with parameters defined.
+pub fn get_open_message(width: u32, height: u32, video_frame_rate: u32, format: u32, packet_max: u32, ibox_version: u32, phone_work_mode: u32) -> MirrorMessage {
+    let mut open_message = MirrorMessage {
+        message_type: 1,
+        data: vec![0;0],
+    };
+
+    let width_slice = width.to_le_bytes();
+    for i in 0..width_slice.len() {
+        open_message.data.push(width_slice[i]);
+    }
+
+    let height_slice = height.to_le_bytes();
+    for i in 0..height_slice.len() {
+        open_message.data.push(height_slice[i]);
+    }
+
+    let frame_slice = video_frame_rate.to_le_bytes();
+    for i in 0..frame_slice.len() {
+        open_message.data.push(frame_slice[i]);
+    }
+
+    let format_slice = format.to_le_bytes();
+    for i in 0..format_slice.len() {
+        open_message.data.push(format_slice[i]);
+    }
+
+    let packet_slice = packet_max.to_le_bytes();
+    for i in 0..packet_slice.len() {
+        open_message.data.push(packet_slice[i]);
+    }
+
+    let ibox_slice = ibox_version.to_le_bytes();
+    for i in 0..ibox_slice.len() {
+        open_message.data.push(ibox_slice[i]);
+    }
+
+    let phonework_slice = phone_work_mode.to_le_bytes();
+    for i in 0..phonework_slice.len() {
+        open_message.data.push(phonework_slice[i]);
+    }
+
+    return open_message;
+}
+
+//Get a Carplay/Android Auto command message.
+pub fn get_carplay_command_message(command: u32) ->MirrorMessage {
+    let mut command_message = MirrorMessage {
+        message_type: 8,
+        data: vec![0;0],
+    };
+
+    let command_slice = command.to_le_bytes();
+    for i in 0..command_slice.len() {
+        command_message.data.push(command_slice[i]);
+    }
+
+    return command_message;
+}
+
+//Get a manufacturer info message.
+pub fn get_manufacturer_info(mn_a: u32, mn_b: u32) -> MirrorMessage {
+    let mut manufacturer_message = MirrorMessage {
+        message_type: 20,
+        data: vec![0;0],
+    };
+
+    let slice_a = mn_a.to_le_bytes();
+    let slice_b = mn_b.to_le_bytes();
+
+    for i in 0..slice_a.len() {
+        manufacturer_message.data.push(slice_a[i]);
+    }
+
+    for i in 0..slice_b.len() {
+        manufacturer_message.data.push(slice_b[i]);
+    }
+
+    return manufacturer_message;
 }
 
 pub struct SendFileMessage {
@@ -130,6 +214,7 @@ pub struct SendFileMessage {
 }
 
 impl SendFileMessage {
+    //Get the MirrorMessage version of the file message.
     pub fn get_mirror_message(&mut self) -> MirrorMessage {
         let mut send_file_message = MirrorMessage {
             message_type: 153,
@@ -163,14 +248,17 @@ impl SendFileMessage {
     }
 }
 
+//Get a Send File message with binary content.
 pub fn get_sendfile_message(filename: String, filedata: Vec<u8>) -> SendFileMessage {
     return SendFileMessage { file_name: filename, file_data: filedata };
 }
 
+//Get a Send File message with string content.
 pub fn get_sendstring_message(filename: String, filedata: String) -> SendFileMessage {
     return SendFileMessage { file_name: filename, file_data: filedata.as_bytes().to_vec() };
 }
 
+//Get a Send File message with integer content.
 pub fn get_sendint_message(filename: String, filedata: u32) -> SendFileMessage {
     let mut new_int_message = SendFileMessage {
         file_name: filename,

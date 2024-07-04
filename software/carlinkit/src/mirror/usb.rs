@@ -233,7 +233,6 @@ impl <'a> USBConnection <'a> {
                 match self.context.try_lock() {
                     Ok(mut context) => {
                         context.rx_cache.push(header);
-                        println!("{}", context.rx_cache.len());
                     }
                     Err(_) => {
                         println!("USB: Parameter list is locked.");
@@ -249,7 +248,6 @@ impl <'a> USBConnection <'a> {
             return;
         }
 
-        println!("{}", self.heartbeat_time.elapsed().unwrap().as_millis());
         if self.heartbeat_time.elapsed().unwrap().as_millis() > 2000 {
             self.heartbeat_time = SystemTime::now();
             self.write_message(get_heartbeat_message());
