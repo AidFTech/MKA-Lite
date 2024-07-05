@@ -1,7 +1,10 @@
+use std::os::unix::net::UnixStream;
 use std::sync::{Arc, Mutex};
 
-use crate::Context;
+use crate::{Context, SocketMessage};
 use crate::USBConnection;
+
+use crate::ipc::*;
 
 use super::messages::get_carplay_command_message;
 use super::messages::get_manufacturer_info;
@@ -14,15 +17,17 @@ use super::messages::MetaDataMessage;
 pub struct MirrorHandler<'a> {
     context: &'a Arc<Mutex<Context>>,
     usb_conn: &'a mut USBConnection<'a>,
+    stream: &'a Arc<Mutex<UnixStream>>,
     run: bool,
     startup: bool,
 }
 
 impl<'a> MirrorHandler<'a> {
-    pub fn new(context: &'a Arc<Mutex<Context>>, usb_conn: &'a mut USBConnection <'a>) -> MirrorHandler <'a> {
+    pub fn new(context: &'a Arc<Mutex<Context>>, usb_conn: &'a mut USBConnection <'a>, stream: &'a Arc<Mutex<UnixStream>>) -> MirrorHandler <'a> {
         return MirrorHandler {
             context,
             usb_conn,
+            stream,
             run: true,
             startup: false,
         };
@@ -46,13 +51,13 @@ impl<'a> MirrorHandler<'a> {
         }
         self.usb_conn.full_loop(self.startup);
 
+        let mut rx_cache: Vec<MirrorMessage> = Vec::new();
+
         match self.context.try_lock() {
             Ok(mut ctx) => {
                 if ctx.rx_cache.len() > 0 {
                     for m in 0..ctx.rx_cache.len() {
-                        let message = &ctx.rx_cache[m];
-                        println!("L: {} T: {}", message.data.len(), message.message_type);
-                        self.interpret_message(message);
+                        rx_cache.push(ctx.rx_cache[m].clone());
                     }
                     ctx.rx_cache = Vec::new();
                 }
@@ -61,6 +66,10 @@ impl<'a> MirrorHandler<'a> {
                 println!("Mirror: Parameter list is locked.");
             }
         };
+
+        for message in rx_cache {
+            self.interpret_message(&message);
+        }
     }
 
     fn send_dongle_startup(&mut self) {
@@ -105,12 +114,99 @@ impl<'a> MirrorHandler<'a> {
             let mut msg_88 = MirrorMessage::new(0x88);
             msg_88.data.push(1);
             self.usb_conn.write_message(msg_88);
+
+            self.usb_conn.reset_heartbeat();
         } else if message.message_type == 2 { //Plugged message.
             //Phone connected.
+            let data = message.clone().decode();
+            if data.len() <= 0 {
+                return;
+            }
+
+            let phone_type = data[0];
+            match self.context.try_lock() {
+                Ok(mut context) => {
+                    context.phone_type = phone_type as u8;
+                }
+                Err(_) => {
+                    return;
+                }
+            }
+            
+            let mut socket_message = SocketMessage {
+                opcode: OPCODE_PHONE_TYPE,
+                data: vec![0;0],
+            };
+            socket_message.data.push(phone_type as u8);
+
+            match self.stream.try_lock() {
+                Ok(mut stream) => {
+                    write_socket_message(&mut stream, socket_message);
+                }
+                Err(_) => {
+
+                }
+            }
+            //TODO: Start the decoders.
         } else if message.message_type == 4 { //Unplugged message.
             //Phone disconnected.
+            let mut socket_message = SocketMessage {
+                opcode: OPCODE_PHONE_TYPE,
+                data: vec![0;0],
+            };
+            socket_message.data.push(0);
+
+            match self.stream.try_lock() {
+                Ok(mut stream) => {
+                    write_socket_message(&mut stream, socket_message);
+                }
+                Err(_) => {
+
+                }
+            }
+            //TODO: Stop the decoders.
         } else if message.message_type == 25 || message.message_type == 42 { //Metadata message.
             //Handle metadata.
+            let meta_message = MetaDataMessage::from(message.clone());
+
+            /*match String::from_utf8(meta_message.get_mirror_message().data) {
+                Ok(meta) => {
+                    println!("{}", meta);
+                }
+                Err(_) => {
+    
+                }
+            };*/
+
+            self.handle_metadata(meta_message);
+        }
+    }
+
+    fn handle_metadata(&mut self, meta_message: MetaDataMessage) {
+        let mut context = match self.context.try_lock() {
+             Ok(context) =>{
+                context
+            }
+            Err(_) => {
+                println!("Metadata: Context locked.");
+                return;
+            }
+        };
+
+        for string_var in meta_message.string_vars {
+            if string_var.variable == "MDModel" {
+                context.phone_name = string_var.value;
+
+                match self.stream.try_lock() {
+                    Ok(mut stream) => {
+                        let socket_message = SocketMessage{opcode: OPCODE_PHONE_NAME, data: context.phone_name.as_bytes().to_vec()};
+                        write_socket_message(&mut stream, socket_message);
+                    }
+                    Err(_) => {
+
+                    }
+                }
+            }
         }
     }
 }

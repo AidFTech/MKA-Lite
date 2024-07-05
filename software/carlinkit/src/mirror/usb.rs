@@ -100,7 +100,7 @@ impl <'a> USBConnection <'a> {
                 }
             }
 
-            if start_time.elapsed().unwrap().as_millis() > 20 && !has_new_device {
+            if start_time.elapsed().unwrap().as_millis() > 50 && !has_new_device {
                 return false;
             }
         }
@@ -178,6 +178,10 @@ impl <'a> USBConnection <'a> {
         self.read_loop();
     }
 
+    pub fn reset_heartbeat(&mut self) {
+        self.heartbeat_time = SystemTime::now();
+    }
+
     //Message read thread loop.
     fn read_loop(&mut self) {
         if !self.running {
@@ -187,7 +191,7 @@ impl <'a> USBConnection <'a> {
         let handle = self.device_handle.as_mut().unwrap();
 
         let mut buffer: [u8;HEADERSIZE] = [0;HEADERSIZE];
-        let len = match handle.read_bulk(self.rx, &mut buffer, Duration::from_millis(200)) {
+        let len = match handle.read_bulk(self.rx, &mut buffer, Duration::from_millis(100)) {
             Ok(len) => len,
             Err(err) => {
                 if err.to_string() != String::from("Operation timed out") { //TODO: Is there a better way to detect this? Without the use of strings?
@@ -213,11 +217,10 @@ impl <'a> USBConnection <'a> {
             };
             let valid = header.deserialize(buffer.to_vec());
 
-
             if valid {
                 let data_len = header.data.len();
                 let mut data_buffer: Vec<u8> = vec![0;data_len];
-                let n_comp = match handle.read_bulk(self.rx, &mut data_buffer, Duration::from_millis(200)) {
+                let n_comp = match handle.read_bulk(self.rx, &mut data_buffer, Duration::from_millis(100)) {
                     Ok(len) => len,
                     Err(_) => {
                         self.running = false;
@@ -274,7 +277,7 @@ impl <'a> USBConnection <'a> {
         let header = &data[0..HEADERSIZE];
         let usb_data = &data[HEADERSIZE..data.len()];
 
-        match handle.write_bulk(self.tx, header, Duration::from_millis(200)) {
+        match handle.write_bulk(self.tx, header, Duration::from_millis(100)) {
             Ok(_) => {
 
             }
@@ -284,7 +287,7 @@ impl <'a> USBConnection <'a> {
         }
 
         if usb_data.len() > 0 {
-           match handle.write_bulk(self.tx, usb_data, Duration::from_millis(200)) {
+           match handle.write_bulk(self.tx, usb_data, Duration::from_millis(100)) {
                 Ok(_) => {
 
                 }

@@ -9,16 +9,16 @@ use crate::Context;
 const SOCKET_PATH: &str = "/run/mka_to_backend.sock";
 const SOCKET_START: &str = "MKASock";
 
-const OPCODE_PHONE_ACTIVE: u8 = 0x21;
-const OPCODE_MKA_ACTIVE: u8 = 0x22;
-const OPCODE_AUDIO_SELECTED: u8 = 0x23;
-const OPCODE_PHONE_TYPE: u8 = 0x2B;
-const OPCODE_PHONE_NAME: u8 = 0x2C;
-const OPCODE_PLAYING: u8 = 0x39;
-const OPCODE_BMBT_CONNECTED: u8 = 0xF0;
+pub const OPCODE_PHONE_ACTIVE: u8 = 0x21;
+pub const OPCODE_MKA_ACTIVE: u8 = 0x22;
+pub const OPCODE_AUDIO_SELECTED: u8 = 0x23;
+pub const OPCODE_PHONE_TYPE: u8 = 0x2B;
+pub const OPCODE_PHONE_NAME: u8 = 0x2C;
+pub const OPCODE_PLAYING: u8 = 0x39;
+pub const OPCODE_BMBT_CONNECTED: u8 = 0xF0;
 
-const OPCODE_IBUS_SEND: u8 = 0x18;
-const OPCODE_IBUS_RECV: u8 = 0x68;
+pub const OPCODE_IBUS_SEND: u8 = 0x18;
+pub const OPCODE_IBUS_RECV: u8 = 0x68;
 
 pub struct SocketMessage {
     pub opcode: u8,

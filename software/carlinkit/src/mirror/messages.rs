@@ -293,19 +293,19 @@ pub fn get_sendint_message(filename: String, filedata: u32) -> SendFileMessage {
 }
 
 pub struct MetaDataString {
-    variable: String,
-    value: String,
+    pub variable: String,
+    pub value: String,
 }
 
 pub struct MetaDataInt {
-    variable: String,
-    value: i32,
+    pub variable: String,
+    pub value: i32,
 }
 
 pub struct MetaDataMessage {
-    message_type: u32,
-    string_vars: Vec<MetaDataString>, //Metadata string variables.
-    int_vars: Vec<MetaDataInt>,
+    pub message_type: u32,
+    pub string_vars: Vec<MetaDataString>, //Metadata string variables.
+    pub int_vars: Vec<MetaDataInt>,
 }
 
 impl MetaDataMessage {
@@ -315,6 +315,58 @@ impl MetaDataMessage {
             string_vars: Vec::new(),
             int_vars: Vec::new(),
         };
+    }
+
+    pub fn from(original_message: MirrorMessage) -> MetaDataMessage {
+        let mut meta_message = MetaDataMessage {
+            message_type: original_message.message_type,
+            string_vars: Vec::new(),
+            int_vars: Vec::new(),
+        };
+
+        let mut msg_string = match String::from_utf8(original_message.data) {
+            Ok(msg_string) => msg_string,
+            Err(_) => String::from(""), //TODO: Get what you can.
+        };
+
+        if msg_string.starts_with("{") {
+            msg_string = msg_string[1..msg_string.len()].to_string();
+        }
+
+        if msg_string.ends_with("}") && msg_string.len() > 1 {
+            msg_string = msg_string[0..msg_string.len() - 1].to_string();
+        }
+
+        let msg_split = msg_string.split(",");
+
+        for element in msg_split {
+            let element_split = element.split(":").collect::<Vec<&str>>();
+
+            if element_split.len() != 2 {
+                continue;
+            }
+
+            let var_name = String::from(&element_split[0][1..element_split[0].len()-1]);
+
+            if element_split[1].starts_with("\"") { //String parameter.
+                let mut element_split_value = element_split[1];
+                if element_split_value.len() > 1 {
+                    element_split_value = &element_split[1][1..element_split_value.len()-1];
+                }
+
+                let value = String::from(element_split_value);
+                meta_message.string_vars.push(MetaDataString {variable: var_name, value: value});
+            } else {
+                let value = match String::from(element_split[1]).parse::<i32>() {
+                    Ok(value) => value,
+                    Err(_) => 0,
+                };
+
+                meta_message.int_vars.push(MetaDataInt { variable: var_name, value: value });
+            }
+        }
+
+        return meta_message;
     }
 
     pub fn add_string(&mut self, variable: String, value: String) {
@@ -332,7 +384,7 @@ impl MetaDataMessage {
     }
 
     pub fn get_mirror_message(&mut self) -> MirrorMessage {
-        let mut byte_string = String::from("");
+        let mut byte_string = String::from("{");
         
         for i in 0..self.string_vars.len() {
             byte_string += "\"";
@@ -357,6 +409,8 @@ impl MetaDataMessage {
                 byte_string += ",";
             }
         }
+
+        byte_string += "}";
 
         let str_bytes = byte_string.as_bytes().to_vec();
 
