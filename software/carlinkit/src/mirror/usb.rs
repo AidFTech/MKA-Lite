@@ -171,8 +171,10 @@ impl <'a> USBConnection <'a> {
     }
 
     //Public full loop function.
-    pub fn full_loop(&mut self) {
-        self.heartbeat_loop();
+    pub fn full_loop(&mut self, heartbeat: bool) {
+        if heartbeat {
+            self.heartbeat_loop();
+        }
         self.read_loop();
     }
 
@@ -187,8 +189,11 @@ impl <'a> USBConnection <'a> {
         let mut buffer: [u8;HEADERSIZE] = [0;HEADERSIZE];
         let len = match handle.read_bulk(self.rx, &mut buffer, Duration::from_millis(200)) {
             Ok(len) => len,
-            Err(_) => {
-                //TODO: In the original Python code, an errno other than 110 would stop the USB handler from running.
+            Err(err) => {
+                if err.to_string() != String::from("Operation timed out") { //TODO: Is there a better way to detect this? Without the use of strings?
+                    self.running = false;
+                    return;
+                }
                 return;
             }
         };
@@ -215,6 +220,7 @@ impl <'a> USBConnection <'a> {
                 let n_comp = match handle.read_bulk(self.rx, &mut data_buffer, Duration::from_millis(200)) {
                     Ok(len) => len,
                     Err(_) => {
+                        self.running = false;
                         return;
                     }
                 };
@@ -232,7 +238,13 @@ impl <'a> USBConnection <'a> {
                 //TODO: Socket video and audio.
                 match self.context.try_lock() {
                     Ok(mut context) => {
-                        context.rx_cache.push(header);
+                        if header.message_type == 6 {
+                            //Push to video socket.
+                        } else if header.message_type == 7 {
+                            //Push to audio socket.
+                        } else {
+                            context.rx_cache.push(header);
+                        }
                     }
                     Err(_) => {
                         println!("USB: Parameter list is locked.");

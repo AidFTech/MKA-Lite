@@ -9,6 +9,7 @@ use super::messages::get_open_message;
 use super::messages::get_sendint_message;
 use super::messages::get_sendstring_message;
 use super::messages::MirrorMessage;
+use super::messages::MetaDataMessage;
 
 pub struct MirrorHandler<'a> {
     context: &'a Arc<Mutex<Context>>,
@@ -32,6 +33,7 @@ impl<'a> MirrorHandler<'a> {
             return;
         }
         if !self.usb_conn.get_running() {
+            self.startup = false;
             let run = self.usb_conn.connect_dongle();
 
             if !run {
@@ -42,7 +44,7 @@ impl<'a> MirrorHandler<'a> {
         } else if !self.startup {
             self.send_dongle_startup();
         }
-        self.usb_conn.full_loop();
+        self.usb_conn.full_loop(self.startup);
 
         match self.context.try_lock() {
             Ok(mut ctx) => {
@@ -89,6 +91,26 @@ impl<'a> MirrorHandler<'a> {
             self.usb_conn.write_message(startup_msg_charge.get_mirror_message());
             self.usb_conn.write_message(startup_msg_name.get_mirror_message());
             self.usb_conn.write_message(startup_msg_carplay);
+
+            let mut startup_msg_meta = MetaDataMessage::new(25);
+            startup_msg_meta.add_int(String::from("mediaDelay"), 300);
+            startup_msg_meta.add_int(String::from("androidAutoSizeW"), 800);
+            startup_msg_meta.add_int(String::from("androidAutoSizeH"), 480);
+            self.usb_conn.write_message(startup_msg_meta.get_mirror_message());
+
+            let mut msg_91 = MirrorMessage::new(9);
+            msg_91.data.push(1);
+            self.usb_conn.write_message(msg_91);
+
+            let mut msg_88 = MirrorMessage::new(0x88);
+            msg_88.data.push(1);
+            self.usb_conn.write_message(msg_88);
+        } else if message.message_type == 2 { //Plugged message.
+            //Phone connected.
+        } else if message.message_type == 4 { //Unplugged message.
+            //Phone disconnected.
+        } else if message.message_type == 25 || message.message_type == 42 { //Metadata message.
+            //Handle metadata.
         }
     }
 }

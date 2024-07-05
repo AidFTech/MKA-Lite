@@ -21,6 +21,11 @@ impl Clone for MirrorMessage {
 }
 
 impl MirrorMessage {
+    //Get a blank mirror message.
+    pub fn new(message_type: u32) -> MirrorMessage {
+        return MirrorMessage{message_type: message_type, data: vec![0;0]};
+    }
+    
     //Read message header data and return whether successful.
     pub fn deserialize(&mut self, data: Vec<u8>) -> bool{
         if data.len() != HEADERSIZE {
@@ -98,19 +103,33 @@ impl MirrorMessage {
 
         return msg_data;
     }
-}
 
-//Create a new, blank mirror message.
-pub fn get_new_mirror_message() -> MirrorMessage {
-    return MirrorMessage {
-        message_type: 0,
-        data: vec![0;0],
+    //Return all encoded integers from the message.
+    pub fn decode(self) -> Vec<u32> {
+        let mut decoded_int: Vec<u32> = vec![0;0];
+
+        for b in 0..self.data.len() {
+            let start = b*4;
+            if start + 4 >= self.data.len() {
+                break;
+            }
+
+            let mut slice: [u8;4] = [0;4];
+
+            for i in 0..slice.len() {
+                slice[i] = self.data[start+i];
+            }
+
+            decoded_int.push(u32::from_le_bytes(slice));
+        }
+
+        return decoded_int;
     }
 }
 
 //Get a mirror message from a USB header.
 pub fn get_mirror_message_from_header(data: Vec<u8>) -> Option<MirrorMessage> {
-    let mut mirror = get_new_mirror_message();
+    let mut mirror = MirrorMessage::new(0);
 
     if mirror.deserialize(data) {
         return Some(mirror);
@@ -271,4 +290,80 @@ pub fn get_sendint_message(filename: String, filedata: u32) -> SendFileMessage {
     }
 
     return new_int_message;
+}
+
+pub struct MetaDataString {
+    variable: String,
+    value: String,
+}
+
+pub struct MetaDataInt {
+    variable: String,
+    value: i32,
+}
+
+pub struct MetaDataMessage {
+    message_type: u32,
+    string_vars: Vec<MetaDataString>, //Metadata string variables.
+    int_vars: Vec<MetaDataInt>,
+}
+
+impl MetaDataMessage {
+    pub fn new(message_type: u32) -> MetaDataMessage {
+        return MetaDataMessage {
+            message_type: message_type,
+            string_vars: Vec::new(),
+            int_vars: Vec::new(),
+        };
+    }
+
+    pub fn add_string(&mut self, variable: String, value: String) {
+        self.string_vars.push(MetaDataString {
+            variable: variable,
+            value: value,
+        });
+    }
+
+    pub fn add_int(&mut self, variable: String, value: i32) {
+        self.int_vars.push(MetaDataInt {
+            variable: variable,
+            value: value,
+        });
+    }
+
+    pub fn get_mirror_message(&mut self) -> MirrorMessage {
+        let mut byte_string = String::from("");
+        
+        for i in 0..self.string_vars.len() {
+            byte_string += "\"";
+            byte_string += self.string_vars[i].variable.as_str();
+            byte_string += "\"";
+            byte_string += ":";
+            byte_string += "\"";
+            byte_string += self.string_vars[i].value.as_str();
+            byte_string += "\"";
+            if i < self.string_vars.len() - 1 || self.int_vars.len() > 0 {
+                byte_string += ",";
+            }
+        }
+
+        for i in 0..self.int_vars.len() {
+            byte_string += "\"";
+            byte_string += self.int_vars[i].variable.as_str();
+            byte_string += "\"";
+            byte_string += ":";
+            byte_string += self.int_vars[i].value.to_string().as_str();
+            if i < self.int_vars.len() - 1 {
+                byte_string += ",";
+            }
+        }
+
+        let str_bytes = byte_string.as_bytes().to_vec();
+
+        let message_return = MirrorMessage {
+            message_type: self.message_type,
+            data: str_bytes,
+        };
+        return message_return;
+    }
 }
