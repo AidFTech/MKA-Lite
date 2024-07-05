@@ -277,7 +277,7 @@ impl <'a> USBConnection <'a> {
         let header = &data[0..HEADERSIZE];
         let usb_data = &data[HEADERSIZE..data.len()];
 
-        match handle.write_bulk(self.tx, header, Duration::from_millis(100)) {
+        match handle.write_bulk(self.tx, header, Duration::from_millis(1000)) {
             Ok(_) => {
 
             }
@@ -287,7 +287,7 @@ impl <'a> USBConnection <'a> {
         }
 
         if usb_data.len() > 0 {
-           match handle.write_bulk(self.tx, usb_data, Duration::from_millis(100)) {
+           match handle.write_bulk(self.tx, usb_data, Duration::from_millis(1000)) {
                 Ok(_) => {
 
                 }
