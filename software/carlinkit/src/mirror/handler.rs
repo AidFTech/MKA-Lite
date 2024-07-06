@@ -108,11 +108,11 @@ impl<'a> MirrorHandler<'a> {
             self.usb_conn.write_message(startup_msg_meta.get_mirror_message());
 
             let mut msg_91 = MirrorMessage::new(9);
-            msg_91.data.push(1);
+            msg_91.push_int(1);
             self.usb_conn.write_message(msg_91);
 
             let mut msg_88 = MirrorMessage::new(0x88);
-            msg_88.data.push(1);
+            msg_88.push_int(1);
             self.usb_conn.write_message(msg_88);
 
             self.usb_conn.reset_heartbeat();
@@ -168,16 +168,6 @@ impl<'a> MirrorHandler<'a> {
         } else if message.message_type == 25 || message.message_type == 42 { //Metadata message.
             //Handle metadata.
             let meta_message = MetaDataMessage::from(message.clone());
-
-            /*match String::from_utf8(meta_message.get_mirror_message().data) {
-                Ok(meta) => {
-                    println!("{}", meta);
-                }
-                Err(_) => {
-    
-                }
-            };*/
-
             self.handle_metadata(meta_message);
         }
     }

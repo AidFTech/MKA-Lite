@@ -125,6 +125,13 @@ impl MirrorMessage {
 
         return decoded_int;
     }
+
+    pub fn push_int(&mut self, n: u32) {
+        let b = n.to_le_bytes();
+        for i in 0..b.len() {
+            self.data.push(b[i]);
+        }
+    }
 }
 
 //Get a mirror message from a USB header.

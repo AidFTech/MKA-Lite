@@ -191,14 +191,18 @@ impl <'a> USBConnection <'a> {
         let handle = self.device_handle.as_mut().unwrap();
 
         let mut buffer: [u8;HEADERSIZE] = [0;HEADERSIZE];
-        let len = match handle.read_bulk(self.rx, &mut buffer, Duration::from_millis(100)) {
+        let len = match handle.read_bulk(self.rx, &mut buffer, Duration::from_millis(100)) { //TODO: This sends an empty USB message to the dongle every 100ms according to Wireshark. Possible to check the size of what can be read first?
             Ok(len) => len,
             Err(err) => {
-                if err.to_string() != String::from("Operation timed out") { //TODO: Is there a better way to detect this? Without the use of strings?
-                    self.running = false;
-                    return;
-                }
-                return;
+                match err {
+                    rusb::Error::Timeout => {
+                        return;
+                    }
+                    _ => {
+                        self.running = false;
+                        return;
+                    }
+                } 
             }
         };
 
@@ -222,9 +226,16 @@ impl <'a> USBConnection <'a> {
                 let mut data_buffer: Vec<u8> = vec![0;data_len];
                 let n_comp = match handle.read_bulk(self.rx, &mut data_buffer, Duration::from_millis(100)) {
                     Ok(len) => len,
-                    Err(_) => {
-                        self.running = false;
-                        return;
+                    Err(err) => {
+                        match err {
+                            rusb::Error::Timeout => {
+                                return;
+                            }
+                            _ => {
+                                self.running = false;
+                                return;
+                            }
+                        } 
                     }
                 };
 
