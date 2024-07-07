@@ -1,5 +1,8 @@
 use std::os::unix::net::UnixStream;
 use std::sync::{Arc, Mutex};
+use std::thread::{self, JoinHandle};
+
+use mpv::MpvHandler;
 
 use crate::{Context, SocketMessage};
 use crate::USBConnection;
@@ -13,6 +16,7 @@ use super::messages::get_sendint_message;
 use super::messages::get_sendstring_message;
 use super::messages::MirrorMessage;
 use super::messages::MetaDataMessage;
+use super::video_decoder::get_video_decoder;
 
 pub struct MirrorHandler<'a> {
     context: &'a Arc<Mutex<Context>>,
@@ -20,17 +24,44 @@ pub struct MirrorHandler<'a> {
     stream: &'a Arc<Mutex<UnixStream>>,
     run: bool,
     startup: bool,
+
+    video_thread_join_handle: Option<JoinHandle<()>>,
 }
 
 impl<'a> MirrorHandler<'a> {
     pub fn new(context: &'a Arc<Mutex<Context>>, usb_conn: &'a mut USBConnection <'a>, stream: &'a Arc<Mutex<UnixStream>>) -> MirrorHandler <'a> {
-        return MirrorHandler {
+        let mut handler = MirrorHandler {
             context,
             usb_conn,
             stream,
             run: true,
             startup: false,
+            video_thread_join_handle: None,
         };
+
+        handler.video_thread_join_handle = Some(thread::spawn(move || {
+            let mut mpv_handler: Option<MpvHandler>;
+            let mut mpv_start = false;
+            while !mpv_start {
+                mpv_handler = get_video_decoder(720, 480, false, String::from("/run/mka_video.sock"));
+                //TODO: These parameters will probably need to be variable.
+                match mpv_handler {
+                    Some(_) => {
+                        mpv_start = true;
+                    }
+                    None => {
+                        continue;
+                    }
+                }
+            }
+            println!("Video connected!");
+
+            while handler.run {
+
+            }
+        }));
+
+        return handler;
     }
 
     pub fn process(&mut self) {
@@ -147,6 +178,8 @@ impl<'a> MirrorHandler<'a> {
 
                 }
             }
+
+            self.usb_conn.start_video();
             //TODO: Start the decoders.
         } else if message.message_type == 4 { //Unplugged message.
             //Phone disconnected.
