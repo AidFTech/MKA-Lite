@@ -1,9 +1,5 @@
-use std::io::Write;
 use std::os::unix::net::UnixStream;
 use std::sync::{Arc, Mutex};
-use std::thread::{self, JoinHandle};
-
-use mpv::MpvHandler;
 
 use crate::{Context, SocketMessage};
 use crate::USBConnection;
@@ -24,11 +20,12 @@ pub struct MirrorHandler<'a> {
     usb_conn: &'a mut USBConnection<'a>,
     run: bool,
     startup: bool,
+    stream: &'a Arc<Mutex<UnixStream>>,
     mpv: Mpv
 }
 
 impl<'a> MirrorHandler<'a> {
-    pub fn new(context: &'a Arc<Mutex<Context>>, usb_conn: &'a mut USBConnection <'a>) -> MirrorHandler <'a> {
+    pub fn new(context: &'a Arc<Mutex<Context>>, usb_conn: &'a mut USBConnection <'a>, stream: &'a Arc<Mutex<UnixStream>>) -> MirrorHandler <'a> {
         loop {
             match Mpv::new(720, 480) {
                 Err(e) => println!("Failed to Start Mpv: {}", e.to_string()),
@@ -38,6 +35,7 @@ impl<'a> MirrorHandler<'a> {
                         usb_conn,
                         run: true,
                         startup: false,
+                        stream,
                         mpv
                     };
                 }
@@ -82,6 +80,11 @@ impl<'a> MirrorHandler<'a> {
         for message in rx_cache {
             self.interpret_message(&message);
         }
+    }
+
+    pub fn send_carplay_command(&mut self, command: u32) {
+        let msg = get_carplay_command_message(command);
+        self.usb_conn.write_message(msg);
     }
 
     fn send_dongle_startup(&mut self) {
@@ -150,16 +153,15 @@ impl<'a> MirrorHandler<'a> {
             };
             socket_message.data.push(phone_type as u8);
 
-            // match self.stream.try_lock() {
-            //     Ok(mut stream) => {
-            //         write_socket_message(&mut stream, socket_message);
-            //     }
-            //     Err(_) => {
-            //
-            //     }
-            // }
+            match self.stream.try_lock() {
+                Ok(mut stream) => {
+                    write_socket_message(&mut stream, socket_message);
+                }
+                Err(_) => {
+            
+                }
+            }
 
-            self.usb_conn.start_video();
             //TODO: Start the decoders.
         } else if message.message_type == 4 {
             // Phone disconnected.
@@ -169,14 +171,14 @@ impl<'a> MirrorHandler<'a> {
             };
             socket_message.data.push(0);
 
-            // match self.stream.try_lock() {
-            //     Ok(mut stream) => {
-            //         write_socket_message(&mut stream, socket_message);
-            //     }
-            //     Err(_) => {
-            //
-            //     }
-            // }
+            match self.stream.try_lock() {
+                Ok(mut stream) => {
+                    write_socket_message(&mut stream, socket_message);
+                }
+                Err(_) => {
+            
+                }
+            }
             //TODO: Stop the decoders.
         } else if message.message_type == 6 {
             self.mpv.send_video(&message.data);
@@ -202,15 +204,15 @@ impl<'a> MirrorHandler<'a> {
             if string_var.variable == "MDModel" {
                 context.phone_name = string_var.value;
 
-                // match self.stream.try_lock() {
-                //     Ok(mut stream) => {
-                //         let socket_message = SocketMessage{opcode: OPCODE_PHONE_NAME, data: context.phone_name.as_bytes().to_vec()};
-                //         write_socket_message(&mut stream, socket_message);
-                //     }
-                //     Err(_) => {
-                //
-                //     }
-                // }
+                match self.stream.try_lock() {
+                    Ok(mut stream) => {
+                        let socket_message = SocketMessage{opcode: OPCODE_PHONE_NAME, data: context.phone_name.as_bytes().to_vec()};
+                        write_socket_message(&mut stream, socket_message);
+                    }
+                    Err(_) => {
+                
+                    }
+                }
             }
         }
     }

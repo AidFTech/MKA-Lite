@@ -1,5 +1,3 @@
-use std::io::Write;
-use std::os::unix::net::UnixStream;
 use std::sync::{Arc, Mutex};
 use rusb::{Context as USBContext, Device, DeviceDescriptor, DeviceHandle, Direction, TransferType, UsbContext};
 use std::time::Duration;
@@ -12,7 +10,7 @@ use crate::mirror::messages::{
     get_mirror_message_from_header,
 
 };
-use crate::{init_socket, Context};
+use crate::Context;
 
 const VENDOR_ID: u16 = 0x1314;
 const DEVICE_ID_WIRED: u16 = 0x1520;
@@ -39,8 +37,6 @@ pub struct USBConnection<'a> {
     context: &'a Arc<Mutex<Context>>,
 
     heartbeat_time: SystemTime,
-
-    video_socket: Option<UnixStream>,
 }
 
 impl <'a> USBConnection <'a> {
@@ -58,8 +54,6 @@ impl <'a> USBConnection <'a> {
             context,
 
             heartbeat_time: SystemTime::now(),
-
-            video_socket: None,
         }
     }
 
@@ -256,29 +250,10 @@ impl <'a> USBConnection <'a> {
             }
 
             if msg_read {
-                //TODO: Socket video and audio.
+                //TODO: Do we want to socket video and audio? Caching it caused issues with Python.
                 match self.context.try_lock() {
                     Ok(mut context) => {
-                        if header.message_type == 6 {
-                            match self.video_socket.as_mut() {
-                                Some(video_socket) => {
-                                    if header.data.len() > 20 {
-                                        let mut video_data: Vec<u8> = Vec::new();
-                                        for i in 20..header.data.len() {
-                                            video_data.push(header.data[i]);
-                                        }
-                                        let _ = video_socket.write(&video_data);
-                                    }
-                                }
-                                None => {
-                                    
-                                }
-                            }
-                        } else if header.message_type == 7 {
-                            //Push to audio socket.
-                        } else {
-                            context.rx_cache.push(header);
-                        }
+                        context.rx_cache.push(header);
                     }
                     Err(_) => {
                         println!("USB: Parameter list is locked.");
@@ -298,30 +273,6 @@ impl <'a> USBConnection <'a> {
             self.heartbeat_time = SystemTime::now();
             self.write_message(get_heartbeat_message());
         }
-    }
-
-    //Start the video socket.
-    pub fn start_video(&mut self) {
-        match self.video_socket {
-            Some(_) => {
-                return;
-            }
-            _ => {
-
-            }
-        }
-
-        self.video_socket = init_socket(String::from("/run/mka_video.sock"));
-        match self.video_socket {
-            Some(_) => {
-                println!("Successfully opened!")
-            }
-            None => {
-                return;
-            }
-        }
-
-        println!("USB: Video started!");
     }
 
     //Write a message to the socket.
