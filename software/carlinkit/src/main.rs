@@ -12,11 +12,11 @@ use mirror::handler::MirrorHandler;
 use mirror::usb::USBConnection;
 
 fn main() {
-    let mutex_stream = Arc::new(Mutex::new(init_default_socket().unwrap()));
+    // let mutex_stream = Arc::new(Mutex::new(init_default_socket().unwrap()));
     let context: Context = Context::new();
     let mutex_context: Arc<Mutex<Context>> = Arc::new(Mutex::new(context));
     let mut usb_conn = USBConnection::new(&mutex_context);
-    let mut mirror_handler = MirrorHandler::new(&mutex_context, &mut usb_conn, &mutex_stream);
+    let mut mirror_handler = MirrorHandler::new(&mutex_context, &mut usb_conn);
 
     loop {
 		let mut new_context = match mutex_context.try_lock() {
@@ -33,18 +33,18 @@ fn main() {
         };
 
         let mut l = 0;
-        match mutex_stream.try_lock() {
-            Ok(mut stream) => {
-                l = read_socket_message(&mut stream, &mut socket_msg);
-            }
-            Err(_) => {
-
-            }
-        }
-
-        if l > 0 {
-            handle_socket_message(&mut new_context, socket_msg);
-        }
+        // match mutex_stream.try_lock() {
+        //     Ok(mut stream) => {
+        //         l = read_socket_message(&mut stream, &mut socket_msg);
+        //     }
+        //     Err(_) => {
+        //
+        //     }
+        // }
+        //
+        // if l > 0 {
+        //     handle_socket_message(&mut new_context, socket_msg);
+        // }
 
         if new_context.ibus_waiting {
             new_context.ibus_waiting = false;

@@ -1,3 +1,4 @@
+use std::io::Write;
 use std::os::unix::net::UnixStream;
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
@@ -16,52 +17,32 @@ use super::messages::get_sendint_message;
 use super::messages::get_sendstring_message;
 use super::messages::MirrorMessage;
 use super::messages::MetaDataMessage;
-use super::video_decoder::get_video_decoder;
+use super::mpv::Mpv;
 
 pub struct MirrorHandler<'a> {
     context: &'a Arc<Mutex<Context>>,
     usb_conn: &'a mut USBConnection<'a>,
-    stream: &'a Arc<Mutex<UnixStream>>,
     run: bool,
     startup: bool,
-
-    video_thread_join_handle: Option<JoinHandle<()>>,
+    mpv: Mpv
 }
 
 impl<'a> MirrorHandler<'a> {
-    pub fn new(context: &'a Arc<Mutex<Context>>, usb_conn: &'a mut USBConnection <'a>, stream: &'a Arc<Mutex<UnixStream>>) -> MirrorHandler <'a> {
-        let mut handler = MirrorHandler {
-            context,
-            usb_conn,
-            stream,
-            run: true,
-            startup: false,
-            video_thread_join_handle: None,
-        };
-
-        handler.video_thread_join_handle = Some(thread::spawn(move || {
-            let mut mpv_handler: Option<MpvHandler>;
-            let mut mpv_start = false;
-            while !mpv_start {
-                mpv_handler = get_video_decoder(720, 480, false, String::from("/run/mka_video.sock"));
-                //TODO: These parameters will probably need to be variable.
-                match mpv_handler {
-                    Some(_) => {
-                        mpv_start = true;
-                    }
-                    None => {
-                        continue;
-                    }
+    pub fn new(context: &'a Arc<Mutex<Context>>, usb_conn: &'a mut USBConnection <'a>) -> MirrorHandler <'a> {
+        loop {
+            match Mpv::new(720, 480) {
+                Err(e) => println!("Failed to Start Mpv: {}", e.to_string()),
+                Ok(mpv) => {
+                    return MirrorHandler {
+                        context,
+                        usb_conn,
+                        run: true,
+                        startup: false,
+                        mpv
+                    };
                 }
-            }
-            println!("Video connected!");
-
-            while handler.run {
-
-            }
-        }));
-
-        return handler;
+            };
+        }
     }
 
     pub fn process(&mut self) {
@@ -147,7 +128,7 @@ impl<'a> MirrorHandler<'a> {
             self.usb_conn.write_message(msg_88);
 
             self.usb_conn.reset_heartbeat();
-        } else if message.message_type == 2 { //Plugged message.
+        } else if message.message_type == 2 {
             //Phone connected.
             let data = message.clone().decode();
             if data.len() <= 0 {
@@ -160,46 +141,47 @@ impl<'a> MirrorHandler<'a> {
                     context.phone_type = phone_type as u8;
                 }
                 Err(_) => {
-                    return;
                 }
             }
-            
+
             let mut socket_message = SocketMessage {
                 opcode: OPCODE_PHONE_TYPE,
                 data: vec![0;0],
             };
             socket_message.data.push(phone_type as u8);
 
-            match self.stream.try_lock() {
-                Ok(mut stream) => {
-                    write_socket_message(&mut stream, socket_message);
-                }
-                Err(_) => {
-
-                }
-            }
+            // match self.stream.try_lock() {
+            //     Ok(mut stream) => {
+            //         write_socket_message(&mut stream, socket_message);
+            //     }
+            //     Err(_) => {
+            //
+            //     }
+            // }
 
             self.usb_conn.start_video();
             //TODO: Start the decoders.
-        } else if message.message_type == 4 { //Unplugged message.
-            //Phone disconnected.
+        } else if message.message_type == 4 {
+            // Phone disconnected.
             let mut socket_message = SocketMessage {
                 opcode: OPCODE_PHONE_TYPE,
                 data: vec![0;0],
             };
             socket_message.data.push(0);
 
-            match self.stream.try_lock() {
-                Ok(mut stream) => {
-                    write_socket_message(&mut stream, socket_message);
-                }
-                Err(_) => {
-
-                }
-            }
+            // match self.stream.try_lock() {
+            //     Ok(mut stream) => {
+            //         write_socket_message(&mut stream, socket_message);
+            //     }
+            //     Err(_) => {
+            //
+            //     }
+            // }
             //TODO: Stop the decoders.
-        } else if message.message_type == 25 || message.message_type == 42 { //Metadata message.
-            //Handle metadata.
+        } else if message.message_type == 6 {
+            self.mpv.send_video(&message.data);
+        } else if message.message_type == 25 || message.message_type == 42 {
+            // Handle metadata.
             let meta_message = MetaDataMessage::from(message.clone());
             self.handle_metadata(meta_message);
         }
@@ -220,15 +202,15 @@ impl<'a> MirrorHandler<'a> {
             if string_var.variable == "MDModel" {
                 context.phone_name = string_var.value;
 
-                match self.stream.try_lock() {
-                    Ok(mut stream) => {
-                        let socket_message = SocketMessage{opcode: OPCODE_PHONE_NAME, data: context.phone_name.as_bytes().to_vec()};
-                        write_socket_message(&mut stream, socket_message);
-                    }
-                    Err(_) => {
-
-                    }
-                }
+                // match self.stream.try_lock() {
+                //     Ok(mut stream) => {
+                //         let socket_message = SocketMessage{opcode: OPCODE_PHONE_NAME, data: context.phone_name.as_bytes().to_vec()};
+                //         write_socket_message(&mut stream, socket_message);
+                //     }
+                //     Err(_) => {
+                //
+                //     }
+                // }
             }
         }
     }
