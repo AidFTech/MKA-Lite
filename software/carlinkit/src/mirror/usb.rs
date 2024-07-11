@@ -287,7 +287,8 @@ impl <'a> USBConnection <'a> {
             Ok(_) => {
 
             }
-            Err(_) => {
+            Err(err) => {
+                println!("{}", err.to_string());
                 return; //TODO: Stop running?
             }
         }
@@ -297,7 +298,8 @@ impl <'a> USBConnection <'a> {
                 Ok(_) => {
 
                 }
-                Err(_) => {
+                Err(err) => {
+                    println!("{}", err.to_string());
                     return; //TODO: Stop running?
                 }
             }

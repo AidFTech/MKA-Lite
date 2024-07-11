@@ -50,10 +50,11 @@ fn main() {
             new_context.ibus_waiting = false;
             println!("{:X?}", new_context.ibus_cache.get_bytes());
             
+            //TODO: Clean this up a bit. Don't send these messages if the phone screen is not active.
             let ibus_msg = &new_context.ibus_cache;
             if ibus_msg.sender == 0xF0 { //From BMBT.
                 if ibus_msg.l() >= 2 && ibus_msg.data[0] == 0x49 {
-                    let clockwise = ibus_msg.data[1]&0x8 != 0;
+                    let clockwise = ibus_msg.data[1]&0x80 != 0;
                     let steps = ibus_msg.data[1]&0x7F;
 
                     let mut cmd: u32 = 100;
@@ -64,7 +65,11 @@ fn main() {
                     for i in 0..steps {
                         mirror_handler.send_carplay_command(cmd);
                     }
-                    println!("Turned!");
+                } else if ibus_msg.l() >= 2 && ibus_msg.data[0] == 0x48 {
+                    if ibus_msg.data[1]&0xF == 0x5 && ibus_msg.data[1]&0xF0 == 0x80 {
+                        mirror_handler.send_carplay_command(104);
+                        mirror_handler.send_carplay_command(105);
+                    }
                 }
             }
         }
