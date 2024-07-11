@@ -1,5 +1,6 @@
 use std::os::unix::net::UnixStream;
 use std::sync::{Arc, Mutex};
+use std::time::SystemTime;
 
 use crate::{Context, SocketMessage};
 use crate::USBConnection;
@@ -11,32 +12,35 @@ use super::messages::get_manufacturer_info;
 use super::messages::get_open_message;
 use super::messages::get_sendint_message;
 use super::messages::get_sendstring_message;
+use super::messages::get_heartbeat_message;
 use super::messages::MirrorMessage;
 use super::messages::MetaDataMessage;
 use super::mpv::Mpv;
 
 pub struct MirrorHandler<'a> {
     context: &'a Arc<Mutex<Context>>,
-    usb_conn: &'a mut USBConnection<'a>,
+    usb_conn: USBConnection,
     run: bool,
     startup: bool,
     stream: &'a Arc<Mutex<UnixStream>>,
-    mpv: Mpv
+    mpv: Mpv,
+    heartbeat_time: SystemTime,
 }
 
 impl<'a> MirrorHandler<'a> {
-    pub fn new(context: &'a Arc<Mutex<Context>>, usb_conn: &'a mut USBConnection <'a>, stream: &'a Arc<Mutex<UnixStream>>) -> MirrorHandler <'a> {
+    pub fn new(context: &'a Arc<Mutex<Context>>, stream: &'a Arc<Mutex<UnixStream>>) -> MirrorHandler <'a> {
         loop {
             match Mpv::new(720, 480) {
                 Err(e) => println!("Failed to Start Mpv: {}", e.to_string()),
                 Ok(mpv) => {
                     return MirrorHandler {
                         context,
-                        usb_conn,
+                        usb_conn: USBConnection::new(),
                         run: true,
                         startup: false,
                         stream,
-                        mpv
+                        mpv,
+                        heartbeat_time: SystemTime::now()
                     };
                 }
             };
@@ -47,9 +51,9 @@ impl<'a> MirrorHandler<'a> {
         if !self.run {
             return;
         }
-        if !self.usb_conn.get_running() {
+        if !self.usb_conn.connected {
             self.startup = false;
-            let run = self.usb_conn.connect_dongle();
+            let run = self.usb_conn.connect();
 
             if !run {
                 return; //TODO: Should we still run full_loop even if no dongle is connected?
@@ -59,26 +63,19 @@ impl<'a> MirrorHandler<'a> {
         } else if !self.startup {
             self.send_dongle_startup();
         }
-        self.usb_conn.full_loop(self.startup);
+        let mirror_message = self.usb_conn.read();
 
-        let mut rx_cache: Vec<MirrorMessage> = Vec::new();
+        match mirror_message {
+            Some(mirror_message) => self.interpret_message(&mirror_message),
+            None => ()
+        }
+        self.heartbeat();
+    }
 
-        match self.context.try_lock() {
-            Ok(mut ctx) => {
-                if ctx.rx_cache.len() > 0 {
-                    for m in 0..ctx.rx_cache.len() {
-                        rx_cache.push(ctx.rx_cache[m].clone());
-                    }
-                    ctx.rx_cache = Vec::new();
-                }
-            }
-            Err(_) => {
-                println!("Mirror: Parameter list is locked.");
-            }
-        };
-
-        for message in rx_cache {
-            self.interpret_message(&message);
+    fn heartbeat(&mut self) {
+        if self.heartbeat_time.elapsed().unwrap().as_millis() > 2000 {
+            self.heartbeat_time = SystemTime::now();
+            self.usb_conn.write_message(get_heartbeat_message());
         }
     }
 
@@ -99,8 +96,10 @@ impl<'a> MirrorHandler<'a> {
     }
 
     fn interpret_message(&mut self, message: &MirrorMessage) {
-        if message.message_type == 0x1 { //Open message.
+        if message.message_type == 0x1 {
+            // Open message.
             self.startup = true;
+            println!("Starting Carlinkit...");
 
             let startup_msg_manufacturer = get_manufacturer_info(0, 0);
             let mut startup_msg_night = get_sendint_message(String::from("/tmp/night_mode"), 0);
@@ -129,15 +128,14 @@ impl<'a> MirrorHandler<'a> {
             let mut msg_88 = MirrorMessage::new(0x88);
             msg_88.push_int(1);
             self.usb_conn.write_message(msg_88);
-
-            self.usb_conn.reset_heartbeat();
+            self.heartbeat_time = SystemTime::now();
         } else if message.message_type == 2 {
             //Phone connected.
             let data = message.clone().decode();
             if data.len() <= 0 {
                 return;
             }
-
+            println!("Phone Connected!");
             let phone_type = data[0];
             match self.context.try_lock() {
                 Ok(mut context) => {
@@ -158,7 +156,7 @@ impl<'a> MirrorHandler<'a> {
                     write_socket_message(&mut stream, socket_message);
                 }
                 Err(_) => {
-            
+
                 }
             }
 
@@ -176,11 +174,12 @@ impl<'a> MirrorHandler<'a> {
                     write_socket_message(&mut stream, socket_message);
                 }
                 Err(_) => {
-            
+
                 }
             }
             //TODO: Stop the decoders.
         } else if message.message_type == 6 {
+            println!("Video data!");
             self.mpv.send_video(&message.data);
         } else if message.message_type == 25 || message.message_type == 42 {
             // Handle metadata.
@@ -210,7 +209,7 @@ impl<'a> MirrorHandler<'a> {
                         write_socket_message(&mut stream, socket_message);
                     }
                     Err(_) => {
-                
+
                     }
                 }
             }

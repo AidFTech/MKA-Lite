@@ -15,8 +15,7 @@ fn main() {
     let mutex_stream = Arc::new(Mutex::new(init_default_socket().unwrap()));
     let context: Context = Context::new();
     let mutex_context: Arc<Mutex<Context>> = Arc::new(Mutex::new(context));
-    let mut usb_conn = USBConnection::new(&mutex_context);
-    let mut mirror_handler = MirrorHandler::new(&mutex_context, &mut usb_conn, &mutex_stream);
+    let mut mirror_handler = MirrorHandler::new(&mutex_context, &mutex_stream);
 
     loop {
 		let mut new_context = match mutex_context.try_lock() {
@@ -38,10 +37,10 @@ fn main() {
                 l = read_socket_message(&mut stream, &mut socket_msg);
             }
             Err(_) => {
-        
+
              }
         }
-        
+
         if l > 0 {
             handle_socket_message(&mut new_context, socket_msg);
         }
@@ -49,7 +48,7 @@ fn main() {
         if new_context.ibus_waiting {
             new_context.ibus_waiting = false;
             println!("{:X?}", new_context.ibus_cache.get_bytes());
-            
+
             //TODO: Clean this up a bit. Don't send these messages if the phone screen is not active.
             let ibus_msg = &new_context.ibus_cache;
             if ibus_msg.sender == 0xF0 { //From BMBT.

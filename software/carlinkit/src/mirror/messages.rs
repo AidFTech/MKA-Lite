@@ -23,9 +23,12 @@ impl Clone for MirrorMessage {
 impl MirrorMessage {
     //Get a blank mirror message.
     pub fn new(message_type: u32) -> MirrorMessage {
-        return MirrorMessage{message_type: message_type, data: vec![0;0]};
+        return MirrorMessage{
+            message_type,
+            data: vec![0;0]
+        };
     }
-    
+
     //Read message header data and return whether successful.
     pub fn deserialize(&mut self, data: Vec<u8>) -> bool{
         if data.len() != HEADERSIZE {
@@ -50,7 +53,7 @@ impl MirrorMessage {
         }
 
         let data_len = u32::from_le_bytes(slice);
-        
+
         //Message type.
         for i in 0..4 {
             slice[i] = data[i+8];
@@ -140,15 +143,12 @@ impl MirrorMessage {
     }
 }
 
-//Get a mirror message from a USB header.
-pub fn get_mirror_message_from_header(data: Vec<u8>) -> Option<MirrorMessage> {
+// Get a mirror message from a USB header.
+pub fn mirror_message_from_header(data: Vec<u8>) -> MirrorMessage {
     let mut mirror = MirrorMessage::new(0);
+    mirror.deserialize(data);
+    return mirror;
 
-    if mirror.deserialize(data) {
-        return Some(mirror);
-    } else {
-        return None;
-    }
 }
 
 //Get a heartbeat mirror message.
@@ -398,7 +398,7 @@ impl MetaDataMessage {
 
     pub fn get_mirror_message(&mut self) -> MirrorMessage {
         let mut byte_string = String::from("{");
-        
+
         for i in 0..self.string_vars.len() {
             byte_string += "\"";
             byte_string += self.string_vars[i].variable.as_str();
