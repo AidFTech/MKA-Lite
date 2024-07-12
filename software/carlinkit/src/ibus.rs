@@ -5,6 +5,21 @@ pub struct IBusMessage {
     pub data: Vec<u8>
 }
 
+impl Clone for IBusMessage {
+    fn clone(&self) -> Self {
+        let mut new_data: Vec<u8> = vec![0;self.data.len()];
+        for i in 0..self.data.len() {
+            new_data[i] = self.data[i];
+        }
+
+        return IBusMessage {
+            sender: self.sender,
+            receiver: self.receiver,
+            data: new_data,
+        }
+    }
+}
+
 impl IBusMessage {
     pub fn l(&self) -> usize {
         return self.data.len();

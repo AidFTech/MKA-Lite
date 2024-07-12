@@ -2,7 +2,7 @@ use std::os::unix::net::UnixStream;
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
-use crate::{Context, SocketMessage};
+use crate::{Context, IBusMessage, SocketMessage};
 use crate::USBConnection;
 
 use crate::ipc::*;
@@ -82,6 +82,37 @@ impl<'a> MirrorHandler<'a> {
     pub fn send_carplay_command(&mut self, command: u32) {
         let msg = get_carplay_command_message(command);
         self.usb_conn.write_message(msg);
+    }
+
+    pub fn handle_ibus_message(&mut self, ibus_msg: IBusMessage) {
+        let context = match self.context.try_lock() {
+            Ok(context) => context,
+            Err(_) => {
+                println!("IBus: Context locked.");
+                return;
+            }
+        };
+
+        if ibus_msg.sender == 0xF0 { //From BMBT.
+            if ibus_msg.l() >= 2 && ibus_msg.data[0] == 0x49 && context.phone_active {
+                let clockwise = ibus_msg.data[1]&0x80 != 0;
+                let steps = ibus_msg.data[1]&0x7F;
+
+                let mut cmd: u32 = 100;
+                if clockwise {
+                    cmd = 101;
+                }
+
+                for i in 0..steps {
+                    self.send_carplay_command(cmd);
+                }
+            } else if ibus_msg.l() >= 2 && ibus_msg.data[0] == 0x48 && context.phone_active {
+                if ibus_msg.data[1]&0xF == 0x5 && ibus_msg.data[1]&0xF0 == 0x80 {
+                    self.send_carplay_command(104);
+                    self.send_carplay_command(105);
+                }
+            }
+        }
     }
 
     fn send_dongle_startup(&mut self) {
@@ -179,7 +210,6 @@ impl<'a> MirrorHandler<'a> {
             }
             //TODO: Stop the decoders.
         } else if message.message_type == 6 {
-            println!("Video data!");
             self.mpv.send_video(&message.data);
         } else if message.message_type == 25 || message.message_type == 42 {
             // Handle metadata.
