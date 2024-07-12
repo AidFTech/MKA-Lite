@@ -29,8 +29,8 @@ impl Context {
         return Self {
             bmbt_connected: false,
             audio_selected: false,
-            mka_active: false,
-            phone_active: false,
+            mka_active: true,
+            phone_active: true,
             fullscreen: false,
             playing: false,
 
