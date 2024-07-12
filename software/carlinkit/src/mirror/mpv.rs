@@ -14,6 +14,7 @@ impl Mpv {
         mpv_cmd.arg("--hwdec=rpi");
         mpv_cmd.arg("--demuxer-rawvideo-fps=60");
         mpv_cmd.arg("--untimed");
+        mpv_cmd.arg("--osc=no");
         mpv_cmd.arg("--fps=60");
         mpv_cmd.arg("-");
         match mpv_cmd.stdin(Stdio::piped()).spawn() {
