@@ -210,7 +210,11 @@ impl<'a> MirrorHandler<'a> {
             }
             //TODO: Stop the decoders.
         } else if message.message_type == 6 {
-            self.mpv.send_video(&message.data);
+            let mut data = vec![0;0];
+            for i in 20..message.data.len() {
+                data.push(message.data[i]);
+            }
+            self.mpv.send_video(&data);
         } else if message.message_type == 25 || message.message_type == 42 {
             // Handle metadata.
             let meta_message = MetaDataMessage::from(message.clone());
