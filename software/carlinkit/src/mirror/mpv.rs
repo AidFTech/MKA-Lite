@@ -18,7 +18,7 @@ impl Mpv {
         mpv_cmd.arg("--fps=60");
         mpv_cmd.arg("-");
         match mpv_cmd.stdin(Stdio::piped()).spawn() {
-            Err(e) => return Err(format!("Could not start Mpv: {} ", e)),
+            Err(e) => return Err(format!("Could not start video Mpv: {} ", e)),
             Ok(process) => return Ok(Mpv { process }),
         }
     }
