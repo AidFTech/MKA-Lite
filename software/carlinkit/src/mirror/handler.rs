@@ -15,7 +15,8 @@ use super::messages::get_sendstring_message;
 use super::messages::get_heartbeat_message;
 use super::messages::MirrorMessage;
 use super::messages::MetaDataMessage;
-use super::mpv::Mpv;
+use super::mpv::MpvVideo;
+use super::mpv::FfAudio;
 
 pub struct MirrorHandler<'a> {
     context: &'a Arc<Mutex<Context>>,
@@ -23,28 +24,45 @@ pub struct MirrorHandler<'a> {
     run: bool,
     startup: bool,
     stream: &'a Arc<Mutex<UnixStream>>,
-    mpv: Mpv,
+    mpv_video: MpvVideo,
+    ff_audio: FfAudio,
     heartbeat_time: SystemTime,
 }
 
 impl<'a> MirrorHandler<'a> {
     pub fn new(context: &'a Arc<Mutex<Context>>, stream: &'a Arc<Mutex<UnixStream>>) -> MirrorHandler <'a> {
-        loop {
-            match Mpv::new(720, 480) {
+        let mut mpv_found = 0;
+        let mut mpv_video: Option<MpvVideo> = None;
+        let mut ff_audio: Option<FfAudio> = None;
+
+        while mpv_found < 2 {
+            match MpvVideo::new(720, 480) {
                 Err(e) => println!("Failed to Start Mpv: {}", e.to_string()),
                 Ok(mpv) => {
-                    return MirrorHandler {
-                        context,
-                        usb_conn: USBConnection::new(),
-                        run: true,
-                        startup: false,
-                        stream,
-                        mpv,
-                        heartbeat_time: SystemTime::now()
-                    };
+                    mpv_video = Some(mpv);
+                    mpv_found += 1;
                 }
             };
+
+            match FfAudio::new() {
+                Err(e) => println!("Failed to Start Mpv: {}", e.to_string()),
+                Ok(mpv) => {
+                    ff_audio = Some(mpv);
+                    mpv_found += 1;
+                }
+            }
         }
+
+        return MirrorHandler {
+            context,
+            usb_conn: USBConnection::new(),
+            run: true,
+            startup: false,
+            stream,
+            mpv_video: mpv_video.unwrap(),
+            ff_audio: ff_audio.unwrap(),
+            heartbeat_time: SystemTime::now()
+        };
     }
 
     pub fn process(&mut self) {
@@ -103,13 +121,19 @@ impl<'a> MirrorHandler<'a> {
                     cmd = 101;
                 }
 
-                for i in 0..steps {
+                for i in 0..steps { //TODO: Do you know of any way to declare this counting variable without it being flagged as unused?
                     self.send_carplay_command(cmd);
                 }
             } else if ibus_msg.l() >= 2 && ibus_msg.data[0] == 0x48 && context.phone_active {
-                if ibus_msg.data[1]&0xF == 0x5 && ibus_msg.data[1]&0xF0 == 0x80 {
+                let command = ibus_msg.data[1]&0x3F;
+                let state = (ibus_msg.data[1]&0xC0) >> 6;
+                if command == 0x5 && state == 0x2 { //Enter button.
                     self.send_carplay_command(104);
                     self.send_carplay_command(105);
+                } else if command == 0x8 && state == 0x2 { //Phone button released.
+                    self.send_carplay_command(106);
+                } else if command == 0x8 && state == 0x1 { //Phone button held.
+                    self.send_carplay_command(200);
                 }
             }
         }
@@ -209,8 +233,19 @@ impl<'a> MirrorHandler<'a> {
                 }
             }
             //TODO: Stop the decoders.
-        } else if message.message_type == 6 {
-            self.mpv.send_video(&message.data);
+        } else if message.message_type == 6 { //Video.
+            let mut data = vec![0;0];
+            for i in 20..message.data.len() {
+                data.push(message.data[i]);
+            }
+            self.mpv_video.send_video(&data);
+        } else if message.message_type == 7 { //Audio.
+            let mut data = vec![0;0];
+            for i in 12..message.data.len() {
+                data.push(message.data[i]);
+            }
+            self.ff_audio.send_audio(&data);
+            //TODO: There are other configurations for audio messages- see the original Python.
         } else if message.message_type == 25 || message.message_type == 42 {
             // Handle metadata.
             let meta_message = MetaDataMessage::from(message.clone());
