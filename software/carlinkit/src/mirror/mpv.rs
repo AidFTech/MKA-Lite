@@ -43,7 +43,6 @@ impl FfAudio {
         ff_cmd.arg("-ar");
         ff_cmd.arg("44100");
         ff_cmd.arg("-nodisp");
-        ff_cmd.arg("--enable-libpulse");
         ff_cmd.arg("-");
         match ff_cmd.stdin(Stdio::piped()).spawn() {
             Err(e) => return Err(format!("Could not start audio FFPlay: {} ", e)),

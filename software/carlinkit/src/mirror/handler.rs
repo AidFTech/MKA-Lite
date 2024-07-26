@@ -121,7 +121,7 @@ impl<'a> MirrorHandler<'a> {
                     cmd = 101;
                 }
 
-                for i in 0..steps { //TODO: Do you know of any way to declare this counting variable without it being flagged as unused?
+                for _i in 0..steps {
                     self.send_carplay_command(cmd);
                 }
             } else if ibus_msg.l() >= 2 && ibus_msg.data[0] == 0x48 && context.phone_active {
