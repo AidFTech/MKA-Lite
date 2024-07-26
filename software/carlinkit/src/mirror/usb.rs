@@ -146,7 +146,7 @@ impl USBConnection {
 
         self.tx = endpoint.tx_address;
         self.rx = endpoint.rx_address;
-        self.connected= true;
+        self.connected = true;
 
         return true;
     }
