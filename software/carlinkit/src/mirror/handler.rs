@@ -16,7 +16,7 @@ use super::messages::get_heartbeat_message;
 use super::messages::MirrorMessage;
 use super::messages::MetaDataMessage;
 use super::mpv::MpvVideo;
-use super::mpv::FfAudio;
+use super::mpv::RdAudio;
 
 pub struct MirrorHandler<'a> {
     context: &'a Arc<Mutex<Context>>,
@@ -25,7 +25,7 @@ pub struct MirrorHandler<'a> {
     startup: bool,
     stream: &'a Arc<Mutex<UnixStream>>,
     mpv_video: MpvVideo,
-    ff_audio: FfAudio,
+    ff_audio: RdAudio,
     heartbeat_time: SystemTime,
 }
 
@@ -33,7 +33,7 @@ impl<'a> MirrorHandler<'a> {
     pub fn new(context: &'a Arc<Mutex<Context>>, stream: &'a Arc<Mutex<UnixStream>>) -> MirrorHandler <'a> {
         let mut mpv_found = 0;
         let mut mpv_video: Option<MpvVideo> = None;
-        let mut ff_audio: Option<FfAudio> = None;
+        let mut ff_audio: Option<RdAudio> = None;
 
         while mpv_found < 2 {
             match MpvVideo::new(720, 480) {
@@ -44,7 +44,7 @@ impl<'a> MirrorHandler<'a> {
                 }
             };
 
-            match FfAudio::new() {
+            match RdAudio::new() {
                 Err(e) => println!("Failed to Start Mpv: {}", e.to_string()),
                 Ok(mpv) => {
                     ff_audio = Some(mpv);
@@ -240,11 +240,13 @@ impl<'a> MirrorHandler<'a> {
             }
             self.mpv_video.send_video(&data);
         } else if message.message_type == 7 { //Audio.
-            let mut data = vec![0;0];
-            for i in 12..message.data.len() {
-                data.push(message.data[i]);
+            if message.data.len() > 16 {
+                let mut data = vec![0;0];
+                for i in 12..message.data.len() {
+                    data.push(message.data[i]);
+                }
+                self.ff_audio.send_audio(&data);
             }
-            self.ff_audio.send_audio(&data);
             //TODO: There are other configurations for audio messages- see the original Python.
         } else if message.message_type == 25 || message.message_type == 42 {
             // Handle metadata.
