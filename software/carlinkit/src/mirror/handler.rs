@@ -15,7 +15,7 @@ use super::messages::get_sendstring_message;
 use super::messages::get_heartbeat_message;
 use super::messages::MirrorMessage;
 use super::messages::MetaDataMessage;
-use super::mpv::MpvVideo;
+use super::mpv::{get_decode_type, MpvVideo};
 use super::mpv::RdAudio;
 
 pub struct MirrorHandler<'a> {
@@ -25,7 +25,7 @@ pub struct MirrorHandler<'a> {
     startup: bool,
     stream: &'a Arc<Mutex<UnixStream>>,
     mpv_video: MpvVideo,
-    ff_audio: RdAudio,
+    rd_audio: RdAudio,
     heartbeat_time: SystemTime,
 }
 
@@ -33,7 +33,7 @@ impl<'a> MirrorHandler<'a> {
     pub fn new(context: &'a Arc<Mutex<Context>>, stream: &'a Arc<Mutex<UnixStream>>) -> MirrorHandler <'a> {
         let mut mpv_found = 0;
         let mut mpv_video: Option<MpvVideo> = None;
-        let mut ff_audio: Option<RdAudio> = None;
+        let mut rd_audio: Option<RdAudio> = None;
 
         while mpv_found < 2 {
             match MpvVideo::new(720, 480) {
@@ -46,8 +46,8 @@ impl<'a> MirrorHandler<'a> {
 
             match RdAudio::new() {
                 Err(e) => println!("Failed to Start Mpv: {}", e.to_string()),
-                Ok(mpv) => {
-                    ff_audio = Some(mpv);
+                Ok(rodio) => {
+                    rd_audio = Some(rodio);
                     mpv_found += 1;
                 }
             }
@@ -60,7 +60,7 @@ impl<'a> MirrorHandler<'a> {
             startup: false,
             stream,
             mpv_video: mpv_video.unwrap(),
-            ff_audio: ff_audio.unwrap(),
+            rd_audio: rd_audio.unwrap(),
             heartbeat_time: SystemTime::now()
         };
     }
@@ -241,13 +241,26 @@ impl<'a> MirrorHandler<'a> {
             self.mpv_video.send_video(&data);
         } else if message.message_type == 7 { //Audio.
             if message.data.len() > 16 {
-                let mut data = vec![0;0];
-                for i in 12..message.data.len() {
-                    data.push(message.data[i]);
+                let (current_sample, current_bits, current_channel) = self.rd_audio.get_audio_profile();
+
+                let decode_num = u32::from_le_bytes([message.data[0], message.data[1], message.data[2], message.data[3]]);
+                let (new_sample, new_bits, new_channel) = get_decode_type(decode_num);
+
+                if new_sample != current_sample || new_bits != current_bits || new_channel != current_channel {
+                    self.rd_audio.set_audio_profile(new_sample, new_bits, new_channel);
                 }
-                self.ff_audio.send_audio(&data);
+
+                let audio_type = u32::from_le_bytes([message.data[8], message.data[9], message.data[10], message.data[11]]);
+
+                if audio_type == 1 {
+                    let mut data = vec![0;0];
+                    for i in 12..message.data.len() {
+                        data.push(message.data[i]);
+                    }
+                    self.rd_audio.send_audio(&data);
+                }
+                //TODO: A value of 2 indicates a navigation prompt. Send to a separate handler?
             }
-            //TODO: There are other configurations for audio messages- see the original Python.
         } else if message.message_type == 25 || message.message_type == 42 {
             // Handle metadata.
             let meta_message = MetaDataMessage::from(message.clone());

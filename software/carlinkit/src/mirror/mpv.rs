@@ -6,7 +6,8 @@ use std::process::Child;
 
 use rodio::Decoder;
 use rodio::OutputStream;
-use rodio::Source;
+use rodio::OutputStreamHandle;
+use rodio::Sink;
 
 pub struct MpvVideo {
     process: Child
@@ -35,7 +36,13 @@ impl MpvVideo {
 }
 
 pub struct RdAudio {
+    _stream: OutputStream,
+    _handler: OutputStreamHandle,
+    sink: Sink,
     data: Vec<u8>,
+    sample: u32,
+    bits: u16,
+    channels: u16,
 }
 
 impl RdAudio {
@@ -60,8 +67,11 @@ impl RdAudio {
             Ok(process) => return Ok(FfAudio { process }),
         }*/
 
+        let (stream, handler) = OutputStream::try_default().unwrap();
+        let sink = Sink::try_new(&handler).unwrap();
+
         let data = Vec::new();
-        return Ok(RdAudio{data});
+        return Ok(RdAudio{_stream: stream, _handler: handler, sink, data, sample: 48000, bits: 16, channels: 2});
     }
 
     pub fn send_audio(&mut self, data: &[u8]) {
@@ -71,14 +81,12 @@ impl RdAudio {
             self.data.push(data[i]);
         }
 
-        let mut new_data = get_wav_header(self.data.len(), 48000, 2, 16);
+        let mut new_data = get_wav_header(self.data.len(), self.sample, self.channels, self.bits);
 
         for i in 0..self.data.len() {
             new_data.push(self.data[i]);
         }
-        self.data.clear();
-
-        let (_stream, handler) = OutputStream::try_default().unwrap();
+        self.data.clear(); 
 
         let cursor = Cursor::new(new_data);
         let source = match Decoder::new_wav(cursor) {
@@ -88,14 +96,25 @@ impl RdAudio {
                 return;
             }
         };
-        match handler.play_raw(source.convert_samples()) {
+        /*match self.handler.play_raw(source.convert_samples()) {
             Ok(_) => {
 
             }
             Err(err) => {
                 println!("Play Error: {}", err);
             }
-        }
+        }*/
+        self.sink.append(source);
+    }
+    
+    pub fn set_audio_profile(&mut self, sample: u32, bits: u16, channels: u16) {
+        self.sample = sample;
+        self.bits = bits;
+        self.channels = channels;
+    }
+    
+    pub fn get_audio_profile(&mut self) -> (u32, u16, u16) {
+        return (self.sample, self.bits, self.channels);
     }
 }
 
@@ -163,4 +182,22 @@ fn get_wav_header(len: usize, sample: u32, channels: u16, bits: u16) -> Vec<u8> 
     }
 
     return wav_header;
+}
+
+pub fn get_decode_type(decode_num: u32) -> (u32, u16, u16) {
+    if decode_num == 1 || decode_num == 2 {
+        return (44100, 16, 2);
+    } else if decode_num == 3 {
+        return(8000, 16, 1);
+    } else if decode_num == 4 {
+        return (48000, 16, 2);
+    } else if decode_num == 5 {
+        return(16000, 16, 1);
+    } else if decode_num == 6 {
+        return(24000, 16, 1);
+    } else if decode_num == 7 {
+        return(16000, 16, 2);
+    } else {
+        return (44100, 16, 2);
+    }
 }
