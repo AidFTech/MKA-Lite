@@ -1,16 +1,17 @@
+use core::str;
 use std::io::Cursor;
 use std::io::Write;
 use std::process::Command;
 use std::process::Stdio;
 use std::process::Child;
 
-use rodio::Decoder;
+use rodio::Decoder as AudioDecoder;
 use rodio::OutputStream;
 use rodio::OutputStreamHandle;
 use rodio::Sink;
 
 pub struct MpvVideo {
-    process: Child
+    process: Child,
 }
 
 impl MpvVideo {
@@ -25,13 +26,64 @@ impl MpvVideo {
         mpv_cmd.arg("-");
         match mpv_cmd.stdin(Stdio::piped()).spawn() {
             Err(e) => return Err(format!("Could not start video Mpv: {} ", e)),
-            Ok(process) => return Ok(MpvVideo { process }),
+            Ok(process) => {
+                return Ok(MpvVideo { process });
+            }
         }
     }
 
     pub fn send_video(&mut self, data: &[u8]) {
         let mut child_stdin = self.process.stdin.as_ref().unwrap();
         let _ = child_stdin.write(&data);
+    }
+    
+    pub fn start(&mut self) {
+        //Start video playback.
+    }
+    
+    pub fn stop(&mut self) {
+        //Stop video playback.
+    }
+    
+    pub fn set_minimize(&mut self, minimize: bool) {
+        let pid = self.process.id();
+        let wid_cmd = Command::new("xdotool").arg("search").arg("--pid").arg(format!("{}", pid)).output();
+
+        let wid_vec = match wid_cmd {
+            Ok(wid) => wid.stdout,
+            Err(_) => {
+                return;
+            }
+        };
+
+        let wid_str = match str::from_utf8(&wid_vec) {
+            Ok(wid_str) => wid_str,
+            Err(_) => {
+                return;
+            }
+        };
+
+        if minimize {
+            let minimize_cmd = Command::new("xdotool").arg("windowminimize").arg(wid_str).output();
+            match minimize_cmd {
+                Ok(_) => {
+
+                }
+                Err(_) => {
+                    return;
+                }
+            }
+        } else {
+            let minimize_cmd = Command::new("xdotool").arg("windowactivate").arg(wid_str).output();
+            match minimize_cmd {
+                Ok(_) => {
+
+                }
+                Err(_) => {
+                    return;
+                }
+            }
+        }
     }
 }
 
@@ -89,7 +141,7 @@ impl RdAudio {
         self.data.clear(); 
 
         let cursor = Cursor::new(new_data);
-        let source = match Decoder::new_wav(cursor) {
+        let source = match AudioDecoder::new_wav(cursor) {
             Ok(source) => source,
             Err(err) => {
                 println!("Decoder Error: {}", err);

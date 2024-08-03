@@ -26,6 +26,7 @@ pub struct MirrorHandler<'a> {
     stream: &'a Arc<Mutex<UnixStream>>,
     mpv_video: MpvVideo,
     rd_audio: RdAudio,
+    nav_audio: RdAudio,
     heartbeat_time: SystemTime,
 }
 
@@ -34,8 +35,9 @@ impl<'a> MirrorHandler<'a> {
         let mut mpv_found = 0;
         let mut mpv_video: Option<MpvVideo> = None;
         let mut rd_audio: Option<RdAudio> = None;
+        let mut nav_audio: Option<RdAudio> = None;
 
-        while mpv_found < 2 {
+        while mpv_found < 3 {
             match MpvVideo::new(720, 480) {
                 Err(e) => println!("Failed to Start Mpv: {}", e.to_string()),
                 Ok(mpv) => {
@@ -45,9 +47,18 @@ impl<'a> MirrorHandler<'a> {
             };
 
             match RdAudio::new() {
-                Err(e) => println!("Failed to Start Mpv: {}", e.to_string()),
+                Err(e) => println!("Failed to Start Rodio: {}", e.to_string()),
                 Ok(rodio) => {
                     rd_audio = Some(rodio);
+                    mpv_found += 1;
+                }
+            }
+            
+            //TODO: Different hardware output?
+            match RdAudio::new() {
+                Err(e) => println!("Failed to Start Rodio: {}", e.to_string()),
+                Ok(rodio) => {
+                    nav_audio = Some(rodio);
                     mpv_found += 1;
                 }
             }
@@ -61,6 +72,7 @@ impl<'a> MirrorHandler<'a> {
             stream,
             mpv_video: mpv_video.unwrap(),
             rd_audio: rd_audio.unwrap(),
+            nav_audio: nav_audio.unwrap(),
             heartbeat_time: SystemTime::now()
         };
     }
@@ -214,6 +226,8 @@ impl<'a> MirrorHandler<'a> {
 
                 }
             }
+            
+            self.mpv_video.start();
 
             //TODO: Start the decoders.
         } else if message.message_type == 4 {
@@ -232,6 +246,8 @@ impl<'a> MirrorHandler<'a> {
 
                 }
             }
+            self.mpv_video.stop();
+
             //TODO: Stop the decoders.
         } else if message.message_type == 6 { //Video.
             let mut data = vec![0;0];
@@ -246,20 +262,26 @@ impl<'a> MirrorHandler<'a> {
                 let decode_num = u32::from_le_bytes([message.data[0], message.data[1], message.data[2], message.data[3]]);
                 let (new_sample, new_bits, new_channel) = get_decode_type(decode_num);
 
-                if new_sample != current_sample || new_bits != current_bits || new_channel != current_channel {
-                    self.rd_audio.set_audio_profile(new_sample, new_bits, new_channel);
-                }
-
                 let audio_type = u32::from_le_bytes([message.data[8], message.data[9], message.data[10], message.data[11]]);
 
-                if audio_type == 1 {
-                    let mut data = vec![0;0];
-                    for i in 12..message.data.len() {
-                        data.push(message.data[i]);
+                if new_sample != current_sample || new_bits != current_bits || new_channel != current_channel {
+                    if audio_type == 1 {
+                        self.rd_audio.set_audio_profile(new_sample, new_bits, new_channel);
+                    } else if audio_type == 2 {
+                        self.nav_audio.set_audio_profile(new_sample, new_bits, new_channel);
                     }
-                    self.rd_audio.send_audio(&data);
                 }
-                //TODO: A value of 2 indicates a navigation prompt. Send to a separate handler?
+
+				let mut data = Vec::new();
+				for i in 12..message.data.len() {
+					data.push(message.data[i]);
+				}
+
+                if audio_type == 1 {
+					self.rd_audio.send_audio(&data);
+                } else if audio_type == 2 {
+					self.nav_audio.send_audio(&data);
+				}
             }
         } else if message.message_type == 25 || message.message_type == 42 {
             // Handle metadata.
