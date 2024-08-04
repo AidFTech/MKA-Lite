@@ -148,6 +148,13 @@ impl<'a> MirrorHandler<'a> {
                     self.send_carplay_command(200);
                 }
             }
+        } else if ibus_msg.l() >= 3 && ibus_msg.data[0] == 0x48 && ibus_msg.data[1] == 0x8E {
+            //TODO: This is an AIBus command for testing. We need to figure out the equivalent MKA command.
+            if ibus_msg.data[2] == 0x0 {
+                self.mpv_video.set_minimize(true);
+            } else {
+                self.mpv_video.set_minimize(false);
+            }
         }
     }
 
