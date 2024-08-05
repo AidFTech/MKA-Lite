@@ -184,6 +184,11 @@ impl USBConnection {
                 return None;
             }
             let data_len = message.data.len();
+
+            if data_len <= 0 {
+                return Some(message);
+            }
+
             let mut data_buffer: Vec<u8> = vec![0;data_len];
             let buf_len = match handle.read_bulk(self.rx, &mut data_buffer, Duration::from_millis(100)) {
                 Ok(len) => len,

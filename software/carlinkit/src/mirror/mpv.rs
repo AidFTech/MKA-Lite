@@ -15,20 +15,21 @@ pub struct MpvVideo {
 }
 
 impl MpvVideo {
-    pub fn new(h: u16, w: u16) -> Result<MpvVideo, String> {
+    pub fn new(width: u16, height: u16) -> Result<MpvVideo, String> {
         let mut mpv_cmd = Command::new("mpv");
-        mpv_cmd.arg(format!("--geometry={}x{}", h, w));
+        //mpv_cmd.arg(format!("--geometry={}x{}", width, height));
         mpv_cmd.arg("--hwdec=rpi");
         mpv_cmd.arg("--demuxer-rawvideo-fps=60");
         mpv_cmd.arg("--untimed");
         mpv_cmd.arg("--osc=no");
         mpv_cmd.arg("--fps=60");
+        mpv_cmd.arg(format!("--video-aspect-override={}/{}", width, height));
         mpv_cmd.arg("--input-ipc-server=/tmp/mka_cmd.sock");
         mpv_cmd.arg("-");
         match mpv_cmd.stdin(Stdio::piped()).spawn() {
             Err(e) => return Err(format!("Could not start video Mpv: {} ", e)),
             Ok(process) => {
-                return Ok(MpvVideo { process });
+                return Ok(MpvVideo { process: process });
             }
         }
     }
@@ -44,6 +45,7 @@ impl MpvVideo {
     
     pub fn stop(&mut self) {
         //Stop video playback.
+        self.set_minimize(true);
     }
     
     pub fn set_minimize(&mut self, minimize: bool) {

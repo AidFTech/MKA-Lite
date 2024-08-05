@@ -15,7 +15,7 @@ fn main() {
     let mutex_stream = Arc::new(Mutex::new(init_default_socket().unwrap()));
     let context: Context = Context::new();
     let mutex_context: Arc<Mutex<Context>> = Arc::new(Mutex::new(context));
-    let mut mirror_handler = MirrorHandler::new(&mutex_context, &mutex_stream);
+    let mut mirror_handler = MirrorHandler::new(&mutex_context, &mutex_stream, 800, 480);
 
     loop {
 		let mut new_context = match mutex_context.try_lock() {

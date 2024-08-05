@@ -1,3 +1,6 @@
+use std::fs::File;
+use std::io::Read;
+use std::path::Path;
 use std::os::unix::net::UnixStream;
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
@@ -7,7 +10,7 @@ use crate::USBConnection;
 
 use crate::ipc::*;
 
-use super::messages::get_carplay_command_message;
+use super::messages::{get_carplay_command_message, get_sendfile_message};
 use super::messages::get_manufacturer_info;
 use super::messages::get_open_message;
 use super::messages::get_sendint_message;
@@ -28,17 +31,20 @@ pub struct MirrorHandler<'a> {
     rd_audio: RdAudio,
     nav_audio: RdAudio,
     heartbeat_time: SystemTime,
+    
+    video_w: u16,
+    video_h: u16,
 }
 
 impl<'a> MirrorHandler<'a> {
-    pub fn new(context: &'a Arc<Mutex<Context>>, stream: &'a Arc<Mutex<UnixStream>>) -> MirrorHandler <'a> {
+    pub fn new(context: &'a Arc<Mutex<Context>>, stream: &'a Arc<Mutex<UnixStream>>, w: u16, h: u16) -> MirrorHandler <'a> {
         let mut mpv_found = 0;
         let mut mpv_video: Option<MpvVideo> = None;
         let mut rd_audio: Option<RdAudio> = None;
         let mut nav_audio: Option<RdAudio> = None;
 
         while mpv_found < 3 {
-            match MpvVideo::new(720, 480) {
+            match MpvVideo::new(w, h) {
                 Err(e) => println!("Failed to Start Mpv: {}", e.to_string()),
                 Ok(mpv) => {
                     mpv_video = Some(mpv);
@@ -73,7 +79,10 @@ impl<'a> MirrorHandler<'a> {
             mpv_video: mpv_video.unwrap(),
             rd_audio: rd_audio.unwrap(),
             nav_audio: nav_audio.unwrap(),
-            heartbeat_time: SystemTime::now()
+            heartbeat_time: SystemTime::now(),
+            
+            video_w: w,
+            video_h: h
         };
     }
 
@@ -161,12 +170,86 @@ impl<'a> MirrorHandler<'a> {
     fn send_dongle_startup(&mut self) {
         let mut dongle_message_dpi = get_sendint_message(String::from("/tmp/screen_dpi"), 160);
         let mut dongle_message_android = get_sendint_message(String::from("/etc/android_work_mode"), 1);
-        let dongle_message_open = get_open_message(800, 480, 30, 5, 49152, 2, 2);
+        let dongle_message_open = get_open_message(self.video_w as u32, self.video_h as u32, 30, 5, 49152, 2, 2);
 
         self.usb_conn.write_message(dongle_message_dpi.get_mirror_message());
         self.usb_conn.write_message(dongle_message_android.get_mirror_message());
         self.usb_conn.write_message(dongle_message_open);
-        //TODO: Send icon messages.
+        
+        //Send airplay.conf...
+        let mut config_file = match File::open(Path::new("airplay.conf")) {
+            Ok(file) => file,
+            Err(err) => {
+                println!("Error opening file: {}", err);
+                return;
+            }
+        };
+        
+        let mut config_data = Vec::new();
+        match config_file.read_to_end(&mut config_data) {
+            Ok(_) => {
+
+            }
+            Err(err) => {
+                println!("Error reading file: {}", err);
+                return;
+            }
+        };
+        
+        let mut config_msg = get_sendfile_message("/etc/airplay.conf".to_string(), config_data);
+        self.usb_conn.write_message(config_msg.get_mirror_message());
+        
+        //Send BMW.png...
+        let mut android_icon_file = match File::open(Path::new("BMW.png")) {
+            Ok(file) => file,
+            Err(err) => {
+                println!("Error opening file: {}", err);
+                return;
+            }
+        };
+
+        let mut android_icon_data: Vec<u8> = Vec::new();
+        match android_icon_file.read_to_end(&mut android_icon_data) {
+            Ok(_) => {
+
+            }
+            Err(err) => {
+                println!("Error reading file: {}", err);
+                return;
+            }
+        };
+
+        let mut android_icon_msg = get_sendfile_message("/etc/oem_icon.png".to_string(), android_icon_data);
+        self.usb_conn.write_message(android_icon_msg.get_mirror_message());
+        
+        //Send BMW_icon.png...
+        let mut carplay_icon_file = match File::open(Path::new("BMW_icon.png")) {
+            Ok(file) => file,
+            Err(err) => {
+                println!("Error opening file: {}", err);
+                return;
+            }
+        };
+        
+        let mut carplay_icon_data: Vec<u8> = Vec::new();
+        match carplay_icon_file.read_to_end(&mut carplay_icon_data) {
+            Ok(_) => {
+
+            }
+            Err(err) => {
+                println!("Error reading file: {}", err);
+                return;
+            }
+        };
+        
+        let mut carplay_icon_msg = get_sendfile_message("/etc/icon_120x120.png".to_string(), carplay_icon_data);
+        self.usb_conn.write_message(carplay_icon_msg.get_mirror_message());
+        
+        //carplay_icon_msg = get_sendfile_message("/etc/icon_180x180.png".to_string(), carplay_icon_data);
+        //self.usb_conn.write_message(carplay_icon_msg.get_mirror_message());
+        
+        //carplay_icon_msg = get_sendfile_message("/etc/icon_256x256.png".to_string(), carplay_icon_data);
+        //self.usb_conn.write_message(carplay_icon_msg.get_mirror_message());
     }
 
     fn interpret_message(&mut self, message: &MirrorMessage) {
@@ -191,8 +274,8 @@ impl<'a> MirrorHandler<'a> {
 
             let mut startup_msg_meta = MetaDataMessage::new(25);
             startup_msg_meta.add_int(String::from("mediaDelay"), 300);
-            startup_msg_meta.add_int(String::from("androidAutoSizeW"), 800);
-            startup_msg_meta.add_int(String::from("androidAutoSizeH"), 480);
+            startup_msg_meta.add_int(String::from("androidAutoSizeW"), self.video_w as i32);
+            startup_msg_meta.add_int(String::from("androidAutoSizeH"), self.video_h as i32);
             self.usb_conn.write_message(startup_msg_meta.get_mirror_message());
 
             let mut msg_91 = MirrorMessage::new(9);
@@ -279,16 +362,16 @@ impl<'a> MirrorHandler<'a> {
                     }
                 }
 
-				let mut data = Vec::new();
-				for i in 12..message.data.len() {
-					data.push(message.data[i]);
-				}
+                let mut data = Vec::new();
+                for i in 12..message.data.len() {
+                    data.push(message.data[i]);
+                }
 
                 if audio_type == 1 {
-					self.rd_audio.send_audio(&data);
+                    self.rd_audio.send_audio(&data);
                 } else if audio_type == 2 {
-					self.nav_audio.send_audio(&data);
-				}
+                    self.nav_audio.send_audio(&data);
+                }
             }
         } else if message.message_type == 25 || message.message_type == 42 {
             // Handle metadata.
