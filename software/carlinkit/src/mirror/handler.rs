@@ -9,6 +9,7 @@ use crate::{Context, IBusMessage, SocketMessage};
 use crate::USBConnection;
 
 use crate::ipc::*;
+use crate::ibus::*;
 
 use super::messages::{get_carplay_command_message, get_sendfile_message};
 use super::messages::get_manufacturer_info;
@@ -31,9 +32,6 @@ pub struct MirrorHandler<'a> {
     rd_audio: RdAudio,
     nav_audio: RdAudio,
     heartbeat_time: SystemTime,
-    
-    video_w: u16,
-    video_h: u16,
 }
 
 impl<'a> MirrorHandler<'a> {
@@ -60,7 +58,6 @@ impl<'a> MirrorHandler<'a> {
                 }
             }
             
-            //TODO: Different hardware output?
             match RdAudio::new() {
                 Err(e) => println!("Failed to Start Rodio: {}", e.to_string()),
                 Ok(rodio) => {
@@ -80,9 +77,6 @@ impl<'a> MirrorHandler<'a> {
             rd_audio: rd_audio.unwrap(),
             nav_audio: nav_audio.unwrap(),
             heartbeat_time: SystemTime::now(),
-            
-            video_w: w,
-            video_h: h
         };
     }
 
@@ -124,7 +118,7 @@ impl<'a> MirrorHandler<'a> {
     }
 
     pub fn handle_ibus_message(&mut self, ibus_msg: IBusMessage) {
-        let context = match self.context.try_lock() {
+        let mut context = match self.context.try_lock() {
             Ok(context) => context,
             Err(_) => {
                 println!("IBus: Context locked.");
@@ -132,7 +126,9 @@ impl<'a> MirrorHandler<'a> {
             }
         };
 
-        if ibus_msg.sender == 0xF0 { //From BMBT.
+        if ibus_msg.l() >= 1 && ibus_msg.data[0] == 0x38 { //CDC request. Must reply.
+
+        } else if ibus_msg.sender == IBUS_DEVICE_BMBT { //From BMBT.
             if ibus_msg.l() >= 2 && ibus_msg.data[0] == 0x49 && context.phone_active {
                 let clockwise = ibus_msg.data[1]&0x80 != 0;
                 let steps = ibus_msg.data[1]&0x7F;
@@ -157,12 +153,17 @@ impl<'a> MirrorHandler<'a> {
                     self.send_carplay_command(200);
                 }
             }
-        } else if ibus_msg.l() >= 3 && ibus_msg.data[0] == 0x48 && ibus_msg.data[1] == 0x8E {
-            //TODO: This is an AIBus command for testing. We need to figure out the equivalent MKA command.
-            if ibus_msg.data[2] == 0x0 {
-                self.mpv_video.set_minimize(true);
-            } else {
-                self.mpv_video.set_minimize(false);
+        } else if ibus_msg.sender == 0xD0 && ibus_msg.l() >= 2 && ibus_msg.data[0] == 0x5B {
+            //TODO: Do not run this command if the RLS is connected.
+            let last_headlights_on = context.headlights_on;
+            if ((ibus_msg.data[1]&0x01) != 0) != last_headlights_on {
+                let headlights_on = (ibus_msg.data[1]&0x01) != 0;
+                context.headlights_on = headlights_on;
+                if headlights_on {
+                    self.send_carplay_command(16);
+                } else {
+                    self.send_carplay_command(17);
+                }
             }
         }
     }
@@ -170,7 +171,7 @@ impl<'a> MirrorHandler<'a> {
     fn send_dongle_startup(&mut self) {
         let mut dongle_message_dpi = get_sendint_message(String::from("/tmp/screen_dpi"), 160);
         let mut dongle_message_android = get_sendint_message(String::from("/etc/android_work_mode"), 1);
-        let dongle_message_open = get_open_message(self.video_w as u32, self.video_h as u32, 30, 5, 49152, 2, 2);
+        let dongle_message_open = get_open_message(800, 480, 30, 5, 49152, 2, 2);
 
         self.usb_conn.write_message(dongle_message_dpi.get_mirror_message());
         self.usb_conn.write_message(dongle_message_android.get_mirror_message());
@@ -274,8 +275,8 @@ impl<'a> MirrorHandler<'a> {
 
             let mut startup_msg_meta = MetaDataMessage::new(25);
             startup_msg_meta.add_int(String::from("mediaDelay"), 300);
-            startup_msg_meta.add_int(String::from("androidAutoSizeW"), self.video_w as i32);
-            startup_msg_meta.add_int(String::from("androidAutoSizeH"), self.video_h as i32);
+            startup_msg_meta.add_int(String::from("androidAutoSizeW"), 800);
+            startup_msg_meta.add_int(String::from("androidAutoSizeH"), 480);
             self.usb_conn.write_message(startup_msg_meta.get_mirror_message());
 
             let mut msg_91 = MirrorMessage::new(9);
@@ -304,7 +305,7 @@ impl<'a> MirrorHandler<'a> {
 
             let mut socket_message = SocketMessage {
                 opcode: OPCODE_PHONE_TYPE,
-                data: vec![0;0],
+                data: Vec::new(),
             };
             socket_message.data.push(phone_type as u8);
 

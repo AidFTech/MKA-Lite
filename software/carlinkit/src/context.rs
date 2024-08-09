@@ -13,6 +13,8 @@ pub struct Context {
 	pub phone_type: u8,
 	pub phone_name: String,
 
+    pub headlights_on: bool,
+
 	pub rx_cache: Vec<MirrorMessage>,
 
 	pub ibus_waiting: bool,
@@ -38,6 +40,8 @@ impl Context {
             phone_name: "".to_string(),
 
             rx_cache: vec![new_msg ; 0],
+
+            headlights_on: false,
 
             ibus_waiting: false,
             ibus_cache: IBusMessage {

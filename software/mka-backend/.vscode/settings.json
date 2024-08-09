@@ -1,6 +1,0 @@
-{
-	"files.associations": {
-		"socket.h": "c",
-		"stdint.h": "c"
-	}
-}

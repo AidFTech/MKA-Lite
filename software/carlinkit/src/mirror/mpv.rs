@@ -45,10 +45,9 @@ impl MpvVideo {
     
     pub fn stop(&mut self) {
         //Stop video playback.
-        self.set_minimize(true);
     }
     
-    pub fn set_minimize(&mut self, minimize: bool) {
+    /*pub fn set_minimize(&mut self, minimize: bool) {
         let pid = self.process.id();
         let wid_cmd = Command::new("xdotool").arg("search").arg("--pid").arg(format!("{}", pid)).output();
 
@@ -87,7 +86,7 @@ impl MpvVideo {
                 }
             }
         }
-    }
+    }*/
 }
 
 pub struct RdAudio {
@@ -102,26 +101,6 @@ pub struct RdAudio {
 
 impl RdAudio {
     pub fn new() -> Result<RdAudio, String> {
-        /*let mut ff_cmd = Command::new("mpv");
-        /*ff_cmd.arg("-f");
-        ff_cmd.arg("s16le");
-        ff_cmd.arg("-ac");
-        ff_cmd.arg("2");
-        ff_cmd.arg("-ar");
-        ff_cmd.arg("48000");
-        ff_cmd.arg("-nodisp");
-        ff_cmd.arg("-");*/
-        ff_cmd.arg("--video=no");
-        ff_cmd.arg("--untimed");
-        ff_cmd.arg("--demuxer-rawaudio-channels=2");
-        ff_cmd.arg("--demuxer-rawaudio-format=s16le");
-        ff_cmd.arg("--demuxer-rawaudio-rate=48000");
-        ff_cmd.arg("-");
-        match ff_cmd.stdin(Stdio::piped()).spawn() {
-            Err(e) => return Err(format!("Could not start audio FFPlay: {} ", e)),
-            Ok(process) => return Ok(FfAudio { process }),
-        }*/
-
         let (stream, handler) = OutputStream::try_default().unwrap();
         let sink = Sink::try_new(&handler).unwrap();
 
@@ -130,8 +109,6 @@ impl RdAudio {
     }
 
     pub fn send_audio(&mut self, data: &[u8]) {
-        /*let mut child_stdin = self.process.stdin.as_ref().unwrap();
-        let _ = child_stdin.write_all(&data);*/
         for i in 0..data.len() {
             self.data.push(data[i]);
         }
