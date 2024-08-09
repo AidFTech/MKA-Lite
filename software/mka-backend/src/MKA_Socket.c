@@ -37,12 +37,12 @@ void refreshSocketMessage(Socket_Message* message, const uint8_t opcode, const u
 //Create a new socket with server and client ports.
 MKA_Socket* createSocket() {
     remove(SOCKET_PATH);
-
+    umask(0);
     MKA_Socket* the_return;
     the_return = (MKA_Socket*) malloc(sizeof(MKA_Socket));
 
     the_return->server_socket = socket(AF_UNIX, SOCK_STREAM, 0);
-    
+
     struct sockaddr_un server_address;
     server_address.sun_family = AF_UNIX;
     strcpy(server_address.sun_path, SOCKET_PATH);

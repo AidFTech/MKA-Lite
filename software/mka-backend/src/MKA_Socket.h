@@ -5,6 +5,7 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/un.h>
 
 #include "IBus_Message.h"
@@ -30,7 +31,7 @@
 typedef struct Socket_Message {
     uint8_t opcode;
     uint16_t l;
-    
+
     uint8_t* data;
 } Socket_Message;
 
