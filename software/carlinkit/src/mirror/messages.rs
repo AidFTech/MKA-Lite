@@ -23,9 +23,12 @@ impl Clone for MirrorMessage {
 impl MirrorMessage {
     //Get a blank mirror message.
     pub fn new(message_type: u32) -> MirrorMessage {
-        return MirrorMessage{message_type: message_type, data: vec![0;0]};
+        return MirrorMessage{
+            message_type,
+            data: Vec::new(),
+        };
     }
-    
+
     //Read message header data and return whether successful.
     pub fn deserialize(&mut self, data: Vec<u8>) -> bool{
         if data.len() != HEADERSIZE {
@@ -50,7 +53,7 @@ impl MirrorMessage {
         }
 
         let data_len = u32::from_le_bytes(slice);
-        
+
         //Message type.
         for i in 0..4 {
             slice[i] = data[i+8];
@@ -140,15 +143,12 @@ impl MirrorMessage {
     }
 }
 
-//Get a mirror message from a USB header.
-pub fn get_mirror_message_from_header(data: Vec<u8>) -> Option<MirrorMessage> {
+// Get a mirror message from a USB header.
+pub fn mirror_message_from_header(data: Vec<u8>) -> MirrorMessage {
     let mut mirror = MirrorMessage::new(0);
+    mirror.deserialize(data);
+    return mirror;
 
-    if mirror.deserialize(data) {
-        return Some(mirror);
-    } else {
-        return None;
-    }
 }
 
 //Get a heartbeat mirror message.
@@ -163,7 +163,7 @@ pub fn get_heartbeat_message() -> MirrorMessage {
 pub fn get_open_message(width: u32, height: u32, video_frame_rate: u32, format: u32, packet_max: u32, ibox_version: u32, phone_work_mode: u32) -> MirrorMessage {
     let mut open_message = MirrorMessage {
         message_type: 1,
-        data: vec![0;0],
+        data: Vec::new(),
     };
 
     let width_slice = width.to_le_bytes();
@@ -208,7 +208,7 @@ pub fn get_open_message(width: u32, height: u32, video_frame_rate: u32, format: 
 pub fn get_carplay_command_message(command: u32) ->MirrorMessage {
     let mut command_message = MirrorMessage {
         message_type: 8,
-        data: vec![0;0],
+        data: Vec::new(),
     };
 
     let command_slice = command.to_le_bytes();
@@ -223,7 +223,7 @@ pub fn get_carplay_command_message(command: u32) ->MirrorMessage {
 pub fn get_manufacturer_info(mn_a: u32, mn_b: u32) -> MirrorMessage {
     let mut manufacturer_message = MirrorMessage {
         message_type: 20,
-        data: vec![0;0],
+        data: Vec::new(),
     };
 
     let slice_a = mn_a.to_le_bytes();
@@ -250,7 +250,7 @@ impl SendFileMessage {
     pub fn get_mirror_message(&mut self) -> MirrorMessage {
         let mut send_file_message = MirrorMessage {
             message_type: 153,
-            data: vec![0;0],
+            data: Vec::new(),
         };
 
         let full_filename = self.file_name.as_bytes();
@@ -294,7 +294,7 @@ pub fn get_sendstring_message(filename: String, filedata: String) -> SendFileMes
 pub fn get_sendint_message(filename: String, filedata: u32) -> SendFileMessage {
     let mut new_int_message = SendFileMessage {
         file_name: filename,
-        file_data: vec![0;0],
+        file_data: Vec::new(),
     };
 
     let new_int_bytes = filedata.to_le_bytes();
@@ -398,7 +398,7 @@ impl MetaDataMessage {
 
     pub fn get_mirror_message(&mut self) -> MirrorMessage {
         let mut byte_string = String::from("{");
-        
+
         for i in 0..self.string_vars.len() {
             byte_string += "\"";
             byte_string += self.string_vars[i].variable.as_str();

@@ -15,8 +15,7 @@ fn main() {
     let mutex_stream = Arc::new(Mutex::new(init_default_socket().unwrap()));
     let context: Context = Context::new();
     let mutex_context: Arc<Mutex<Context>> = Arc::new(Mutex::new(context));
-    let mut usb_conn = USBConnection::new(&mutex_context);
-    let mut mirror_handler = MirrorHandler::new(&mutex_context, &mut usb_conn, &mutex_stream);
+    let mut mirror_handler = MirrorHandler::new(&mutex_context, &mutex_stream, 800, 480);
 
     loop {
 		let mut new_context = match mutex_context.try_lock() {
@@ -39,19 +38,27 @@ fn main() {
             }
             Err(_) => {
 
-            }
+             }
         }
 
         if l > 0 {
             handle_socket_message(&mut new_context, socket_msg);
         }
 
-        if new_context.ibus_waiting {
+        let ibus_waiting = new_context.ibus_waiting;
+        let ibus_msg = new_context.ibus_cache.clone();
+
+        if ibus_waiting {
             new_context.ibus_waiting = false;
-            println!("{:X?}", new_context.ibus_cache.get_bytes());
-            //TODO: Interpret the IBus message.
         }
+
         std::mem::drop(new_context);
+
+        if ibus_waiting {
+            println!("{:X?}", ibus_msg.get_bytes());
+            mirror_handler.handle_ibus_message(ibus_msg);
+        }
+
         // TODO: Return a Result() and act on errors (like run being false)
         mirror_handler.process();
     }

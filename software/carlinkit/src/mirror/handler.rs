@@ -1,76 +1,92 @@
+use std::fs::File;
+use std::io::Read;
+use std::path::Path;
 use std::os::unix::net::UnixStream;
 use std::sync::{Arc, Mutex};
-use std::thread::{self, JoinHandle};
+use std::time::SystemTime;
 
-use mpv::MpvHandler;
-
-use crate::{Context, SocketMessage};
+use crate::{Context, IBusMessage, SocketMessage};
 use crate::USBConnection;
 
 use crate::ipc::*;
+use crate::ibus::*;
 
-use super::messages::get_carplay_command_message;
+use super::messages::{get_carplay_command_message, get_sendfile_message};
 use super::messages::get_manufacturer_info;
 use super::messages::get_open_message;
 use super::messages::get_sendint_message;
 use super::messages::get_sendstring_message;
+use super::messages::get_heartbeat_message;
 use super::messages::MirrorMessage;
 use super::messages::MetaDataMessage;
-use super::video_decoder::get_video_decoder;
+use super::mpv::{get_decode_type, MpvVideo};
+use super::mpv::RdAudio;
 
 pub struct MirrorHandler<'a> {
     context: &'a Arc<Mutex<Context>>,
-    usb_conn: &'a mut USBConnection<'a>,
-    stream: &'a Arc<Mutex<UnixStream>>,
+    usb_conn: USBConnection,
     run: bool,
     startup: bool,
-
-    video_thread_join_handle: Option<JoinHandle<()>>,
+    stream: &'a Arc<Mutex<UnixStream>>,
+    mpv_video: MpvVideo,
+    rd_audio: RdAudio,
+    nav_audio: RdAudio,
+    heartbeat_time: SystemTime,
 }
 
 impl<'a> MirrorHandler<'a> {
-    pub fn new(context: &'a Arc<Mutex<Context>>, usb_conn: &'a mut USBConnection <'a>, stream: &'a Arc<Mutex<UnixStream>>) -> MirrorHandler <'a> {
-        let mut handler = MirrorHandler {
-            context,
-            usb_conn,
-            stream,
-            run: true,
-            startup: false,
-            video_thread_join_handle: None,
-        };
+    pub fn new(context: &'a Arc<Mutex<Context>>, stream: &'a Arc<Mutex<UnixStream>>, w: u16, h: u16) -> MirrorHandler <'a> {
+        let mut mpv_found = 0;
+        let mut mpv_video: Option<MpvVideo> = None;
+        let mut rd_audio: Option<RdAudio> = None;
+        let mut nav_audio: Option<RdAudio> = None;
 
-        handler.video_thread_join_handle = Some(thread::spawn(move || {
-            let mut mpv_handler: Option<MpvHandler>;
-            let mut mpv_start = false;
-            while !mpv_start {
-                mpv_handler = get_video_decoder(720, 480, false, String::from("/run/mka_video.sock"));
-                //TODO: These parameters will probably need to be variable.
-                match mpv_handler {
-                    Some(_) => {
-                        mpv_start = true;
-                    }
-                    None => {
-                        continue;
-                    }
+        while mpv_found < 3 {
+            match MpvVideo::new(w, h) {
+                Err(e) => println!("Failed to Start Mpv: {}", e.to_string()),
+                Ok(mpv) => {
+                    mpv_video = Some(mpv);
+                    mpv_found += 1;
+                }
+            };
+
+            match RdAudio::new() {
+                Err(e) => println!("Failed to Start Rodio: {}", e.to_string()),
+                Ok(rodio) => {
+                    rd_audio = Some(rodio);
+                    mpv_found += 1;
                 }
             }
-            println!("Video connected!");
-
-            while handler.run {
-
+            
+            match RdAudio::new() {
+                Err(e) => println!("Failed to Start Rodio: {}", e.to_string()),
+                Ok(rodio) => {
+                    nav_audio = Some(rodio);
+                    mpv_found += 1;
+                }
             }
-        }));
+        }
 
-        return handler;
+        return MirrorHandler {
+            context,
+            usb_conn: USBConnection::new(),
+            run: true,
+            startup: false,
+            stream,
+            mpv_video: mpv_video.unwrap(),
+            rd_audio: rd_audio.unwrap(),
+            nav_audio: nav_audio.unwrap(),
+            heartbeat_time: SystemTime::now(),
+        };
     }
 
     pub fn process(&mut self) {
         if !self.run {
             return;
         }
-        if !self.usb_conn.get_running() {
+        if !self.usb_conn.connected {
             self.startup = false;
-            let run = self.usb_conn.connect_dongle();
+            let run = self.usb_conn.connect();
 
             if !run {
                 return; //TODO: Should we still run full_loop even if no dongle is connected?
@@ -80,26 +96,75 @@ impl<'a> MirrorHandler<'a> {
         } else if !self.startup {
             self.send_dongle_startup();
         }
-        self.usb_conn.full_loop(self.startup);
+        let mirror_message = self.usb_conn.read();
 
-        let mut rx_cache: Vec<MirrorMessage> = Vec::new();
+        match mirror_message {
+            Some(mirror_message) => self.interpret_message(&mirror_message),
+            None => ()
+        }
+        self.heartbeat();
+    }
 
-        match self.context.try_lock() {
-            Ok(mut ctx) => {
-                if ctx.rx_cache.len() > 0 {
-                    for m in 0..ctx.rx_cache.len() {
-                        rx_cache.push(ctx.rx_cache[m].clone());
-                    }
-                    ctx.rx_cache = Vec::new();
-                }
-            }
+    fn heartbeat(&mut self) {
+        if self.heartbeat_time.elapsed().unwrap().as_millis() > 2000 {
+            self.heartbeat_time = SystemTime::now();
+            self.usb_conn.write_message(get_heartbeat_message());
+        }
+    }
+
+    pub fn send_carplay_command(&mut self, command: u32) {
+        let msg = get_carplay_command_message(command);
+        self.usb_conn.write_message(msg);
+    }
+
+    pub fn handle_ibus_message(&mut self, ibus_msg: IBusMessage) {
+        let mut context = match self.context.try_lock() {
+            Ok(context) => context,
             Err(_) => {
-                println!("Mirror: Parameter list is locked.");
+                println!("IBus: Context locked.");
+                return;
             }
         };
 
-        for message in rx_cache {
-            self.interpret_message(&message);
+        if ibus_msg.l() >= 1 && ibus_msg.data[0] == 0x38 { //CDC request. Must reply.
+
+        } else if ibus_msg.sender == IBUS_DEVICE_BMBT { //From BMBT.
+            if ibus_msg.l() >= 2 && ibus_msg.data[0] == 0x49 && context.phone_active {
+                let clockwise = ibus_msg.data[1]&0x80 != 0;
+                let steps = ibus_msg.data[1]&0x7F;
+
+                let mut cmd: u32 = 100;
+                if clockwise {
+                    cmd = 101;
+                }
+
+                for _i in 0..steps {
+                    self.send_carplay_command(cmd);
+                }
+            } else if ibus_msg.l() >= 2 && ibus_msg.data[0] == 0x48 && context.phone_active {
+                let command = ibus_msg.data[1]&0x3F;
+                let state = (ibus_msg.data[1]&0xC0) >> 6;
+                if command == 0x5 && state == 0x2 { //Enter button.
+                    self.send_carplay_command(104);
+                    self.send_carplay_command(105);
+                } else if command == 0x8 && state == 0x2 { //Phone button released.
+                    self.send_carplay_command(106);
+                } else if command == 0x8 && state == 0x1 { //Phone button held.
+                    self.send_carplay_command(200);
+                }
+            }
+        } else if ibus_msg.sender == 0xD0 && ibus_msg.l() >= 2 && ibus_msg.data[0] == 0x5B {
+            //TODO: Do not run this command if the RLS is connected.
+            let last_headlights_on = context.headlights_on;
+            if ((ibus_msg.data[1]&0x01) != 0) != last_headlights_on {
+                let headlights_on = (ibus_msg.data[1]&0x01) != 0;
+                context.headlights_on = headlights_on;
+                if headlights_on {
+                    self.send_carplay_command(16);
+                } else {
+                    self.send_carplay_command(17);
+                }
+            }
         }
     }
 
@@ -111,12 +176,88 @@ impl<'a> MirrorHandler<'a> {
         self.usb_conn.write_message(dongle_message_dpi.get_mirror_message());
         self.usb_conn.write_message(dongle_message_android.get_mirror_message());
         self.usb_conn.write_message(dongle_message_open);
-        //TODO: Send icon messages.
+        
+        //Send airplay.conf...
+        let mut config_file = match File::open(Path::new("airplay.conf")) {
+            Ok(file) => file,
+            Err(err) => {
+                println!("Error opening file: {}", err);
+                return;
+            }
+        };
+        
+        let mut config_data = Vec::new();
+        match config_file.read_to_end(&mut config_data) {
+            Ok(_) => {
+
+            }
+            Err(err) => {
+                println!("Error reading file: {}", err);
+                return;
+            }
+        };
+        
+        let mut config_msg = get_sendfile_message("/etc/airplay.conf".to_string(), config_data);
+        self.usb_conn.write_message(config_msg.get_mirror_message());
+        
+        //Send BMW.png...
+        let mut android_icon_file = match File::open(Path::new("BMW.png")) {
+            Ok(file) => file,
+            Err(err) => {
+                println!("Error opening file: {}", err);
+                return;
+            }
+        };
+
+        let mut android_icon_data: Vec<u8> = Vec::new();
+        match android_icon_file.read_to_end(&mut android_icon_data) {
+            Ok(_) => {
+
+            }
+            Err(err) => {
+                println!("Error reading file: {}", err);
+                return;
+            }
+        };
+
+        let mut android_icon_msg = get_sendfile_message("/etc/oem_icon.png".to_string(), android_icon_data);
+        self.usb_conn.write_message(android_icon_msg.get_mirror_message());
+        
+        //Send BMW_icon.png...
+        let mut carplay_icon_file = match File::open(Path::new("BMW_icon.png")) {
+            Ok(file) => file,
+            Err(err) => {
+                println!("Error opening file: {}", err);
+                return;
+            }
+        };
+        
+        let mut carplay_icon_data: Vec<u8> = Vec::new();
+        match carplay_icon_file.read_to_end(&mut carplay_icon_data) {
+            Ok(_) => {
+
+            }
+            Err(err) => {
+                println!("Error reading file: {}", err);
+                return;
+            }
+        };
+        
+        let mut carplay_icon_msg = get_sendfile_message("/etc/icon_120x120.png".to_string(), carplay_icon_data);
+        self.usb_conn.write_message(carplay_icon_msg.get_mirror_message());
+        
+        //carplay_icon_msg = get_sendfile_message("/etc/icon_180x180.png".to_string(), carplay_icon_data);
+        //self.usb_conn.write_message(carplay_icon_msg.get_mirror_message());
+        
+        //carplay_icon_msg = get_sendfile_message("/etc/icon_256x256.png".to_string(), carplay_icon_data);
+        //self.usb_conn.write_message(carplay_icon_msg.get_mirror_message());
     }
 
     fn interpret_message(&mut self, message: &MirrorMessage) {
-        if message.message_type == 0x1 { //Open message.
+        if message.message_type == 0x1 {
+            // Open message.
             self.startup = true;
+            println!("Starting Carlinkit...");
 
             let startup_msg_manufacturer = get_manufacturer_info(0, 0);
             let mut startup_msg_night = get_sendint_message(String::from("/tmp/night_mode"), 0);
@@ -145,28 +286,26 @@ impl<'a> MirrorHandler<'a> {
             let mut msg_88 = MirrorMessage::new(0x88);
             msg_88.push_int(1);
             self.usb_conn.write_message(msg_88);
-
-            self.usb_conn.reset_heartbeat();
-        } else if message.message_type == 2 { //Plugged message.
+            self.heartbeat_time = SystemTime::now();
+        } else if message.message_type == 2 {
             //Phone connected.
             let data = message.clone().decode();
             if data.len() <= 0 {
                 return;
             }
-
+            println!("Phone Connected!");
             let phone_type = data[0];
             match self.context.try_lock() {
                 Ok(mut context) => {
                     context.phone_type = phone_type as u8;
                 }
                 Err(_) => {
-                    return;
                 }
             }
-            
+
             let mut socket_message = SocketMessage {
                 opcode: OPCODE_PHONE_TYPE,
-                data: vec![0;0],
+                data: Vec::new(),
             };
             socket_message.data.push(phone_type as u8);
 
@@ -178,11 +317,12 @@ impl<'a> MirrorHandler<'a> {
 
                 }
             }
+            
+            self.mpv_video.start();
 
-            self.usb_conn.start_video();
             //TODO: Start the decoders.
-        } else if message.message_type == 4 { //Unplugged message.
-            //Phone disconnected.
+        } else if message.message_type == 4 {
+            // Phone disconnected.
             let mut socket_message = SocketMessage {
                 opcode: OPCODE_PHONE_TYPE,
                 data: vec![0;0],
@@ -197,9 +337,45 @@ impl<'a> MirrorHandler<'a> {
 
                 }
             }
+            self.mpv_video.stop();
+
             //TODO: Stop the decoders.
-        } else if message.message_type == 25 || message.message_type == 42 { //Metadata message.
-            //Handle metadata.
+        } else if message.message_type == 6 { //Video.
+            let mut data = vec![0;0];
+            for i in 20..message.data.len() {
+                data.push(message.data[i]);
+            }
+            self.mpv_video.send_video(&data);
+        } else if message.message_type == 7 { //Audio.
+            if message.data.len() > 16 {
+                let (current_sample, current_bits, current_channel) = self.rd_audio.get_audio_profile();
+
+                let decode_num = u32::from_le_bytes([message.data[0], message.data[1], message.data[2], message.data[3]]);
+                let (new_sample, new_bits, new_channel) = get_decode_type(decode_num);
+
+                let audio_type = u32::from_le_bytes([message.data[8], message.data[9], message.data[10], message.data[11]]);
+
+                if new_sample != current_sample || new_bits != current_bits || new_channel != current_channel {
+                    if audio_type == 1 {
+                        self.rd_audio.set_audio_profile(new_sample, new_bits, new_channel);
+                    } else if audio_type == 2 {
+                        self.nav_audio.set_audio_profile(new_sample, new_bits, new_channel);
+                    }
+                }
+
+                let mut data = Vec::new();
+                for i in 12..message.data.len() {
+                    data.push(message.data[i]);
+                }
+
+                if audio_type == 1 {
+                    self.rd_audio.send_audio(&data);
+                } else if audio_type == 2 {
+                    self.nav_audio.send_audio(&data);
+                }
+            }
+        } else if message.message_type == 25 || message.message_type == 42 {
+            // Handle metadata.
             let meta_message = MetaDataMessage::from(message.clone());
             self.handle_metadata(meta_message);
         }
