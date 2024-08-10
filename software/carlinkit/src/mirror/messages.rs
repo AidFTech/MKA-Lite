@@ -109,17 +109,17 @@ impl MirrorMessage {
 
     //Return all encoded integers from the message.
     pub fn decode(self) -> Vec<u32> {
-        let limit = self.data.len()/4;
+        let limit = self.data.len();
         return self.decode_partial(limit);
     }
 
     //Return a range of encoded integers from the message.
     pub fn decode_partial(self, limit: usize) -> Vec<u32> {
-        let mut decoded_int: Vec<u32> = vec![0;0];
+        let mut decoded_int: Vec<u32> = Vec::new();
 
-        for b in 0..limit*4 {
-            let start = b*4;
-            if start + 4 >= limit*4 {
+        for b in (0..limit).step_by(4) {
+            let start = b;
+            if start + 4 > limit {
                 break;
             }
 

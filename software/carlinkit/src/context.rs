@@ -1,11 +1,6 @@
-use crate::IBusMessage;
-
-use crate::mirror::messages::MirrorMessage;
-
 pub struct Context {
 	pub bmbt_connected: bool,
 	pub audio_selected: bool,
-	pub mka_active: bool,
 	pub phone_active: bool,
 	pub fullscreen: bool,
 	pub playing: bool,
@@ -13,25 +8,22 @@ pub struct Context {
 	pub phone_type: u8,
 	pub phone_name: String,
 
+    pub song_title: String,
+    pub artist: String,
+    pub album: String,
+    pub app: String,
+
+    pub version: i8,
+
     pub headlights_on: bool,
-
-	pub rx_cache: Vec<MirrorMessage>,
-
-	pub ibus_waiting: bool,
-	pub ibus_cache: IBusMessage,
 }
 
 impl Context {
     pub fn new() -> Self {
-        let new_msg = MirrorMessage {
-            message_type: 0,
-            data: vec![0;0],
-        };
 
         return Self {
             bmbt_connected: false,
             audio_selected: false,
-            mka_active: true,
             phone_active: true,
             fullscreen: false,
             playing: false,
@@ -39,16 +31,14 @@ impl Context {
             phone_type: 0,
             phone_name: "".to_string(),
 
-            rx_cache: vec![new_msg ; 0],
+            song_title: "".to_string(),
+            artist: "".to_string(),
+            album: "".to_string(),
+            app: "".to_string(),
+
+            version: -1,
 
             headlights_on: false,
-
-            ibus_waiting: false,
-            ibus_cache: IBusMessage {
-                sender: 0,
-                receiver: 0,
-                data: Vec::new(),
-            }
         };
     }
 }

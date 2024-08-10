@@ -1,6 +1,8 @@
 //IBus implementation
 
-use serialport::{new, Parity, SerialPort};
+use std::time::{Duration, Instant};
+
+use serialport::{Parity, SerialPort, SerialPortBuilder};
 
 //From BlueBus:
 // Devices
@@ -34,6 +36,54 @@ pub const IBUS_DEVICE_RLS: u8 = 0xE8; /* Rain Light Sensor */
 pub const IBUS_DEVICE_VM: u8 = 0xED; /* Video Module */
 pub const IBUS_DEVICE_BMBT: u8 = 0xF0; /* On-board monitor */
 pub const IBUS_DEVICE_LOC: u8 = 0xFF; /* Local */
+
+// CDC Commands
+pub const IBUS_CDC_CMD_GET_STATUS: u8 = 0x00;
+pub const IBUS_CDC_CMD_STOP_PLAYING: u8 = 0x01;
+pub const IBUS_CDC_CMD_PAUSE_PLAYING: u8 = 0x02;
+pub const IBUS_CDC_CMD_START_PLAYING: u8 = 0x03;
+pub const IBUS_CDC_CMD_CHANGE_TRACK: u8 = 0x0A;
+pub const IBUS_CDC_CMD_SEEK: u8 = 0x04;
+pub const IBUS_CDC_CMD_CHANGE_TRACK_BLAUPUNKT: u8 = 0x05;
+pub const IBUS_CDC_CMD_CD_CHANGE: u8 = 0x06;
+pub const IBUS_CDC_CMD_SCAN: u8 = 0x07;
+pub const IBUS_CDC_CMD_RANDOM_MODE: u8 = 0x08;
+// CDC Status
+pub const IBUS_CDC_STAT_STOP: u8 = 0x00;
+pub const IBUS_CDC_STAT_PAUSE: u8 = 0x01;
+pub const IBUS_CDC_STAT_PLAYING: u8 = 0x02;
+pub const IBUS_CDC_STAT_FAST_FWD: u8 = 0x03;
+pub const IBUS_CDC_STAT_FAST_REV: u8 = 0x04;
+pub const IBUS_CDC_STAT_END: u8 = 0x07;
+pub const IBUS_CDC_STAT_LOADING: u8 = 0x08;
+
+//Radio Commands
+pub const IBUS_CMD_RAD_SCREEN_MODE_UPDATE: u8 = 0x46;
+pub const IBUS_CMD_RAD_UPDATE_MAIN_AREA: u8 = 0x23;
+pub const IBUS_CMD_RAD_C43_SCREEN_UPDATE: u8 = 0x21;
+pub const IBUS_CMD_RAD_C43_SET_MENU_MODE: u8 = 0xC0;
+pub const IBUS_CMD_RAD_WRITE_MID_DISPLAY: u8 = 0x23;
+pub const IBUS_CMD_RAD_WRITE_MID_MENU: u8 = 0x21;
+
+//GT Commands
+pub const IBUS_CMD_GT_WRITE_NO_CURSOR: u8 = 0x21;
+
+pub const IBUS_CMD_GT_CHANGE_UI_REQ: u8 = 0x20;
+pub const IBUS_CMD_GT_CHANGE_UI_RESP: u8 = 0x21;
+pub const IBUS_CMD_GT_WRITE_RESPONSE: u8 = 0x22;
+pub const IBUS_CMD_GT_WRITE_TITLE: u8 = 0x23;
+pub const IBUS_CMD_GT_MENU_SELECT: u8 = 0x31;
+pub const IBUS_CMD_GT_DISPLAY_RADIO_MENU: u8 = 0x37;
+pub const IBUS_CMD_GT_SCREEN_MODE_SET: u8 = 0x45;
+pub const IBUS_CMD_GT_RAD_TV_STATUS: u8 = 0x4E;
+pub const IBUS_CMD_GT_MONITOR_CONTROL: u8 = 0x4F;
+pub const IBUS_CMD_GT_WRITE_INDEX: u8 = 0x60;
+pub const IBUS_CMD_GT_WRITE_INDEX_TMC: u8 = 0x61;
+pub const IBUS_CMD_GT_WRITE_ZONE: u8 = 0x62;
+pub const IBUS_CMD_GT_WRITE_STATIC: u8 = 0x63;
+pub const IBUS_CMD_GT_TELEMATICS_COORDINATES: u8 = 0xA2;
+pub const IBUS_CMD_GT_TELEMATICS_LOCATION: u8 = 0xA4;
+pub const IBUS_CMD_GT_WRITE_WITH_CURSOR: u8 = 0xA5;
 
 pub struct IBusMessage {
     pub sender: u8,
@@ -139,16 +189,15 @@ pub struct IBusHandler {
 impl IBusHandler {
     //Get an IBus handler from a port name.
     pub fn new(port_str: String) -> Option<IBusHandler> {
-        let port_builder = serialport::new(port_str, 9600).parity(Parity::Even);
-        match port_builder.open() {
-            Ok(new_port) => {
-                return Some(IBusHandler {port: new_port, byte_cache: Vec::new()});
-            }
+        let port_builder = serialport::new(port_str, 9600).timeout(Duration::from_millis(2)).parity(Parity::Even);
+        let new_port = match port_builder.open() {
+            Ok(new_port) => new_port,
             Err(err) => {
                 println!("Error: {}", err);
                 return None;
             }
         };
+        return Some(IBusHandler {port: new_port, byte_cache: Vec::new()});
     }
 
     //Send an IBus message.
@@ -187,7 +236,7 @@ impl IBusHandler {
     pub fn read_ibus_message(&mut self) -> Option<IBusMessage> {
         if self.byte_cache.len() >= 2 {
             if self.byte_cache.len() - 2 >= self.byte_cache[1] as usize {
-                let mut l = self.byte_cache[1] as usize + 4;
+                let mut l = self.byte_cache[1] as usize + 2;
                 
                 if l <= self.byte_cache.len() {
 
@@ -213,7 +262,7 @@ impl IBusHandler {
             }
         }
 
-        let byte_count = match self.port.bytes_to_read() {
+        let mut byte_count = match self.port.bytes_to_read() {
             Ok(l) => l,
             Err(_) => {
                 return None;
@@ -224,30 +273,44 @@ impl IBusHandler {
             return None;
         }
 
-        let mut byte_buf = vec![0;byte_count as usize];
-        match self.port.read(&mut byte_buf) {
-            Ok(_) => {
+        let ib_wait = Duration::from_millis(2);
+        let mut start = Instant::now();
 
+        while Instant::now() - start < ib_wait {
+            let new_byte_count = match self.port.bytes_to_read() {
+                Ok(new_byte_count) => new_byte_count,
+                Err(_) => {
+                    break;
+                }
+            };
+            if new_byte_count > byte_count {
+                byte_count = new_byte_count;
+                start = Instant::now();
             }
+        }
+
+        let mut byte_buf = vec![0;byte_count as usize + 256]; //Buffering it- is there a way around this?
+        let bytes_read = match self.port.read(&mut byte_buf) {
+            Ok(l) => l,
             Err(err) => {
                 println!("Read error: {}", err);
                 return None;
             }
-        }
+        };
 
         let mut msg_buf = Vec::new();
-        for i in 0..(byte_buf[1] as usize + 4) {
+        for i in 0..(byte_buf[1] as usize + 2) {
             msg_buf.push(byte_buf[i]);
         }
 
-        let start = byte_buf[1] as usize + 4;
+        let start = byte_buf[1] as usize + 2;
         for _i in 0..start {
-            msg_buf.remove(0);
+            byte_buf.remove(0);
         }
 
-        if msg_buf.len() > 0 {
-            for i in 0..msg_buf.len() {
-                self.byte_cache.push(msg_buf[i]);
+        if bytes_read as i64 - start as i64 > 0 {
+            for i in 0..bytes_read as i64 - start as i64 {
+                self.byte_cache.push(byte_buf[i as usize]);
             }
         }
 
@@ -256,6 +319,19 @@ impl IBusHandler {
             return Some(new_message);
         } else {
             return None;
+        }
+    }
+
+    //Get the number of bytes available.
+    pub fn bytes_available(&mut self) -> u32 {
+        if self.byte_cache.len() > 0 {
+            return self.byte_cache.len() as u32;
+        } else {
+            let l = match self.port.bytes_to_read() {
+                Ok(l) => l,
+                Err(_) => 0,
+            };
+            return l;
         }
     }
 }

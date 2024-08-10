@@ -1,4 +1,3 @@
-use core::str;
 use std::io::Cursor;
 use std::io::Write;
 use std::process::Command;

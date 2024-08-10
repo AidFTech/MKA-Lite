@@ -1,63 +1,58 @@
-mod ipc;
 mod ibus;
 mod context;
 mod mirror;
 
+use std::env;
 use std::sync::{Arc, Mutex};
 
-use ipc::*;
 use ibus::*;
 use context::Context;
 use mirror::handler::MirrorHandler;
 use mirror::usb::USBConnection;
 
 fn main() {
-    let mutex_stream = Arc::new(Mutex::new(init_default_socket().unwrap()));
+    let args = env::args();
+    if args.len() < 2 {
+        println!("A serial port argument is required.");
+        return;
+    }
+
+    let mut ibus_handler = None;
+    for arg in args {
+        if arg.contains("./carlinkit") { //TODO: Is there another way to check? The ./carlinkit is counted as an argument.
+            continue;
+        }
+
+        ibus_handler = IBusHandler::new(arg.clone());
+
+        match ibus_handler {
+            Some(ref _ibus_handler) => {
+                println!("Successfully opened {}!", arg.clone());
+                break;
+            }
+            None => {
+                println!("Could not connect to {}.", arg);
+                //Continue the loop.
+            }
+        }
+    }
+
+    match ibus_handler {
+        Some(ref _ibus_handler) => {
+            //Continue the program.
+        }
+        None => {
+            println!("Could not open the IBus handler.");
+            return;
+        }
+    }
+
     let context: Context = Context::new();
     let mutex_context: Arc<Mutex<Context>> = Arc::new(Mutex::new(context));
-    let mut mirror_handler = MirrorHandler::new(&mutex_context, &mutex_stream, 800, 480);
+    let mut mirror_handler = MirrorHandler::new(&mutex_context, ibus_handler.unwrap(), 800, 480);
 
     loop {
-		let mut new_context = match mutex_context.try_lock() {
-			Ok(new_context) => new_context,
-			Err(_) => {
-				println!("Main: Parameter list is locked.");
-				continue;
-			}
-		};
-
-        let mut socket_msg = SocketMessage {
-            opcode: 0,
-            data: Vec::new(),
-        };
-
-        let mut l = 0;
-        match mutex_stream.try_lock() {
-            Ok(mut stream) => {
-                l = read_socket_message(&mut stream, &mut socket_msg);
-            }
-            Err(_) => {
-
-             }
-        }
-
-        if l > 0 {
-            handle_socket_message(&mut new_context, socket_msg);
-        }
-
-        let ibus_waiting = new_context.ibus_waiting;
-        let ibus_msg = new_context.ibus_cache.clone();
-
-        if ibus_waiting {
-            new_context.ibus_waiting = false;
-        }
-
-        std::mem::drop(new_context);
-
-        if ibus_waiting {
-            println!("{:X?}", ibus_msg.get_bytes());
-            mirror_handler.handle_ibus_message(ibus_msg);
-        }
+        mirror_handler.check_ibus();
 
         // TODO: Return a Result() and act on errors (like run being false)
         mirror_handler.process();
