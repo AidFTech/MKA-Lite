@@ -85,6 +85,8 @@ pub const IBUS_CMD_GT_TELEMATICS_COORDINATES: u8 = 0xA2;
 pub const IBUS_CMD_GT_TELEMATICS_LOCATION: u8 = 0xA4;
 pub const IBUS_CMD_GT_WRITE_WITH_CURSOR: u8 = 0xA5;
 
+const IBUS_WAIT: u64 = 5;
+
 pub struct IBusMessage {
     pub sender: u8,
     pub receiver: u8,
@@ -189,7 +191,7 @@ pub struct IBusHandler {
 impl IBusHandler {
     //Get an IBus handler from a port name.
     pub fn new(port_str: String) -> Option<IBusHandler> {
-        let port_builder = serialport::new(port_str, 9600).timeout(Duration::from_millis(2)).parity(Parity::Even);
+        let port_builder = serialport::new(port_str, 9600).timeout(Duration::from_millis(IBUS_WAIT)).parity(Parity::Even);
         let new_port = match port_builder.open() {
             Ok(new_port) => new_port,
             Err(err) => {
@@ -220,13 +222,16 @@ impl IBusHandler {
             }
         }
         
-        //Write the data.
-        match self.port.write(&data) {
-            Ok(_) => {
+        let _ = self.port.set_timeout(Duration::from_millis(300));
 
+        //Write the data.
+        match self.port.write_all(&data) {
+            Ok(_) => {
+                let _ = self.port.set_timeout(Duration::from_millis(IBUS_WAIT));
             }
             Err(err) => {
                 println!("IBus write error: {}", err);
+                let _ = self.port.set_timeout(Duration::from_millis(IBUS_WAIT));
                 return;
             }
         };
@@ -269,12 +274,23 @@ impl IBusHandler {
             }
         };
 
+        let ib_wait = Duration::from_millis(IBUS_WAIT);
+        let mut start = Instant::now();
+
+        while byte_count < 4 && Instant::now() - start < ib_wait {
+            byte_count = match self.port.bytes_to_read() {
+                Ok(l) => l,
+                Err(_) => {
+                    return None;
+                }
+            };
+        }
+
         if byte_count < 4 {
             return None;
         }
-
-        let ib_wait = Duration::from_millis(2);
-        let mut start = Instant::now();
+        
+        start = Instant::now();
 
         while Instant::now() - start < ib_wait {
             let new_byte_count = match self.port.bytes_to_read() {

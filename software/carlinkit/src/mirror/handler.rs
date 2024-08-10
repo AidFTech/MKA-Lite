@@ -161,15 +161,15 @@ impl<'a> MirrorHandler<'a> {
             } else if ibus_msg.data[1] == IBUS_CDC_CMD_STOP_PLAYING { //Stop the MKA.
                 let cd_msg = get_cd_status_message(IBUS_CDC_STAT_STOP, sender);
                 self.ibus_handler.write_ibus_message(cd_msg);
-                context.audio_selected = false;
-
-                self.send_carplay_command(202);
+                
+                std::mem::drop(context);
+                self.set_selected(false);
             } else if ibus_msg.data[1] == IBUS_CDC_CMD_START_PLAYING || ibus_msg.data[1] == IBUS_CDC_CMD_PAUSE_PLAYING { //Start the MKA.
                 let cd_msg = get_cd_status_message(IBUS_CDC_STAT_PLAYING, sender);
                 self.ibus_handler.write_ibus_message(cd_msg);
-                context.audio_selected = true;
 
-                self.send_carplay_command(201);
+                std::mem::drop(context);
+                self.set_selected(true);
             } else { //N/A message.
                 if selected {
                     let cd_msg = get_cd_status_message(IBUS_CDC_STAT_END, sender);
@@ -208,20 +208,8 @@ impl<'a> MirrorHandler<'a> {
                 }
 
                 if sent_22 {
-                    //Unlock the context.
                     std::mem::drop(context);
-
                     self.send_radio_screen_update();
-
-                    //Get the context back.
-                    context = match self.context.try_lock() {
-                        Ok(context) => context,
-                        Err(_) => {
-                            println!("IBus: Context locked.");
-                            return;
-                        }
-                    };
-                    let _ = context.version;
                 }
             } else if !context.audio_selected {
                 //TODO: Header overlay.
@@ -462,10 +450,70 @@ impl<'a> MirrorHandler<'a> {
             }
         };
 
+        let mut phone_name_changed = false;
+        let mut song_title_changed = false;
+        let mut artist_changed = false;
+        let mut album_changed = false;
+        let mut app_changed = false;
+
         for string_var in meta_message.string_vars {
             if string_var.variable == "MDModel" {
                 context.phone_name = string_var.value;
+                phone_name_changed = true;
+            } else if string_var.variable == "MediaSongName" {
+                context.song_title = string_var.value;
+                song_title_changed = true;
+            } else if string_var.variable == "MediaArtistName" {
+                context.artist = string_var.value;
+                artist_changed = true;
+            } else if string_var.variable == "MediaAlbumName" {
+                context.album = string_var.value;
+                album_changed = true;
+            } else if string_var.variable == "MediaAPPName" {
+                context.app = string_var.value;
+                app_changed = true;
+
+                if !song_title_changed {
+                    context.song_title = "".to_string();
+                    song_title_changed = true;
+                }
+                if !artist_changed {
+                    context.artist = "".to_string();
+                    artist_changed = true;
+                }
+                if !album_changed {
+                    context.album = "".to_string();
+                    album_changed = true;
+                }
             }
+        }
+
+        if context.audio_selected && phone_name_changed {
+            std::mem::drop(context);
+            self.send_radio_screen_update();
+        } else if context.audio_selected && (song_title_changed || artist_changed || album_changed || app_changed) {
+            self.send_all_radio_center_text(context.version, true, context.song_title.clone(), context.artist.clone(), context.album.clone(), context.app.clone());
+        }
+    }
+
+    //Set whether the MKA is the selected source.
+    fn set_selected(&mut self, selected: bool) {
+        let mut context = match self.context.try_lock() {
+            Ok(context) => context,
+            Err(_) => {
+                println!("Set Selected: Context locked.");
+                return;
+            }
+        };
+
+        context.audio_selected = selected;
+        std::mem::drop(context);
+
+        if selected {
+            self.send_carplay_command(201);
+            self.send_radio_screen_update();
+        } else {
+            self.send_carplay_command(202);
         }
     }
 
@@ -474,7 +522,7 @@ impl<'a> MirrorHandler<'a> {
         let context = match self.context.try_lock() {
             Ok(context) => context,
             Err(_) => {
-                println!("IBus: Context locked.");
+                println!("Screen Update: Context locked.");
                 return;
             }
         };
@@ -595,7 +643,7 @@ impl<'a> MirrorHandler<'a> {
 
         let text_change_message = IBusMessage {
             sender: IBUS_DEVICE_RAD,
-            receiver: IBUS_DEVICE_CDC,
+            receiver: IBUS_DEVICE_GT,
             data: text_data,
         };
 
