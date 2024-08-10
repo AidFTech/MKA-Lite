@@ -337,17 +337,43 @@ impl MetaDataMessage {
             int_vars: Vec::new(),
         };
 
+        let mut msg_bytes = original_message.data.clone();
+
         let mut msg_string = match String::from_utf8(original_message.data) {
             Ok(msg_string) => msg_string,
-            Err(_) => String::from(""), //TODO: Get what you can.
+            Err(_) => {
+                return meta_message;
+            }
+            //TODO: Get what you can from the actual string?
         };
 
-        if msg_string.starts_with("{") {
-            msg_string = msg_string[1..msg_string.len()].to_string();
+        if msg_string.starts_with("{") || (msg_bytes.len() > 0 && msg_bytes[0] == 0x7B)  {
+            msg_string.remove(0);
+        } else {
+            let mut bracket_removed = false;
+            let i = 0;
+            while !bracket_removed && msg_bytes.len() > 0 {
+                if msg_bytes[i] == 0x7B {
+                    msg_bytes.remove(0);
+                    bracket_removed = true;
+                    break;
+                } else {
+                    msg_bytes.remove(0);
+                }
+            }
+
+            if bracket_removed {
+                msg_string = match String::from_utf8(msg_bytes) {
+                    Ok(msg_string) => msg_string,
+                    Err(_) => {
+                        return meta_message;
+                    }
+                }
+            }
         }
 
-        if msg_string.ends_with("}") && msg_string.len() > 1 {
-            msg_string = msg_string[0..msg_string.len() - 1].to_string();
+        if msg_string.len() > 1 && (msg_string.ends_with("}")) {
+            msg_string.remove(msg_string.len() - 1);
         }
 
         let msg_split = msg_string.split(",");

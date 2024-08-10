@@ -2,7 +2,7 @@
 
 use std::time::{Duration, Instant};
 
-use serialport::{Parity, SerialPort, SerialPortBuilder};
+use serialport::{Parity, SerialPort};
 
 //From BlueBus:
 // Devices
@@ -222,7 +222,9 @@ impl IBusHandler {
             }
         }
         
-        let _ = self.port.set_timeout(Duration::from_millis(300));
+        //let start = Instant::now();
+        let send_timeout = (data.len()*10*1000 / 9600) as u64 + IBUS_WAIT;
+        let _ = self.port.set_timeout(Duration::from_millis(send_timeout));
 
         //Write the data.
         match self.port.write_all(&data) {
@@ -235,6 +237,15 @@ impl IBusHandler {
                 return;
             }
         };
+        
+        match self.port.flush() {
+            Ok(_) => {
+            }
+            Err(err) => {
+                println!("IBus write error: {}", err);
+                return;
+            }
+        };
     }
 
     //Read the IBus port.
@@ -242,6 +253,7 @@ impl IBusHandler {
         if self.byte_cache.len() >= 2 {
             if self.byte_cache.len() - 2 >= self.byte_cache[1] as usize {
                 let mut l = self.byte_cache[1] as usize + 2;
+                let mut returned_msg = None;
                 
                 if l <= self.byte_cache.len() {
 
@@ -252,7 +264,7 @@ impl IBusHandler {
 
                     let cached_msg = get_ibus_message(cached_data);
                     if cached_msg.l() > 0 {
-                        return Some(cached_msg);
+                        returned_msg = Some(cached_msg);
                     }
                     //If message was invalid, we just see what is waiting.   
                 } else {
@@ -262,6 +274,8 @@ impl IBusHandler {
                 for _i in 0..l {
                     self.byte_cache.remove(0);
                 }
+
+                return returned_msg;
             } else {
                 self.byte_cache.clear();
             }
@@ -309,7 +323,7 @@ impl IBusHandler {
         let bytes_read = match self.port.read(&mut byte_buf) {
             Ok(l) => l,
             Err(err) => {
-                println!("Read error: {}", err);
+                println!("IBus read error: {}", err);
                 return None;
             }
         };

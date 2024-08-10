@@ -125,7 +125,7 @@ impl<'a> MirrorHandler<'a> {
     }
 
     pub fn check_ibus(&mut self) {
-        if self.ibus_handler.bytes_available() > 0 {
+        if self.ibus_handler.bytes_available() >= 4 {
             let ibus_msg = match self.ibus_handler.read_ibus_message() {
                 Some(ibus_msg) => ibus_msg,
                 None => {
@@ -146,7 +146,13 @@ impl<'a> MirrorHandler<'a> {
             }
         };
 
-        if ibus_msg.l() >= 2 && ibus_msg.receiver == IBUS_DEVICE_CDC && ibus_msg.data[0] == 0x38 { //CDC request. Must reply.
+        if ibus_msg.l() >= 1 && ibus_msg.receiver == IBUS_DEVICE_CDC && ibus_msg.data[0] == 0x1 {
+            self.ibus_handler.write_ibus_message(IBusMessage {
+                sender: IBUS_DEVICE_CDC,
+                receiver: ibus_msg.sender,
+                data: [0x2, 0x0].to_vec(),
+            });
+        } else if ibus_msg.l() >= 2 && ibus_msg.receiver == IBUS_DEVICE_CDC && ibus_msg.data[0] == 0x38 { //CDC request. Must reply.
             let selected = context.audio_selected;
             let sender = ibus_msg.sender;
 
@@ -382,9 +388,11 @@ impl<'a> MirrorHandler<'a> {
             }
             println!("Phone Connected!");
             let phone_type = data[0];
+            let mut selected = false;
             match self.context.try_lock() {
                 Ok(mut context) => {
                     context.phone_type = phone_type as u8;
+                    selected = context.audio_selected;
                 }
                 Err(_) => {
                 }
@@ -393,10 +401,33 @@ impl<'a> MirrorHandler<'a> {
             self.mpv_video.start();
             self.set_phone_light(PHONE_LED_GREEN);
 
+            if selected {
+                self.send_radio_screen_update();
+            }
+
         } else if message.message_type == 4 {
             // Phone disconnected.
             self.mpv_video.stop();
             self.set_phone_light(PHONE_LED_RED);
+
+            let mut selected = false;
+            match self.context.try_lock() {
+                Ok(mut context) => {
+                    context.phone_type = 0;
+                    context.phone_name = "".to_string();
+                    context.song_title = "".to_string();
+                    context.artist = "".to_string();
+                    context.album = "".to_string();
+                    context.app = "".to_string();
+                    selected = context.audio_selected;
+                }
+                Err(_) => {
+                }
+            }
+
+            if selected {
+                self.send_radio_screen_update();
+            }
 
         } else if message.message_type == 6 { //Video.
             let mut data = vec![0;0];
@@ -517,6 +548,14 @@ impl<'a> MirrorHandler<'a> {
         }
     }
 
+    pub fn send_cd_ping(&mut self) {
+        self.ibus_handler.write_ibus_message(IBusMessage {
+            sender: IBUS_DEVICE_CDC,
+            receiver: IBUS_DEVICE_GLO,
+            data: [0x2, 0x1].to_vec(),
+        });
+    }
+
     //Send all radio screen update messages.
     fn send_radio_screen_update(&mut self) {
         let context = match self.context.try_lock() {
@@ -580,9 +619,10 @@ impl<'a> MirrorHandler<'a> {
         self.ibus_handler.write_ibus_message(text_msg);
     }
 
+    //Send a radio subtitle change message. 
     fn send_radio_subtitle_text(&mut self, text: String, zone: u8, refresh: bool) {
         let mut text_data = Vec::new();
-        text_data.push(IBUS_CMD_GT_WRITE_TITLE);
+        text_data.push(IBUS_CMD_GT_WRITE_WITH_CURSOR);
         text_data.push(0x62);
         text_data.push(0x1);
         text_data.push(0x40 | (zone&0xF));

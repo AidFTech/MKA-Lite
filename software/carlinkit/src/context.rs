@@ -36,7 +36,7 @@ impl Context {
             album: "".to_string(),
             app: "".to_string(),
 
-            version: -1,
+            version: 5,
 
             headlights_on: false,
         };

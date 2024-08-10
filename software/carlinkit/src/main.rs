@@ -4,6 +4,7 @@ mod mirror;
 
 use std::env;
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 use ibus::*;
 use context::Context;
@@ -47,14 +48,23 @@ fn main() {
         }
     }
 
+    let mut ping_timer = Instant::now();
+
     let context: Context = Context::new();
     let mutex_context: Arc<Mutex<Context>> = Arc::new(Mutex::new(context));
     let mut mirror_handler = MirrorHandler::new(&mutex_context, ibus_handler.unwrap(), 800, 480);
+
+    mirror_handler.send_cd_ping();
 
     loop {
         mirror_handler.check_ibus();
 
         // TODO: Return a Result() and act on errors (like run being false)
         mirror_handler.process();
+
+        if Instant::now() - ping_timer >= Duration::from_millis(20000) {
+            ping_timer = Instant::now();
+            mirror_handler.send_cd_ping();
+        }
     }
 }
