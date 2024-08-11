@@ -222,18 +222,13 @@ impl IBusHandler {
             }
         }
         
-        //let start = Instant::now();
-        let send_timeout = (data.len()*10*1000 / 9600) as u64 + IBUS_WAIT;
-        let _ = self.port.set_timeout(Duration::from_millis(send_timeout));
 
         //Write the data.
         match self.port.write_all(&data) {
             Ok(_) => {
-                let _ = self.port.set_timeout(Duration::from_millis(IBUS_WAIT));
             }
             Err(err) => {
                 println!("IBus write error: {}", err);
-                let _ = self.port.set_timeout(Duration::from_millis(IBUS_WAIT));
                 return;
             }
         };
