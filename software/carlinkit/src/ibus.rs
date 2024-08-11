@@ -185,13 +185,12 @@ pub fn get_ibus_message(data: Vec<u8>) -> IBusMessage {
 
 pub struct IBusHandler {
     port: Box<dyn SerialPort>,
-    byte_cache: Vec<u8>
 }
 
 impl IBusHandler {
     //Get an IBus handler from a port name.
     pub fn new(port_str: String) -> Option<IBusHandler> {
-        let port_builder = serialport::new(port_str, 9600).timeout(Duration::from_millis(IBUS_WAIT)).parity(Parity::Even);
+        let port_builder = serialport::new(port_str, 9600).parity(Parity::Even);
         let new_port = match port_builder.open() {
             Ok(new_port) => new_port,
             Err(err) => {
@@ -199,29 +198,14 @@ impl IBusHandler {
                 return None;
             }
         };
-        return Some(IBusHandler {port: new_port, byte_cache: Vec::new()});
+        return Some(IBusHandler {port: new_port});
     }
 
     //Send an IBus message.
     pub fn write_ibus_message(&mut self, message: IBusMessage) {
         let data = message.get_bytes();
 
-        //Make sure there is nothing waiting to be read.
-        let pre_byte_count = match self.port.bytes_to_read() {
-            Ok(l) => l,
-            Err(_) => {
-                return;
-            }
-        };
-        if pre_byte_count > 0 {
-            let mut buf = vec![0;pre_byte_count as usize];
-            let _ = self.port.read(&mut buf);
-
-            for d in buf {
-                self.byte_cache.push(d);
-            }
-        }
-        
+        //let _ = self.port.set_timeout(Duration::from_millis(0));
 
         //Write the data.
         match self.port.write_all(&data) {
@@ -229,6 +213,7 @@ impl IBusHandler {
             }
             Err(err) => {
                 println!("IBus write error: {}", err);
+                //let _ = self.port.set_timeout(Duration::from_millis(IBUS_WAIT));
                 return;
             }
         };
@@ -238,51 +223,16 @@ impl IBusHandler {
             }
             Err(err) => {
                 println!("IBus write error: {}", err);
+                //let _ = self.port.set_timeout(Duration::from_millis(IBUS_WAIT));
                 return;
             }
         };
+
+        //let _ = self.port.set_timeout(Duration::from_millis(IBUS_WAIT));
     }
 
     //Read the IBus port.
     pub fn read_ibus_message(&mut self) -> Option<IBusMessage> {
-        if self.byte_cache.len() >= 2 {
-            if self.byte_cache.len() - 2 >= self.byte_cache[1] as usize {
-                let mut l = self.byte_cache[1] as usize + 2;
-                let mut returned_msg = None;
-                
-                if l <= self.byte_cache.len() {
-
-                    let mut cached_data = Vec::new();
-                    for i in 0..l {
-                        cached_data.push(self.byte_cache[i]);
-                    }
-
-                    let cached_msg = get_ibus_message(cached_data);
-                    if cached_msg.l() > 0 {
-                        returned_msg = Some(cached_msg);
-                    }
-                    //If message was invalid, we just see what is waiting.   
-                } else {
-                    l = self.byte_cache.len();
-                }
-                
-                for _i in 0..l {
-                    self.byte_cache.remove(0);
-                }
-
-                match returned_msg {
-                    Some(returned_msg) => {
-                        return Some(returned_msg);
-                    }
-                    None => {
-                        //Continue.
-                    }
-                }
-            } else {
-                self.byte_cache.clear();
-            }
-        }
-
         let mut byte_count = match self.port.bytes_to_read() {
             Ok(l) => l,
             Err(_) => {
@@ -290,23 +240,12 @@ impl IBusHandler {
             }
         };
 
-        let ib_wait = Duration::from_millis(IBUS_WAIT);
-        let mut start = Instant::now();
-
-        while byte_count < 4 && Instant::now() - start < ib_wait {
-            byte_count = match self.port.bytes_to_read() {
-                Ok(l) => l,
-                Err(_) => {
-                    return None;
-                }
-            };
-        }
-
-        if byte_count < 4 {
+        if byte_count < 2 {
             return None;
         }
-        
-        start = Instant::now();
+
+        let ib_wait = Duration::from_millis(IBUS_WAIT);
+        let mut start = Instant::now();
 
         while Instant::now() - start < ib_wait {
             let new_byte_count = match self.port.bytes_to_read() {
@@ -321,34 +260,78 @@ impl IBusHandler {
             }
         }
 
-        let mut byte_buf = vec![0;byte_count as usize + 256]; //Buffering it- is there a way around this?
-        let bytes_read = match self.port.read(&mut byte_buf) {
-            Ok(l) => l,
-            Err(err) => {
-                println!("IBus read error: {}", err);
+        if byte_count >= 2 {
+            let mut init_stream = vec![0;2];
+            match self.port.read_exact(&mut init_stream) {
+                Ok(_) => {
+
+                } Err(err) => {
+                    println!("IBus read error: {}", err);
+                    return None;
+                }
+            }
+
+            let l = init_stream[1] as usize;
+            start = Instant::now();
+            byte_count = match self.port.bytes_to_read() {
+                Ok(l) => l,
+                Err(_) => {
+                    return None;
+                }
+            };
+
+            while byte_count < l as u32 {
+                let new_byte_count = match self.port.bytes_to_read() {
+                    Ok(new_byte_count) => new_byte_count,
+                    Err(_) => {
+                        break;
+                    }
+                };
+                if new_byte_count > byte_count {
+                    byte_count = new_byte_count;
+                    start = Instant::now();
+                }
+
+                if Instant::now() - start > ib_wait {
+                    let mut db = vec![0;byte_count as usize];
+                    let _ = self.port.read_exact(&mut db);
+                    return None;
+                }
+            }
+
+            if byte_count < l as u32 {
+                let mut db = vec![0;byte_count as usize];
+                let _ = self.port.read_exact(&mut db);
                 return None;
             }
-        };
 
-        let mut msg_buf = Vec::new();
-        for i in 0..(byte_buf[1] as usize + 2) {
-            msg_buf.push(byte_buf[i]);
-        }
+            let mut byte_stream = vec![0;l];
+            match self.port.read_exact(&mut byte_stream) {
+                Ok(l) => l,
+                Err(err) => {
+                    println!("IBus read error: {}", err);
+                    return None;
+                }
+            };
 
-        let start = byte_buf[1] as usize + 2;
-        for _i in 0..start {
-            byte_buf.remove(0);
-        }
+            byte_stream.insert(0, init_stream[1]);
+            byte_stream.insert(0, init_stream[0]);
 
-        if bytes_read as i64 - start as i64 > 0 {
-            for i in 0..bytes_read as i64 - start as i64 {
-                self.byte_cache.push(byte_buf[i as usize]);
+            let ibus_return = get_ibus_message(byte_stream);
+
+            if ibus_return.l() > 0 {
+                return Some(ibus_return);
+            } else {
+                byte_count = match self.port.bytes_to_read() {
+                    Ok(l) => l,
+                    Err(_) => {
+                        return None;
+                    }
+                };
+                let mut db = vec![0;byte_count as usize];
+                let _ = self.port.read_exact(&mut db);
+                return None;
             }
-        }
-
-        let new_message = get_ibus_message(msg_buf);
-        if new_message.l() > 0 {
-            return Some(new_message);
         } else {
             return None;
         }
@@ -356,14 +339,10 @@ impl IBusHandler {
 
     //Get the number of bytes available.
     pub fn bytes_available(&mut self) -> u32 {
-        if self.byte_cache.len() > 0 {
-            return self.byte_cache.len() as u32;
-        } else {
-            let l = match self.port.bytes_to_read() {
-                Ok(l) => l,
-                Err(_) => 0,
-            };
-            return l;
-        }
+        let l = match self.port.bytes_to_read() {
+            Ok(l) => l,
+            Err(_) => 0,
+        };
+        return l;
     }
 }

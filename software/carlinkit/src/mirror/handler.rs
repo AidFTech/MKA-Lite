@@ -133,6 +133,7 @@ impl<'a> MirrorHandler<'a> {
                 }
             };
 
+            println!("{:X?}", ibus_msg.get_bytes());
             self.handle_ibus_message(ibus_msg);
         }
     }
@@ -156,7 +157,7 @@ impl<'a> MirrorHandler<'a> {
             let selected = context.audio_selected;
             let sender = ibus_msg.sender;
 
-            if ibus_msg.data[1] == IBUS_CDC_CMD_GET_STATUS || ibus_msg.data[1] == IBUS_CDC_CMD_CHANGE_TRACK {
+            if ibus_msg.data[1] == IBUS_CDC_CMD_GET_STATUS {
                 if selected {
                     let cd_msg = get_cd_status_message(IBUS_CDC_STAT_PLAYING, sender);
                     self.ibus_handler.write_ibus_message(cd_msg);
@@ -176,6 +177,20 @@ impl<'a> MirrorHandler<'a> {
 
                 std::mem::drop(context);
                 self.set_selected(true);
+            } else if ibus_msg.data[1] == IBUS_CDC_CMD_CHANGE_TRACK && ibus_msg.l() >= 3 {
+                if selected {
+                    println!("Track change: {}", ibus_msg.data[2]);
+                    if ibus_msg.data[2] == 0 {
+                        self.send_carplay_command(204);
+                    } else if ibus_msg.data[2] == 1 {
+                        self.send_carplay_command(205);
+                    }
+                    let cd_msg = get_cd_status_message(IBUS_CDC_STAT_PLAYING, sender);
+                    self.ibus_handler.write_ibus_message(cd_msg);
+                } else {
+                    let cd_msg = get_cd_status_message(IBUS_CDC_STAT_STOP, sender);
+                    self.ibus_handler.write_ibus_message(cd_msg);
+                }
             } else { //N/A message.
                 if selected {
                     let cd_msg = get_cd_status_message(IBUS_CDC_STAT_END, sender);
@@ -185,8 +200,8 @@ impl<'a> MirrorHandler<'a> {
                     self.ibus_handler.write_ibus_message(cd_msg);
                 }
             }
-        } else if ibus_msg.l() >= 1 && ibus_msg.data[0] == IBUS_CMD_RAD_SCREEN_MODE_UPDATE { //Audio screen changed.
-            if context.phone_active {
+        } else if ibus_msg.l() >= 2 && ibus_msg.data[0] == IBUS_CMD_RAD_SCREEN_MODE_UPDATE { //Audio screen changed.
+            if context.phone_active && (ibus_msg.data[1]&0x1) != 0 {
                 let screen_msg = IBusMessage {
                     sender: IBUS_DEVICE_GT,
                     receiver: IBUS_DEVICE_RAD,
@@ -243,6 +258,8 @@ impl<'a> MirrorHandler<'a> {
                     self.send_carplay_command(106);
                 } else if command == 0x8 && state == 0x1 { //Phone button held.
                     self.send_carplay_command(200);
+                } else if command == 0x14 && state == 0x2 { //Direction button released.
+                    self.send_carplay_command(203);
                 }
             }
         } else if ibus_msg.sender == 0xD0 && ibus_msg.l() >= 2 && ibus_msg.data[0] == 0x5B {
@@ -542,7 +559,7 @@ impl<'a> MirrorHandler<'a> {
 
         if selected {
             self.send_carplay_command(201);
-            self.send_radio_screen_update();
+            //self.send_radio_screen_update();
         } else {
             self.send_carplay_command(202);
         }
@@ -583,13 +600,11 @@ impl<'a> MirrorHandler<'a> {
         if context.playing {
             self.send_radio_subtitle_text(">".to_string(), 2, false);
         } else {
-            self.send_radio_subtitle_text("||".to_string(), 2, !(phone_type == 3 || phone_type == 5));
+            self.send_radio_subtitle_text("||".to_string(), 2, false);
         }
 
-        if phone_type == 3 || phone_type == 5 {
-            let phone_name = context.phone_name.clone();
-            self.send_radio_subtitle_text(phone_name, 6, true);
-        }
+        let phone_name = context.phone_name.clone();
+        self.send_radio_subtitle_text(phone_name, 6, true);
     }
 
     //Send a radio header change message.
