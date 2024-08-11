@@ -270,7 +270,14 @@ impl IBusHandler {
                     self.byte_cache.remove(0);
                 }
 
-                return returned_msg;
+                match returned_msg {
+                    Some(returned_msg) => {
+                        return Some(returned_msg);
+                    }
+                    None => {
+                        //Continue.
+                    }
+                }
             } else {
                 self.byte_cache.clear();
             }
