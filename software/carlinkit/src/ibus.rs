@@ -247,7 +247,7 @@ impl IBusHandler {
         let ib_wait = Duration::from_millis(IBUS_WAIT);
         let mut start = Instant::now();
 
-        while Instant::now() - start < ib_wait {
+        /*while Instant::now() - start < ib_wait {
             let new_byte_count = match self.port.bytes_to_read() {
                 Ok(new_byte_count) => new_byte_count,
                 Err(_) => {
@@ -258,7 +258,7 @@ impl IBusHandler {
                 byte_count = new_byte_count;
                 start = Instant::now();
             }
-        }
+        }*/
 
         if byte_count >= 2 {
             let mut init_stream = vec![0;2];

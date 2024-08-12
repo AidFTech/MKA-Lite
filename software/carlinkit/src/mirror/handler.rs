@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant, SystemTime};
+use std::time::SystemTime;
 
 use crate::{Context, IBusMessage};
 use crate::USBConnection;
@@ -20,10 +20,10 @@ use super::messages::MetaDataMessage;
 use super::mpv::{get_decode_type, MpvVideo};
 use super::mpv::RdAudio;
 
-const SONG_NAME: u8 = 1;
-const ARTIST: u8 = 2;
-const ALBUM: u8 = 3;
-const APP: u8 = 4;
+pub const SONG_NAME: u8 = 1;
+pub const ARTIST: u8 = 2;
+pub const ALBUM: u8 = 3;
+pub const APP: u8 = 4;
 
 //const PHONE_LED_OFF: u8 = 0;
 const PHONE_LED_GREEN: u8 = 1;
@@ -34,7 +34,7 @@ pub struct MirrorHandler<'a> {
     usb_conn: USBConnection,
     run: bool,
     startup: bool,
-    ibus_handler: IBusHandler,
+    ibus_handler: &'a Arc<Mutex<IBusHandler>>,
     mpv_video: MpvVideo,
     rd_audio: RdAudio,
     nav_audio: RdAudio,
@@ -42,7 +42,7 @@ pub struct MirrorHandler<'a> {
 }
 
 impl<'a> MirrorHandler<'a> {
-    pub fn new(context: &'a Arc<Mutex<Context>>, ibus_handler: IBusHandler, w: u16, h: u16) -> MirrorHandler <'a> {
+    pub fn new(context: &'a Arc<Mutex<Context>>, ibus_handler: &'a Arc<Mutex<IBusHandler>>, w: u16, h: u16) -> MirrorHandler <'a> {
         let mut mpv_found = 0;
         let mut mpv_video: Option<MpvVideo> = None;
         let mut rd_audio: Option<RdAudio> = None;
@@ -124,20 +124,6 @@ impl<'a> MirrorHandler<'a> {
         self.usb_conn.write_message(msg);
     }
 
-    pub fn check_ibus(&mut self) {
-        if self.ibus_handler.bytes_available() >= 4 {
-            let ibus_msg = match self.ibus_handler.read_ibus_message() {
-                Some(ibus_msg) => ibus_msg,
-                None => {
-                    return;
-                }
-            };
-
-            println!("{:X?}", ibus_msg.get_bytes());
-            self.handle_ibus_message(ibus_msg);
-        }
-    }
-
     pub fn handle_ibus_message(&mut self, ibus_msg: IBusMessage) {
         let mut context = match self.context.try_lock() {
             Ok(context) => context,
@@ -146,96 +132,8 @@ impl<'a> MirrorHandler<'a> {
                 return;
             }
         };
-
-        if ibus_msg.l() >= 1 && ibus_msg.receiver == IBUS_DEVICE_CDC && ibus_msg.data[0] == 0x1 {
-            self.ibus_handler.write_ibus_message(IBusMessage {
-                sender: IBUS_DEVICE_CDC,
-                receiver: ibus_msg.sender,
-                data: [0x2, 0x0].to_vec(),
-            });
-        } else if ibus_msg.l() >= 2 && ibus_msg.receiver == IBUS_DEVICE_CDC && ibus_msg.data[0] == 0x38 { //CDC request. Must reply.
-            let selected = context.audio_selected;
-            let sender = ibus_msg.sender;
-
-            if ibus_msg.data[1] == IBUS_CDC_CMD_GET_STATUS {
-                if selected {
-                    let cd_msg = get_cd_status_message(IBUS_CDC_STAT_PLAYING, sender);
-                    self.ibus_handler.write_ibus_message(cd_msg);
-                } else {
-                    let cd_msg = get_cd_status_message(IBUS_CDC_STAT_STOP, sender);
-                    self.ibus_handler.write_ibus_message(cd_msg);
-                }
-            } else if ibus_msg.data[1] == IBUS_CDC_CMD_STOP_PLAYING { //Stop the MKA.
-                let cd_msg = get_cd_status_message(IBUS_CDC_STAT_STOP, sender);
-                self.ibus_handler.write_ibus_message(cd_msg);
-                
-                std::mem::drop(context);
-                self.set_selected(false);
-            } else if ibus_msg.data[1] == IBUS_CDC_CMD_START_PLAYING || ibus_msg.data[1] == IBUS_CDC_CMD_PAUSE_PLAYING { //Start the MKA.
-                let cd_msg = get_cd_status_message(IBUS_CDC_STAT_PLAYING, sender);
-                self.ibus_handler.write_ibus_message(cd_msg);
-
-                std::mem::drop(context);
-                self.set_selected(true);
-            } else if ibus_msg.data[1] == IBUS_CDC_CMD_CHANGE_TRACK && ibus_msg.l() >= 3 {
-                if selected {
-                    println!("Track change: {}", ibus_msg.data[2]);
-                    if ibus_msg.data[2] == 0 {
-                        self.send_carplay_command(204);
-                    } else if ibus_msg.data[2] == 1 {
-                        self.send_carplay_command(205);
-                    }
-                    let cd_msg = get_cd_status_message(IBUS_CDC_STAT_PLAYING, sender);
-                    self.ibus_handler.write_ibus_message(cd_msg);
-                } else {
-                    let cd_msg = get_cd_status_message(IBUS_CDC_STAT_STOP, sender);
-                    self.ibus_handler.write_ibus_message(cd_msg);
-                }
-            } else { //N/A message.
-                if selected {
-                    let cd_msg = get_cd_status_message(IBUS_CDC_STAT_END, sender);
-                    self.ibus_handler.write_ibus_message(cd_msg);
-                } else {
-                    let cd_msg = get_cd_status_message(IBUS_CDC_STAT_STOP, sender);
-                    self.ibus_handler.write_ibus_message(cd_msg);
-                }
-            }
-        } else if ibus_msg.l() >= 2 && ibus_msg.data[0] == IBUS_CMD_RAD_SCREEN_MODE_UPDATE { //Audio screen changed.
-            if context.phone_active && (ibus_msg.data[1]&0x1) != 0 {
-                let screen_msg = IBusMessage {
-                    sender: IBUS_DEVICE_GT,
-                    receiver: IBUS_DEVICE_RAD,
-                    data: [IBUS_CMD_GT_SCREEN_MODE_SET, 0].to_vec(),
-                };
-                self.ibus_handler.write_ibus_message(screen_msg);
-            }
-        } else if ibus_msg.l() >= 1 && ibus_msg.data[0] == IBUS_CMD_GT_WRITE_TITLE { //Screen text. //TODO: Set "Selected" to false if this says an FM frequency, tape info, anything that is not a CD changer header.
-            if context.audio_selected && ibus_msg.data[ibus_msg.l() - 1] != 0x8E {
-                let start = Instant::now();
-
-                let mut sent_22 = false;
-                while !sent_22 && Instant::now() - start < Duration::from_millis(750) {
-                    match self.ibus_handler.read_ibus_message() {
-                        Some(ibus_msg) => {
-                            if ibus_msg.sender == IBUS_DEVICE_GT && ibus_msg.l() >= 1 && ibus_msg.data[0] == IBUS_CMD_GT_WRITE_RESPONSE {
-                                sent_22 = true;
-                                break;
-                            }
-                        }
-                        None => {
-                            continue;
-                        }
-                    }
-                }
-
-                if sent_22 {
-                    std::mem::drop(context);
-                    self.send_radio_screen_update();
-                }
-            } else if !context.audio_selected {
-                //TODO: Header overlay.
-            }
-        } else if ibus_msg.sender == IBUS_DEVICE_BMBT { //From BMBT.
+        
+        if ibus_msg.sender == IBUS_DEVICE_BMBT { //From BMBT.
             if ibus_msg.l() >= 2 && ibus_msg.data[0] == 0x49 && context.phone_active {
                 let clockwise = ibus_msg.data[1]&0x80 != 0;
                 let steps = ibus_msg.data[1]&0x7F;
@@ -544,36 +442,6 @@ impl<'a> MirrorHandler<'a> {
         }
     }
 
-    //Set whether the MKA is the selected source.
-    fn set_selected(&mut self, selected: bool) {
-        let mut context = match self.context.try_lock() {
-            Ok(context) => context,
-            Err(_) => {
-                println!("Set Selected: Context locked.");
-                return;
-            }
-        };
-
-        context.audio_selected = selected;
-        std::mem::drop(context);
-
-        if selected {
-            self.send_carplay_command(201);
-            //self.send_radio_screen_update();
-        } else {
-            self.send_carplay_command(202);
-        }
-    }
-
-    pub fn send_cd_ping(&mut self) {
-        self.ibus_handler.write_ibus_message(IBusMessage {
-            sender: IBUS_DEVICE_CDC,
-            receiver: IBUS_DEVICE_GLO,
-            data: [0x2, 0x1].to_vec(),
-        });
-    }
-
-    //Send all radio screen update messages.
     fn send_radio_screen_update(&mut self) {
         let context = match self.context.try_lock() {
             Ok(context) => context,
@@ -607,8 +475,16 @@ impl<'a> MirrorHandler<'a> {
         self.send_radio_subtitle_text(phone_name, 6, true);
     }
 
-    //Send a radio header change message.
+//Send a radio header change message.
     fn send_radio_main_text(&mut self, text: String) {
+        let mut ibus_handler = match self.ibus_handler.try_lock() {
+            Ok(ibus_handler) => ibus_handler,
+            Err(_) => {
+                println!("IBus handler locked.");
+                return;
+            }
+        };
+
         let mut text_data = Vec::new();
         text_data.push(IBUS_CMD_GT_WRITE_TITLE);
         text_data.push(0x62);
@@ -631,11 +507,19 @@ impl<'a> MirrorHandler<'a> {
             receiver: IBUS_DEVICE_GT,
             data: text_data,
         };
-        self.ibus_handler.write_ibus_message(text_msg);
+        ibus_handler.write_ibus_message(text_msg);
     }
 
     //Send a radio subtitle change message. 
     fn send_radio_subtitle_text(&mut self, text: String, zone: u8, refresh: bool) {
+        let mut ibus_handler = match self.ibus_handler.try_lock() {
+            Ok(ibus_handler) => ibus_handler,
+            Err(_) => {
+                println!("IBus handler locked.");
+                return;
+            }
+        };
+
         let mut text_data = Vec::new();
         text_data.push(IBUS_CMD_GT_WRITE_WITH_CURSOR);
         text_data.push(0x62);
@@ -657,7 +541,8 @@ impl<'a> MirrorHandler<'a> {
             data: text_data,
         };
 
-        self.ibus_handler.write_ibus_message(text_msg);
+        ibus_handler.write_ibus_message(text_msg);
+        std::mem::drop(ibus_handler);
 
         if refresh {
             self.send_refresh(0x62);
@@ -666,6 +551,14 @@ impl<'a> MirrorHandler<'a> {
 
     //Send a radio text change message.
     fn send_radio_center_text(&mut self, text: String, position: u8, version: i8) {
+        let mut ibus_handler = match self.ibus_handler.try_lock() {
+            Ok(ibus_handler) => ibus_handler,
+            Err(_) => {
+                println!("IBus handler locked.");
+                return;
+            }
+        };
+        
         let index: u8;
         if position == SONG_NAME {
             index = 0x41;
@@ -702,7 +595,7 @@ impl<'a> MirrorHandler<'a> {
             data: text_data,
         };
 
-        self.ibus_handler.write_ibus_message(text_change_message);
+        ibus_handler.write_ibus_message(text_change_message);
     }
 
     //Send multiple radio text change messages.
@@ -723,6 +616,14 @@ impl<'a> MirrorHandler<'a> {
 
     //Send a refresh message.
     fn send_refresh(&mut self, index: u8) {
+        let mut ibus_handler = match self.ibus_handler.try_lock() {
+            Ok(ibus_handler) => ibus_handler,
+            Err(_) => {
+                println!("IBus handler locked.");
+                return;
+            }
+        };
+        
         let refresh_data = [IBUS_CMD_GT_WRITE_WITH_CURSOR, index, 0x1, 0x0].to_vec();
         let refresh_msg = IBusMessage {
             sender: IBUS_DEVICE_RAD,
@@ -730,11 +631,19 @@ impl<'a> MirrorHandler<'a> {
             data: refresh_data,
         };
 
-        self.ibus_handler.write_ibus_message(refresh_msg);
+        ibus_handler.write_ibus_message(refresh_msg);
     }
 
     //Set the state of the phone LEDs on the BMBT.
     fn set_phone_light(&mut self, state: u8) {
+        let mut ibus_handler = match self.ibus_handler.try_lock() {
+            Ok(ibus_handler) => ibus_handler,
+            Err(_) => {
+                println!("IBus handler locked.");
+                return;
+            }
+        };
+        
         let mut phone_data = [0x2B, 0x00];
         if state == PHONE_LED_GREEN {
             phone_data[1] = 0x10;
@@ -742,27 +651,10 @@ impl<'a> MirrorHandler<'a> {
             phone_data[1] = 0x1;
         }
 
-        self.ibus_handler.write_ibus_message(IBusMessage {
+        ibus_handler.write_ibus_message(IBusMessage {
             sender: IBUS_DEVICE_TEL,
             receiver: IBUS_DEVICE_ANZV,
             data: phone_data.to_vec(),
         });
     }
-}
-
-fn get_cd_status_message(status: u8, receiver: u8) -> IBusMessage {
-    let mut pseudo_status = 0x89;
-    if status == 0x0 {
-        pseudo_status = 0x82;
-    }
-
-    let data = [0x39, status, pseudo_status, 0x00, 0x3f, 0x00, 0x1, 0x1, 0x0, 0x1, 0x1, 0x1];
-
-    let status_msg = IBusMessage {
-        sender: IBUS_DEVICE_CDC,
-        receiver: receiver,
-        data: data.to_vec(),
-    };
-
-    return status_msg;
 }

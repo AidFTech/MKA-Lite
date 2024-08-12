@@ -1,4 +1,5 @@
 mod ibus;
+mod mka;
 mod context;
 mod mirror;
 
@@ -7,6 +8,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use ibus::*;
+use mka::MKAObj;
 use context::Context;
 use mirror::handler::MirrorHandler;
 use mirror::usb::USBConnection;
@@ -51,20 +53,29 @@ fn main() {
     let mut ping_timer = Instant::now();
 
     let context: Context = Context::new();
+    
     let mutex_context: Arc<Mutex<Context>> = Arc::new(Mutex::new(context));
-    let mut mirror_handler = MirrorHandler::new(&mutex_context, ibus_handler.unwrap(), 800, 480);
+    let mutex_ibus_handler = Arc::new(Mutex::new(ibus_handler.unwrap()));
+    let mutex_mirror_handler = Arc::new(Mutex::new(MirrorHandler::new(&mutex_context, &mutex_ibus_handler, 800, 480)));
 
-    mirror_handler.send_cd_ping();
+    let mut mka_obj = MKAObj::new(&mutex_context, &mutex_ibus_handler, &mutex_mirror_handler);
+
+    mka_obj.send_cd_ping();
 
     loop {
-        mirror_handler.check_ibus();
+        mka_obj.check_ibus();
 
         // TODO: Return a Result() and act on errors (like run being false)
-        mirror_handler.process();
+        match mutex_mirror_handler.try_lock() {
+            Ok(mut mirror_handler) => {
+                mirror_handler.process();
+            }
+            Err(_) => ()
+        }
 
         if Instant::now() - ping_timer >= Duration::from_millis(20000) {
             ping_timer = Instant::now();
-            mirror_handler.send_cd_ping();
+            mka_obj.send_cd_ping();
         }
     }
 }
