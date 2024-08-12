@@ -119,7 +119,7 @@ impl <'a> MKAObj<'a> {
                 }
             }
         } else if ibus_msg.l() >= 2 && ibus_msg.data[0] == IBUS_CMD_RAD_SCREEN_MODE_UPDATE { //Audio screen changed.
-            if context.phone_active && (ibus_msg.data[1]&0x1) != 0 {
+            if context.phone_active && ((ibus_msg.data[1]&0x1) != 0 || (ibus_msg.data[1]&0x2) != 0) {
                 let screen_msg = IBusMessage {
                     sender: IBUS_DEVICE_GT,
                     receiver: IBUS_DEVICE_RAD,
@@ -154,6 +154,15 @@ impl <'a> MKAObj<'a> {
             } else if !context.audio_selected {
                 //TODO: Header overlay.
             }
+        } else if ibus_msg.l() >= 2 && ibus_msg.sender == IBUS_DEVICE_BMBT && ibus_msg.data[0] == 0x48 && context.phone_active {
+			if (ibus_msg.data[1]&0x3F) == 0x30 && context.phone_active { //Radio button. To make sure the screen stays active.
+				let screen_msg = IBusMessage {
+                    sender: IBUS_DEVICE_GT,
+                    receiver: IBUS_DEVICE_RAD,
+                    data: [IBUS_CMD_GT_SCREEN_MODE_SET, 0].to_vec(),
+                };
+                ibus_handler.write_ibus_message(screen_msg);
+			}
         } else {
             std::mem::drop(context);
             std::mem::drop(ibus_handler);
@@ -407,6 +416,61 @@ impl <'a> MKAObj<'a> {
         } else {
             mirror_handler.send_carplay_command(202);
         }
+    }
+
+    //Create the main settings menu.
+    fn create_main_menu(&mut self) {
+        let context = match self.context.try_lock() {
+            Ok(context) => context,
+            Err(_) => {
+                println!("Set Selected: Context locked.");
+                return;
+            }
+        };
+
+        self.create_menu_option(9, "MKA Settings".to_string());
+
+        //TODO: An option for auto light sensitivity if the RLS is present.
+        self.create_menu_option(0, "Auto Connect".to_string());
+        self.create_menu_option(1, "Auto Start Music".to_string());
+        self.create_menu_option(2, "Audio Source".to_string());
+        self.create_menu_option(3, "Audio HUD".to_string());
+
+        if context.phone_type == 3 {
+            self.create_menu_option(4, "Start CarPlay".to_string());
+        } else if context.phone_type == 5 {
+            self.create_menu_option(4, "Start Android".to_string());
+        }
+
+        self.send_refresh(0x61);
+    }
+
+    //Create a menu option.
+    fn create_menu_option(&mut self, index: u8, text: String) {
+        let mut ibus_handler = match self.ibus_handler.try_lock() {
+            Ok(ibus_handler) => ibus_handler,
+            Err(_) => {
+                println!("IBus handler locked.");
+                return;
+            }
+        };
+
+        let mut menu_option_data = Vec::new();
+        menu_option_data.push(IBUS_CMD_GT_WRITE_NO_CURSOR);
+        menu_option_data.push(0x61);
+        menu_option_data.push(0x1);
+        menu_option_data.push(index&0x1F);
+
+        let text_bytes = text.as_bytes();
+        for b in text_bytes {
+            menu_option_data.push(*b);
+        }
+
+        ibus_handler.write_ibus_message(IBusMessage {
+            sender: IBUS_DEVICE_RAD,
+            receiver: IBUS_DEVICE_GT,
+            data: menu_option_data,
+        });
     }
 }
 
