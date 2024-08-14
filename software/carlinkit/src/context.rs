@@ -1,28 +1,30 @@
 pub struct Context {
-	pub bmbt_connected: bool,
-	pub audio_selected: bool,
-	pub phone_active: bool,
-	pub fullscreen: bool,
-	pub playing: bool,
+	pub audio_on: bool, //True if the BMW audio system is on.
+    pub audio_open: bool, //True if the audio window is open.
+	pub audio_selected: bool, //True if the MKA is selected as the active audio device.
+	pub phone_active: bool, //True if phone mirroring is active.
+	pub fullscreen: bool, //True on the final Raspberry Pi, false for testing.
+	pub playing: bool, //True if the phone is playing music.
 
-	pub phone_type: u8,
-	pub phone_name: String,
+	pub phone_type: u8, //The phone type, as defined by the dongle.
+	pub phone_name: String, //The name of the phone.
 
-    pub song_title: String,
-    pub artist: String,
-    pub album: String,
-    pub app: String,
+    pub song_title: String, //The song title.
+    pub artist: String, //The artist name.
+    pub album: String, // The album name.
+    pub app: String, //The app name.
 
-    pub version: i8,
+    pub version: i8, //The nav computer version.
 
-    pub headlights_on: bool,
+    pub headlights_on: bool, //True if headlights are turned on.
 }
 
 impl Context {
     pub fn new() -> Self {
 
         return Self {
-            bmbt_connected: false,
+            audio_on: false,
+            audio_open: false,
             audio_selected: false,
             phone_active: true,
             fullscreen: false,

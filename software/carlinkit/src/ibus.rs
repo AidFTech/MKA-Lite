@@ -85,6 +85,8 @@ pub const IBUS_CMD_GT_TELEMATICS_COORDINATES: u8 = 0xA2;
 pub const IBUS_CMD_GT_TELEMATICS_LOCATION: u8 = 0xA4;
 pub const IBUS_CMD_GT_WRITE_WITH_CURSOR: u8 = 0xA5;
 
+pub const IBUS_CMD_RAD_LED_TAPE_CTRL: u8 = 0x4A;
+
 const IBUS_WAIT: u64 = 5;
 
 pub struct IBusMessage {
