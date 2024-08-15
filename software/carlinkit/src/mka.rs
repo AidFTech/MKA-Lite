@@ -9,12 +9,13 @@ pub struct MKAObj<'a> {
     context: &'a Arc<Mutex<Context>>,
     ibus_handler: &'a Arc<Mutex<IBusHandler>>,
     mirror_handler: &'a Arc<Mutex<MirrorHandler<'a>>>,
+    main_text: String,
 }
 
 impl <'a> MKAObj<'a> {
     pub fn new(context: &'a Arc<Mutex<Context>>, ibus_handler: &'a Arc<Mutex<IBusHandler>>, mirror_handler: &'a Arc<Mutex<MirrorHandler<'a>>>) -> MKAObj<'a> {
         return MKAObj {
-            context, ibus_handler, mirror_handler,
+            context, ibus_handler, mirror_handler, main_text: "Audio".to_string()
         }
     }
 
@@ -22,22 +23,39 @@ impl <'a> MKAObj<'a> {
         let mut ibus_handler = match self.ibus_handler.try_lock() {
             Ok(ibus_handler) => ibus_handler,
             Err(_) => {
-                println!("IBus handler locked.");
+                println!("Check IBus: IBus handler locked.");
                 return;
             }
         };
-
+		
         if ibus_handler.bytes_available() >= 4 {
-            let ibus_msg = match ibus_handler.read_ibus_message() {
-                Some(ibus_msg) => ibus_msg,
-                None => {
-                    return;
-                }
-            };
+			let full_ib_start = Instant::now();
+            let mut ib_start = Instant::now();
+            
+            while Instant::now() - ib_start < Duration::from_millis(20) && Instant::now() - full_ib_start < Duration::from_millis(100) {
+                if ibus_handler.bytes_available() >= 4 {
+                    let ibus_msg = match ibus_handler.read_ibus_message() {
+                        Some(ibus_msg) => ibus_msg,
+                        None => {
+                            return;
+                        }
+                    };
 
-            std::mem::drop(ibus_handler);
-            println!("{:X?}", ibus_msg.get_bytes());
-            self.handle_ibus_message(ibus_msg);
+                    ib_start = Instant::now();
+                    
+                    std::mem::drop(ibus_handler);
+                    println!("{:X?}", ibus_msg.get_bytes());
+                    self.handle_ibus_message(ibus_msg);
+
+                    ibus_handler = match self.ibus_handler.try_lock() {
+                        Ok(ibus_handler) => ibus_handler,
+                        Err(_) => {
+                            println!("Check IBus Loop: IBus handler locked.");
+                            break;
+                        }
+                    };
+                }
+            }
         }
     }
 
@@ -53,7 +71,7 @@ impl <'a> MKAObj<'a> {
         let mut ibus_handler = match self.ibus_handler.try_lock() {
             Ok(ibus_handler) => ibus_handler,
             Err(_) => {
-                println!("IBus handler locked.");
+                println!("Handle IBus: IBus handler locked.");
                 return;
             }
         };
@@ -81,12 +99,14 @@ impl <'a> MKAObj<'a> {
                 ibus_handler.write_ibus_message(cd_msg);
                 
                 std::mem::drop(context);
+                std::mem::drop(ibus_handler);
                 self.set_selected(false);
             } else if ibus_msg.data[1] == IBUS_CDC_CMD_START_PLAYING || ibus_msg.data[1] == IBUS_CDC_CMD_PAUSE_PLAYING { //Start the MKA.
                 let cd_msg = get_cd_status_message(IBUS_CDC_STAT_PLAYING, sender);
                 ibus_handler.write_ibus_message(cd_msg);
 
                 std::mem::drop(context);
+                std::mem::drop(ibus_handler);
                 self.set_selected(true);
             } else if ibus_msg.data[1] == IBUS_CDC_CMD_CHANGE_TRACK && ibus_msg.l() >= 3 {
                 if selected {
@@ -123,20 +143,32 @@ impl <'a> MKAObj<'a> {
                 context.audio_open = false;
                 if context.phone_active {
                     context.audio_open = true;
-                    let screen_msg = IBusMessage {
+                    /*let screen_msg = IBusMessage {
                         sender: IBUS_DEVICE_GT,
                         receiver: IBUS_DEVICE_RAD,
                         data: [IBUS_CMD_GT_SCREEN_MODE_SET, 0].to_vec(),
                     };
-                    ibus_handler.write_ibus_message(screen_msg);
+                    ibus_handler.write_ibus_message(screen_msg);*/
+                    
+                    if context.audio_selected {
+						std::mem::drop(context);
+						std::mem::drop(ibus_handler);
+						
+						self.send_radio_screen_update();
+					} else {
+						std::mem::drop(context);
+						std::mem::drop(ibus_handler);
+
+						self.send_radio_main_text(self.main_text.clone());
+					}
                 }
 
-                if !context.audio_on {
+                /*if !context.audio_on {
                     std::mem::drop(context);
                     std::mem::drop(ibus_handler);
 
                     self.send_radio_main_text("Audio Off".to_string());
-                }
+                }*/
             }
         } else if ibus_msg.l() >= 2 && ibus_msg.data[0] == IBUS_CMD_RAD_LED_TAPE_CTRL {
             if ibus_msg.data[1] == 0x00 {
@@ -146,15 +178,75 @@ impl <'a> MKAObj<'a> {
             }
             
             if ibus_msg.data[1] == 0x00 && context.phone_active { //LED turned off.
-                context.audio_open = false;
+                context.audio_open = true;
 
                 std::mem::drop(context);
                 std::mem::drop(ibus_handler);
-
+                
+                self.main_text = "Audio Off".to_string();
                 self.send_radio_main_text("Audio Off".to_string());
             }
-        } else if ibus_msg.l() >= 1 && ibus_msg.data[0] == IBUS_CMD_GT_WRITE_TITLE { //Screen text. //TODO: Set "Selected" to false if this says an FM frequency, tape info, anything that is not a CD changer header.
+        } else if ibus_msg.l() >= 1 && (ibus_msg.data[0] == IBUS_CMD_GT_WRITE_TITLE) { //Screen text. //TODO: Set "Selected" to false if this says an FM frequency, tape info, anything that is not a CD changer header.
             context.audio_open = true;
+
+            let mut mka_title = false;
+            
+            if ibus_msg.data[0] == IBUS_CMD_GT_WRITE_TITLE {
+                self.main_text.clear();
+                if ibus_msg.l() > 3 {
+                    for i in 3..ibus_msg.l() {
+                        if ibus_msg.data[i] != 0x8E {
+                            self.main_text.push(ibus_msg.data[i] as char);
+                        } else {
+                            mka_title = true;
+                        }
+                    }
+                } else {
+                    self.main_text = "Audio".to_string();
+                }
+            }
+
+            if !mka_title && !(self.main_text.contains("TR") && self.main_text.contains("-")) { //TODO: Are different "track number" messages sent depending on system?
+                std::mem::drop(context);
+                std::mem::drop(ibus_handler);
+                self.set_selected(false);
+
+                context = match self.context.try_lock() {
+                    Ok(context) => context,
+                    Err(_) => {
+                        println!("Refresh Main Text: Context locked.");
+                        return;
+                    }
+                };
+        
+                ibus_handler = match self.ibus_handler.try_lock() {
+                    Ok(ibus_handler) => ibus_handler,
+                    Err(_) => {
+                        println!("Refresh Main Text: IBus handler locked.");
+                        return;
+                    }
+                };
+            } else if !mka_title && !context.audio_selected {
+                std::mem::drop(context);
+                std::mem::drop(ibus_handler);
+                self.set_selected(true);
+
+                context = match self.context.try_lock() {
+                    Ok(context) => context,
+                    Err(_) => {
+                        println!("Refresh Main Text: Context locked.");
+                        return;
+                    }
+                };
+        
+                ibus_handler = match self.ibus_handler.try_lock() {
+                    Ok(ibus_handler) => ibus_handler,
+                    Err(_) => {
+                        println!("Refresh Main Text: IBus handler locked.");
+                        return;
+                    }
+                };
+            }
             
             if context.audio_selected && ibus_msg.data[ibus_msg.l() - 1] != 0x8E {
                 context.audio_on = true;
@@ -226,7 +318,7 @@ impl <'a> MKAObj<'a> {
         let mut ibus_handler = match self.ibus_handler.try_lock() {
             Ok(ibus_handler) => ibus_handler,
             Err(_) => {
-                println!("IBus handler locked.");
+                println!("CD Ping: IBus handler locked.");
                 return;
             }
         };
@@ -277,7 +369,7 @@ impl <'a> MKAObj<'a> {
         let mut ibus_handler = match self.ibus_handler.try_lock() {
             Ok(ibus_handler) => ibus_handler,
             Err(_) => {
-                println!("IBus handler locked.");
+                println!("Radio Main Text: IBus handler locked.");
                 return;
             }
         };
@@ -312,7 +404,7 @@ impl <'a> MKAObj<'a> {
         let mut ibus_handler = match self.ibus_handler.try_lock() {
             Ok(ibus_handler) => ibus_handler,
             Err(_) => {
-                println!("IBus handler locked.");
+                println!("Radio Subtitle Text: IBus handler locked.");
                 return;
             }
         };
@@ -351,7 +443,7 @@ impl <'a> MKAObj<'a> {
         let mut ibus_handler = match self.ibus_handler.try_lock() {
             Ok(ibus_handler) => ibus_handler,
             Err(_) => {
-                println!("IBus handler locked.");
+                println!("Radio Center Text: IBus handler locked.");
                 return;
             }
         };
@@ -416,7 +508,7 @@ impl <'a> MKAObj<'a> {
         let mut ibus_handler = match self.ibus_handler.try_lock() {
             Ok(ibus_handler) => ibus_handler,
             Err(_) => {
-                println!("IBus handler locked.");
+                println!("Refresh: IBus handler locked.");
                 return;
             }
         };
@@ -454,7 +546,7 @@ impl <'a> MKAObj<'a> {
 
         if selected {
             mirror_handler.send_carplay_command(201);
-            //self.send_radio_screen_update();
+            self.send_radio_screen_update();
         } else {
             mirror_handler.send_carplay_command(202);
         }
@@ -492,7 +584,7 @@ impl <'a> MKAObj<'a> {
         let mut ibus_handler = match self.ibus_handler.try_lock() {
             Ok(ibus_handler) => ibus_handler,
             Err(_) => {
-                println!("IBus handler locked.");
+                println!("Menu Option: IBus handler locked.");
                 return;
             }
         };

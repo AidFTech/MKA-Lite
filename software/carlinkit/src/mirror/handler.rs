@@ -407,29 +407,37 @@ impl<'a> MirrorHandler<'a> {
                 context.phone_name = string_var.value;
                 phone_name_changed = true;
             } else if string_var.variable == "MediaSongName" {
-                context.song_title = string_var.value;
-                song_title_changed = true;
-            } else if string_var.variable == "MediaArtistName" {
-                context.artist = string_var.value;
-                artist_changed = true;
-            } else if string_var.variable == "MediaAlbumName" {
-                context.album = string_var.value;
-                album_changed = true;
-            } else if string_var.variable == "MediaAPPName" {
-                context.app = string_var.value;
-                app_changed = true;
-
-                if !song_title_changed {
-                    context.song_title = "".to_string();
+                if context.song_title != string_var.value {
+                    context.song_title = string_var.value;
                     song_title_changed = true;
                 }
-                if !artist_changed {
-                    context.artist = "".to_string();
+            } else if string_var.variable == "MediaArtistName" {
+                if context.artist != string_var.value {
+                    context.artist = string_var.value;
                     artist_changed = true;
                 }
-                if !album_changed {
-                    context.album = "".to_string();
+            } else if string_var.variable == "MediaAlbumName" {
+                if context.album != string_var.value {
+                    context.album = string_var.value;
                     album_changed = true;
+                }
+            } else if string_var.variable == "MediaAPPName" {
+                if context.app != string_var.value {
+                    context.app = string_var.value;
+                    app_changed = true;
+
+                    if !song_title_changed {
+                        context.song_title = "".to_string();
+                        song_title_changed = true;
+                    }
+                    if !artist_changed {
+                        context.artist = "".to_string();
+                        artist_changed = true;
+                    }
+                    if !album_changed {
+                        context.album = "".to_string();
+                        album_changed = true;
+                    }
                 }
             }
         }
@@ -480,7 +488,7 @@ impl<'a> MirrorHandler<'a> {
         let mut ibus_handler = match self.ibus_handler.try_lock() {
             Ok(ibus_handler) => ibus_handler,
             Err(_) => {
-                println!("IBus handler locked.");
+                println!("Radio Main Text: IBus handler locked.");
                 return;
             }
         };
@@ -515,7 +523,7 @@ impl<'a> MirrorHandler<'a> {
         let mut ibus_handler = match self.ibus_handler.try_lock() {
             Ok(ibus_handler) => ibus_handler,
             Err(_) => {
-                println!("IBus handler locked.");
+                println!("Radio Subtitle Text: IBus handler locked.");
                 return;
             }
         };
@@ -554,7 +562,7 @@ impl<'a> MirrorHandler<'a> {
         let mut ibus_handler = match self.ibus_handler.try_lock() {
             Ok(ibus_handler) => ibus_handler,
             Err(_) => {
-                println!("IBus handler locked.");
+                println!("Radio Center Text: IBus handler locked.");
                 return;
             }
         };
@@ -619,7 +627,7 @@ impl<'a> MirrorHandler<'a> {
         let mut ibus_handler = match self.ibus_handler.try_lock() {
             Ok(ibus_handler) => ibus_handler,
             Err(_) => {
-                println!("IBus handler locked.");
+                println!("Refresh: IBus handler locked.");
                 return;
             }
         };
@@ -639,7 +647,7 @@ impl<'a> MirrorHandler<'a> {
         let mut ibus_handler = match self.ibus_handler.try_lock() {
             Ok(ibus_handler) => ibus_handler,
             Err(_) => {
-                println!("IBus handler locked.");
+                println!("Phone Light: IBus handler locked.");
                 return;
             }
         };
