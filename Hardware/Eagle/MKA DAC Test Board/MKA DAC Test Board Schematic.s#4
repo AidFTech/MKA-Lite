@@ -10,18 +10,6 @@
 <layers>
 <layer number="1" name="Top" color="4" fill="1" visible="no" active="no"/>
 <layer number="2" name="Route2" color="1" fill="3" visible="no" active="no"/>
-<layer number="3" name="Route3" color="4" fill="3" visible="no" active="no"/>
-<layer number="4" name="Route4" color="1" fill="4" visible="no" active="no"/>
-<layer number="5" name="Route5" color="4" fill="4" visible="no" active="no"/>
-<layer number="6" name="Route6" color="1" fill="8" visible="no" active="no"/>
-<layer number="7" name="Route7" color="4" fill="8" visible="no" active="no"/>
-<layer number="8" name="Route8" color="1" fill="2" visible="no" active="no"/>
-<layer number="9" name="Route9" color="4" fill="2" visible="no" active="no"/>
-<layer number="10" name="Route10" color="1" fill="7" visible="no" active="no"/>
-<layer number="11" name="Route11" color="4" fill="7" visible="no" active="no"/>
-<layer number="12" name="Route12" color="1" fill="5" visible="no" active="no"/>
-<layer number="13" name="Route13" color="4" fill="5" visible="no" active="no"/>
-<layer number="14" name="Route14" color="1" fill="6" visible="no" active="no"/>
 <layer number="15" name="Route15" color="4" fill="6" visible="no" active="no"/>
 <layer number="16" name="Bottom" color="1" fill="1" visible="no" active="no"/>
 <layer number="17" name="Pads" color="2" fill="1" visible="no" active="no"/>
@@ -5676,8 +5664,6 @@ Switches electronic signals</description>
 <text x="167.64" y="10.16" size="3.81" layer="94">Ted Salmon &amp; Aidan F.</text>
 <text x="12.7" y="175.26" size="3.81" layer="97">RGB DAC</text>
 <text x="116.84" y="175.26" size="3.81" layer="97">CSYNC Generation</text>
-<text x="190.5" y="142.24" size="1.778" layer="91">Ted:
-This should be an XOR gate, not XNOR.</text>
 </plain>
 <instances>
 <instance part="FRAME4" gate="G$1" x="0" y="0" smashed="yes"/>
@@ -5746,15 +5732,15 @@ This should be an XOR gate, not XNOR.</text>
 </instance>
 <instance part="U5" gate="G$2" x="149.86" y="147.32" smashed="yes"/>
 <instance part="U5" gate="G$1" x="149.86" y="132.08" smashed="yes">
-<attribute name="NAME" x="142.24" y="137.922" size="1.778" layer="95" font="vector"/>
+<attribute name="NAME" x="144.78" y="140.462" size="1.778" layer="95" font="vector"/>
 </instance>
 <instance part="U6" gate="G$1" x="185.42" y="135.89" smashed="yes">
 <attribute name="NAME" x="177.8" y="141.732" size="1.778" layer="95" font="vector"/>
 </instance>
 <instance part="U6" gate="G$2" x="185.42" y="151.13" smashed="yes"/>
-<instance part="U7" gate="G$2" x="182.88" y="78.74" smashed="yes"/>
-<instance part="U7" gate="G$1" x="182.88" y="63.5" smashed="yes">
-<attribute name="NAME" x="175.26" y="69.342" size="1.778" layer="95" font="vector"/>
+<instance part="U7" gate="G$2" x="205.74" y="116.84" smashed="yes"/>
+<instance part="U7" gate="G$1" x="205.74" y="101.6" smashed="yes">
+<attribute name="NAME" x="198.12" y="107.442" size="1.778" layer="95" font="vector"/>
 </instance>
 <instance part="GND23" gate="1" x="152.4" y="160.02" smashed="yes" rot="R180">
 <attribute name="VALUE" x="152.4" y="160.274" size="1.778" layer="96" rot="R180" align="top-center"/>
@@ -5762,8 +5748,8 @@ This should be an XOR gate, not XNOR.</text>
 <instance part="GND25" gate="1" x="187.96" y="162.56" smashed="yes" rot="R180">
 <attribute name="VALUE" x="187.96" y="162.814" size="1.778" layer="96" rot="R180" align="top-center"/>
 </instance>
-<instance part="GND26" gate="1" x="185.42" y="91.44" smashed="yes" rot="R180">
-<attribute name="VALUE" x="185.42" y="91.694" size="1.778" layer="96" rot="R180" align="top-center"/>
+<instance part="GND26" gate="1" x="208.28" y="129.54" smashed="yes" rot="R180">
+<attribute name="VALUE" x="208.28" y="129.794" size="1.778" layer="96" rot="R180" align="top-center"/>
 </instance>
 <instance part="SUPPLY19" gate="G$1" x="182.88" y="165.1" smashed="yes">
 <attribute name="VALUE" x="182.88" y="167.894" size="1.778" layer="96" align="bottom-center"/>
@@ -5771,8 +5757,8 @@ This should be an XOR gate, not XNOR.</text>
 <instance part="SUPPLY20" gate="G$1" x="147.32" y="162.56" smashed="yes">
 <attribute name="VALUE" x="147.32" y="165.354" size="1.778" layer="96" align="bottom-center"/>
 </instance>
-<instance part="SUPPLY23" gate="G$1" x="180.34" y="88.9" smashed="yes">
-<attribute name="VALUE" x="180.34" y="91.694" size="1.778" layer="96" align="bottom-center"/>
+<instance part="SUPPLY23" gate="G$1" x="203.2" y="127" smashed="yes">
+<attribute name="VALUE" x="203.2" y="129.794" size="1.778" layer="96" align="bottom-center"/>
 </instance>
 </instances>
 <busses>
@@ -6068,7 +6054,7 @@ This should be an XOR gate, not XNOR.</text>
 <segment>
 <pinref part="GND26" gate="1" pin="GND"/>
 <pinref part="U7" gate="G$2" pin="GND"/>
-<wire x1="185.42" y1="88.9" x2="185.42" y2="83.82" width="0.1524" layer="91"/>
+<wire x1="208.28" y1="127" x2="208.28" y2="121.92" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="AVID_M1_RES" class="0">
@@ -6208,8 +6194,10 @@ This should be an XOR gate, not XNOR.</text>
 </segment>
 <segment>
 <pinref part="SUPPLY23" gate="G$1" pin="3.3V"/>
+<wire x1="203.2" y1="127" x2="203.2" y2="124.46" width="0.1524" layer="91"/>
 <pinref part="U7" gate="G$2" pin="VCC"/>
-<wire x1="180.34" y1="88.9" x2="180.34" y2="83.82" width="0.1524" layer="91"/>
+<wire x1="203.2" y1="124.46" x2="203.2" y2="123.19" width="0.1524" layer="91"/>
+<wire x1="203.2" y1="123.19" x2="203.2" y2="121.92" width="0.1524" layer="91"/>
 </segment>
 </net>
 </nets>
@@ -6295,10 +6283,6 @@ This should be an XOR gate, not XNOR.</text>
 </schematic>
 </drawing>
 <compatibility>
-<note version="6.3" minversion="6.2.2" severity="warning">
-Since Version 6.2.2 text objects can contain more than one line,
-which will not be processed correctly with this version.
-</note>
 <note version="8.2" severity="warning">
 Since Version 8.2, EAGLE supports online libraries. The ids
 of those online libraries will not be understood (or retained)
