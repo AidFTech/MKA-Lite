@@ -10,6 +10,18 @@
 <layers>
 <layer number="1" name="Top" color="4" fill="1" visible="no" active="no"/>
 <layer number="2" name="Route2" color="1" fill="3" visible="no" active="no"/>
+<layer number="3" name="Route3" color="4" fill="3" visible="no" active="no"/>
+<layer number="4" name="Route4" color="1" fill="4" visible="no" active="no"/>
+<layer number="5" name="Route5" color="4" fill="4" visible="no" active="no"/>
+<layer number="6" name="Route6" color="1" fill="8" visible="no" active="no"/>
+<layer number="7" name="Route7" color="4" fill="8" visible="no" active="no"/>
+<layer number="8" name="Route8" color="1" fill="2" visible="no" active="no"/>
+<layer number="9" name="Route9" color="4" fill="2" visible="no" active="no"/>
+<layer number="10" name="Route10" color="1" fill="7" visible="no" active="no"/>
+<layer number="11" name="Route11" color="4" fill="7" visible="no" active="no"/>
+<layer number="12" name="Route12" color="1" fill="5" visible="no" active="no"/>
+<layer number="13" name="Route13" color="4" fill="5" visible="no" active="no"/>
+<layer number="14" name="Route14" color="1" fill="6" visible="no" active="no"/>
 <layer number="15" name="Route15" color="4" fill="6" visible="no" active="no"/>
 <layer number="16" name="Bottom" color="1" fill="1" visible="no" active="no"/>
 <layer number="17" name="Pads" color="2" fill="1" visible="no" active="no"/>
@@ -3335,6 +3347,10 @@ Switches electronic signals</description>
 <part name="U7" library="ICs" deviceset="SN74AHC1G02" device="DCK"/>
 <part name="GND23" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
 <part name="GND25" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
+<part name="GND26" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
+<part name="SUPPLY19" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="3.3V" device=""/>
+<part name="SUPPLY20" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="3.3V" device=""/>
+<part name="SUPPLY23" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="3.3V" device=""/>
 </parts>
 <sheets>
 <sheet>
@@ -5660,6 +5676,8 @@ Switches electronic signals</description>
 <text x="167.64" y="10.16" size="3.81" layer="94">Ted Salmon &amp; Aidan F.</text>
 <text x="12.7" y="175.26" size="3.81" layer="97">RGB DAC</text>
 <text x="116.84" y="175.26" size="3.81" layer="97">CSYNC Generation</text>
+<text x="190.5" y="142.24" size="1.778" layer="91">Ted:
+This should be an XOR gate, not XNOR.</text>
 </plain>
 <instances>
 <instance part="FRAME4" gate="G$1" x="0" y="0" smashed="yes"/>
@@ -5726,23 +5744,35 @@ Switches electronic signals</description>
 <instance part="GND17" gate="1" x="45.72" y="60.96" smashed="yes">
 <attribute name="VALUE" x="45.72" y="60.706" size="1.778" layer="96" align="top-center"/>
 </instance>
-<instance part="U5" gate="G$2" x="139.7" y="147.32" smashed="yes"/>
-<instance part="U5" gate="G$1" x="139.7" y="132.08" smashed="yes">
-<attribute name="NAME" x="134.62" y="140.462" size="1.778" layer="95" font="vector"/>
+<instance part="U5" gate="G$2" x="149.86" y="147.32" smashed="yes"/>
+<instance part="U5" gate="G$1" x="149.86" y="132.08" smashed="yes">
+<attribute name="NAME" x="142.24" y="137.922" size="1.778" layer="95" font="vector"/>
 </instance>
 <instance part="U6" gate="G$1" x="185.42" y="135.89" smashed="yes">
 <attribute name="NAME" x="177.8" y="141.732" size="1.778" layer="95" font="vector"/>
 </instance>
 <instance part="U6" gate="G$2" x="185.42" y="151.13" smashed="yes"/>
-<instance part="U7" gate="G$2" x="205.74" y="116.84" smashed="yes"/>
-<instance part="U7" gate="G$1" x="205.74" y="101.6" smashed="yes">
-<attribute name="NAME" x="198.12" y="107.442" size="1.778" layer="95" font="vector"/>
+<instance part="U7" gate="G$2" x="182.88" y="78.74" smashed="yes"/>
+<instance part="U7" gate="G$1" x="182.88" y="63.5" smashed="yes">
+<attribute name="NAME" x="175.26" y="69.342" size="1.778" layer="95" font="vector"/>
 </instance>
-<instance part="GND23" gate="1" x="142.24" y="160.02" smashed="yes" rot="R180">
-<attribute name="VALUE" x="142.24" y="160.274" size="1.778" layer="96" rot="R180" align="top-center"/>
+<instance part="GND23" gate="1" x="152.4" y="160.02" smashed="yes" rot="R180">
+<attribute name="VALUE" x="152.4" y="160.274" size="1.778" layer="96" rot="R180" align="top-center"/>
 </instance>
 <instance part="GND25" gate="1" x="187.96" y="162.56" smashed="yes" rot="R180">
 <attribute name="VALUE" x="187.96" y="162.814" size="1.778" layer="96" rot="R180" align="top-center"/>
+</instance>
+<instance part="GND26" gate="1" x="185.42" y="91.44" smashed="yes" rot="R180">
+<attribute name="VALUE" x="185.42" y="91.694" size="1.778" layer="96" rot="R180" align="top-center"/>
+</instance>
+<instance part="SUPPLY19" gate="G$1" x="182.88" y="165.1" smashed="yes">
+<attribute name="VALUE" x="182.88" y="167.894" size="1.778" layer="96" align="bottom-center"/>
+</instance>
+<instance part="SUPPLY20" gate="G$1" x="147.32" y="162.56" smashed="yes">
+<attribute name="VALUE" x="147.32" y="165.354" size="1.778" layer="96" align="bottom-center"/>
+</instance>
+<instance part="SUPPLY23" gate="G$1" x="180.34" y="88.9" smashed="yes">
+<attribute name="VALUE" x="180.34" y="91.694" size="1.778" layer="96" align="bottom-center"/>
 </instance>
 </instances>
 <busses>
@@ -6028,12 +6058,17 @@ Switches electronic signals</description>
 <segment>
 <pinref part="GND23" gate="1" pin="GND"/>
 <pinref part="U5" gate="G$2" pin="GND"/>
-<wire x1="142.24" y1="157.48" x2="142.24" y2="152.4" width="0.1524" layer="91"/>
+<wire x1="152.4" y1="157.48" x2="152.4" y2="152.4" width="0.1524" layer="91"/>
 </segment>
 <segment>
 <pinref part="GND25" gate="1" pin="GND"/>
 <pinref part="U6" gate="G$2" pin="GND"/>
 <wire x1="187.96" y1="160.02" x2="187.96" y2="156.21" width="0.1524" layer="91"/>
+</segment>
+<segment>
+<pinref part="GND26" gate="1" pin="GND"/>
+<pinref part="U7" gate="G$2" pin="GND"/>
+<wire x1="185.42" y1="88.9" x2="185.42" y2="83.82" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="AVID_M1_RES" class="0">
@@ -6127,19 +6162,54 @@ Switches electronic signals</description>
 <segment>
 <pinref part="U6" gate="G$1" pin="B"/>
 <pinref part="U5" gate="G$1" pin="Y"/>
-<wire x1="176.149" y1="130.81" x2="148.59" y2="130.81" width="0.1524" layer="91"/>
+<wire x1="176.149" y1="130.81" x2="158.75" y2="130.81" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="DVID_VSYNC" class="0">
 <segment>
-<label x="167.64" y="139.7" size="1.27" layer="95" rot="R180" xref="yes"/>
+<label x="137.16" y="134.62" size="1.27" layer="95" rot="R180" xref="yes"/>
 </segment>
 </net>
 <net name="N$9" class="0">
 <segment>
 <pinref part="U6" gate="G$1" pin="A"/>
-<wire x1="167.64" y1="139.7" x2="167.64" y2="138.43" width="0.1524" layer="91"/>
-<wire x1="167.64" y1="138.43" x2="176.149" y2="138.43" width="0.1524" layer="91"/>
+<wire x1="170.18" y1="142.24" x2="170.18" y2="138.43" width="0.1524" layer="91"/>
+<wire x1="170.18" y1="138.43" x2="176.149" y2="138.43" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="N$11" class="0">
+<segment>
+<pinref part="U5" gate="G$1" pin="A"/>
+<wire x1="137.16" y1="134.62" x2="139.7" y2="134.62" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="DVID_HSYNC" class="0">
+<segment>
+<wire x1="170.18" y1="142.24" x2="170.18" y2="144.78" width="0.1524" layer="91"/>
+<label x="170.18" y="144.78" size="1.27" layer="95" rot="R90" xref="yes"/>
+</segment>
+</net>
+<net name="N$12" class="0">
+<segment>
+<wire x1="71.12" y1="137.16" x2="104.14" y2="137.16" width="0.1524" layer="91"/>
+<wire x1="104.14" y1="137.16" x2="104.14" y2="134.62" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="3.3V" class="2">
+<segment>
+<pinref part="SUPPLY19" gate="G$1" pin="3.3V"/>
+<pinref part="U6" gate="G$2" pin="VCC"/>
+<wire x1="182.88" y1="165.1" x2="182.88" y2="156.21" width="0.1524" layer="91"/>
+</segment>
+<segment>
+<pinref part="SUPPLY20" gate="G$1" pin="3.3V"/>
+<pinref part="U5" gate="G$2" pin="VCC"/>
+<wire x1="147.32" y1="162.56" x2="147.32" y2="152.4" width="0.1524" layer="91"/>
+</segment>
+<segment>
+<pinref part="SUPPLY23" gate="G$1" pin="3.3V"/>
+<pinref part="U7" gate="G$2" pin="VCC"/>
+<wire x1="180.34" y1="88.9" x2="180.34" y2="83.82" width="0.1524" layer="91"/>
 </segment>
 </net>
 </nets>
@@ -6225,6 +6295,10 @@ Switches electronic signals</description>
 </schematic>
 </drawing>
 <compatibility>
+<note version="6.3" minversion="6.2.2" severity="warning">
+Since Version 6.2.2 text objects can contain more than one line,
+which will not be processed correctly with this version.
+</note>
 <note version="8.2" severity="warning">
 Since Version 8.2, EAGLE supports online libraries. The ids
 of those online libraries will not be understood (or retained)
