@@ -217,8 +217,19 @@ impl USBConnection {
 
     // Write a message to the socket.
     pub fn write_message(&mut self, message: MirrorMessage) {
+        if !self.connected {
+            return;
+        }
+        
         let data = message.serialize();
-        let handle = self.device_handle.as_mut().unwrap();
+        
+        let handle = match self.device_handle.as_mut() {
+            Some(handle) => handle,
+            None => {
+                println!("Not connected.");
+                return;
+            }
+        };
 
         let header = &data[0..HEADERSIZE];
         let usb_data = &data[HEADERSIZE..data.len()];
