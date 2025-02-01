@@ -200,7 +200,9 @@ impl IBusHandler {
                 return None;
             }
         };
-        return Some(IBusHandler {port: new_port});
+        return Some(IBusHandler {
+            port: new_port,
+        });
     }
 
     //Send an IBus message.
@@ -247,7 +249,7 @@ impl IBusHandler {
         }
 
         let ib_wait = Duration::from_millis(IBUS_WAIT);
-        let mut start = Instant::now();
+        let mut start;
 
         /*while Instant::now() - start < ib_wait {
             let new_byte_count = match self.port.bytes_to_read() {

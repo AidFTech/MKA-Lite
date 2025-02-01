@@ -14,6 +14,8 @@ pub struct Context {
     pub album: String, // The album name.
     pub app: String, //The app name.
 
+    pub track_time: i32, //The current song runtime.
+
     pub version: i8, //The nav computer version.
 
     pub headlights_on: bool, //True if headlights are turned on.
@@ -37,6 +39,8 @@ impl Context {
             artist: "".to_string(),
             album: "".to_string(),
             app: "".to_string(),
+
+            track_time: -1,
 
             version: 5,
 

@@ -2,6 +2,7 @@ mod ibus;
 mod mka;
 mod context;
 mod mirror;
+mod aap;
 
 use std::env;
 use std::sync::{Arc, Mutex};
