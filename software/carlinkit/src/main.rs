@@ -4,7 +4,7 @@ mod context;
 mod mirror;
 mod aap;
 
-use std::env;
+use std::{env, thread};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -59,9 +59,32 @@ fn main() {
     let mutex_ibus_handler = Arc::new(Mutex::new(ibus_handler.unwrap()));
     let mutex_mirror_handler = Arc::new(Mutex::new(MirrorHandler::new(&mutex_context, &mutex_ibus_handler, 800, 480)));
 
+    let thread_ibus_handler = Arc::clone(&mutex_ibus_handler);
+
     let mut mka_obj = MKAObj::new(&mutex_context, &mutex_ibus_handler, &mutex_mirror_handler);
 
     mka_obj.send_cd_ping();
+
+    let _ibus_handle = thread::spawn( move || {
+        loop {
+            let mut ibus_handler = match thread_ibus_handler.try_lock() {
+                Ok(ibus_handler) => ibus_handler,
+                Err(_) => {
+                    continue;
+                }
+            };
+
+            if ibus_handler.bytes_available() >= 4 {
+                let ib_msg = match ibus_handler.read_ibus_message() {
+                    None => {
+                        continue;
+                    }
+                    Some(ib_msg) => ib_msg,
+                };
+                ibus_handler.cache_message(ib_msg);
+            }
+        }
+    });
 
     loop {
         mka_obj.check_ibus();

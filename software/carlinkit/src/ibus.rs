@@ -187,6 +187,7 @@ pub fn get_ibus_message(data: Vec<u8>) -> IBusMessage {
 
 pub struct IBusHandler {
     port: Box<dyn SerialPort>,
+    rx_cache: Vec<IBusMessage>,
 }
 
 impl IBusHandler {
@@ -202,6 +203,7 @@ impl IBusHandler {
         };
         return Some(IBusHandler {
             port: new_port,
+            rx_cache: Vec::new(),
         });
     }
 
@@ -339,6 +341,16 @@ impl IBusHandler {
         } else {
             return None;
         }
+    }
+
+    //Add a message to the cache.
+    pub fn cache_message(&mut self, message: IBusMessage) {
+        self.rx_cache.push(message);
+    }
+
+    //Get the RX message cache.
+    pub fn get_rx_cache(&mut self) -> &mut Vec<IBusMessage> {
+        return &mut self.rx_cache;
     }
 
     //Get the number of bytes available.
