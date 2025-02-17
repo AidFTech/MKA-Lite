@@ -59,12 +59,20 @@ impl <'a> MKAObj<'a> {
         }*/
 
         let ibus_cache = ibus_handler.get_rx_cache();
+        let mut ibus_rx = Vec::new();
+
         for ibus_msg in &mut *ibus_cache {
-            println!("{:X?}", ibus_msg.get_bytes());
-            self.handle_ibus_message(ibus_msg.clone());
+            ibus_rx.push(ibus_msg.clone());
         }
 
         ibus_cache.clear();
+
+        std::mem::drop(ibus_handler);
+
+        for ibus_msg in ibus_rx {
+            println!("{:X?}", ibus_msg.get_bytes());
+            self.handle_ibus_message(ibus_msg);
+        }
     }
 
     fn handle_ibus_message(&mut self, ibus_msg: IBusMessage) {
