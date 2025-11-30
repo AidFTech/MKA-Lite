@@ -188,10 +188,11 @@ pub fn get_ibus_message(data: Vec<u8>) -> IBusMessage {
 pub struct IBusHandler {
     port: Box<dyn SerialPort>,
     rx_cache: Vec<IBusMessage>,
+    tx_cache: Vec<IBusMessage>,
 }
 
 impl IBusHandler {
-    //Get an IBus handler from a port name.
+    ///Get an IBus handler from a port name.
     pub fn new(port_str: String) -> Option<IBusHandler> {
         let port_builder = serialport::new(port_str, 9600).parity(Parity::Even);
         let new_port = match port_builder.open() {
@@ -204,10 +205,11 @@ impl IBusHandler {
         return Some(IBusHandler {
             port: new_port,
             rx_cache: Vec::new(),
+            tx_cache: Vec::new(),
         });
     }
 
-    //Send an IBus message.
+    ///Send an IBus message.
     pub fn write_ibus_message(&mut self, message: IBusMessage) {
         let data = message.get_bytes();
 
@@ -237,7 +239,7 @@ impl IBusHandler {
         //let _ = self.port.set_timeout(Duration::from_millis(IBUS_WAIT));
     }
 
-    //Read the IBus port.
+    ///Read the IBus port.
     pub fn read_ibus_message(&mut self) -> Option<IBusMessage> {
         let mut byte_count = match self.port.bytes_to_read() {
             Ok(l) => l,
@@ -343,17 +345,22 @@ impl IBusHandler {
         }
     }
 
-    //Add a message to the cache.
-    pub fn cache_message(&mut self, message: IBusMessage) {
+    ///Add a message to the RX cache.
+    pub fn rx_cache_message(&mut self, message: IBusMessage) {
         self.rx_cache.push(message);
     }
 
-    //Get the RX message cache.
+    ///Get the TX message cache.
+    pub fn get_tx_cache(&mut self) -> &mut Vec<IBusMessage> {
+        return &mut self.tx_cache;
+    }
+
+    ///Get the RX message cache.
     pub fn get_rx_cache(&mut self) -> &mut Vec<IBusMessage> {
         return &mut self.rx_cache;
     }
 
-    //Get the number of bytes available.
+    ///Get the number of bytes available.
     pub fn bytes_available(&mut self) -> u32 {
         let l = match self.port.bytes_to_read() {
             Ok(l) => l,

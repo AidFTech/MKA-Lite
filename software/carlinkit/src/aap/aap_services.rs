@@ -11,10 +11,11 @@ pub enum ServiceChannels {
 	PhoneStatusChannel,
 	NotificationChannel,
 	NavigationChannel,
+	MediaStatusChannel,
 	MaximumChannel=256,
 }
 
-pub enum SensorType {
+pub enum SensorTypeOld {
 	SensorTypeLocation = 1,
 	SensorTypeCompass,
 	SensorTypeSpeed,

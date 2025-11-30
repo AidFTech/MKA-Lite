@@ -88,10 +88,31 @@ impl<'a> MirrorHandler<'a> {
     }
 
     pub fn process(&mut self) {
+        let phone_type = match self.context.try_lock() {
+            Ok(context) => {
+                context.phone_type
+            }
+            Err(_) => {
+                return;
+            }
+        };
+
         if !self.run {
             return;
         }
         if !self.usb_conn.connected {
+            if phone_type == 3 {
+                match self.context.try_lock() {
+					Ok(mut context) => {
+						context.phone_type = 0;
+					}
+					Err(_) => {
+						println!("Carplay Handler stop connection: Context locked.");
+						return;
+					}
+				};
+            }
+
             self.startup = false;
             let run = self.usb_conn.connect();
 

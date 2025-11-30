@@ -1,7 +1,7 @@
 use protobuf::rt::*;
 use protobuf::Message;
 
-use super::aap_services::SensorType;
+use super::aap_services::SensorTypeOld;
 
 #[derive(Default, PartialEq, Clone)]
 pub struct SensorMessage {
@@ -72,17 +72,17 @@ impl Message for SensorMessage {
 	fn write_to_with_cached_sizes(&self, os: &mut protobuf::CodedOutputStream) -> protobuf::Result<()> {
 		for l in &self.event_location {
 			let ev_data = l.write_to_bytes()?;
-			os.write_bytes(SensorType::SensorTypeLocation as u32, &ev_data)?;
+			os.write_bytes(SensorTypeOld::SensorTypeLocation as u32, &ev_data)?;
 		}
 		
 		for n in &self.event_night {
 			let ev_data = n.write_to_bytes()?;
-			os.write_bytes(SensorType::SensorTypeNightData as u32, &ev_data)?;
+			os.write_bytes(SensorTypeOld::SensorTypeNightData as u32, &ev_data)?;
 		}
 
 		for s in &self.event_status {
 			let ev_data = s.write_to_bytes()?;
-			os.write_bytes(SensorType::SensorTypeDrivingStatus as u32, &ev_data)?;
+			os.write_bytes(SensorTypeOld::SensorTypeDrivingStatus as u32, &ev_data)?;
 		}
 		
 		os.write_unknown_fields(self.special_fields.unknown_fields())?;

@@ -1,5 +1,5 @@
 use rusb::{Context as USBContext, Device, DeviceDescriptor, DeviceHandle, Direction, TransferType, UsbContext};
-use std::time::{Duration, SystemTime};
+use std::time::{Duration, Instant};
 
 use crate::mirror::messages::{
     HEADERSIZE,
@@ -27,6 +27,8 @@ pub struct USBConnection {
 
     rx: u8,
     tx: u8,
+
+    last_check: Instant,
 }
 
 impl USBConnection {
@@ -40,55 +42,58 @@ impl USBConnection {
 
             rx: 0,
             tx: 0,
+
+            last_check: Instant::now(),
         }
     }
 
     pub fn connect(&mut self) -> bool {
-        let start_time = SystemTime::now();
+        if Instant::now() - self.last_check < Duration::from_millis(100) {
+            return false;
+        }
+
         let mut has_new_device = false;
         let mut device_id: u16;
 
-        while !has_new_device {
-            let context = match USBContext::new() {
-                Ok(context) => context,
-                Err(_e) => continue,
-            };
+        let context = match USBContext::new() {
+            Ok(context) => context,
+            Err(_e) => return false,
+        };
 
-            let device_list = match context.devices() {
-                Ok(device_list) => device_list,
-                Err(_e) => continue,
-            };
+        let device_list = match context.devices() {
+            Ok(device_list) => device_list,
+            Err(_e) => return false,
+        };
 
-            for id in 0..2 {
-                if id % 2 == 1 {
-                    device_id = DEVICE_ID_WIRELESS;
-                } else {
-                    device_id = DEVICE_ID_WIRED;
-                }
+        for id in 0..2 {
+            if id % 2 == 1 {
+                device_id = DEVICE_ID_WIRELESS;
+            } else {
+                device_id = DEVICE_ID_WIRED;
+            }
 
-                for device in device_list.iter() {
-                    let device_descriptor = match device.device_descriptor() {
-                        Ok(d) => d,
-                        Err(_e) => continue,
-                    };
+            for device in device_list.iter() {
+                let device_descriptor = match device.device_descriptor() {
+                    Ok(d) => d,
+                    Err(_e) => continue,
+                };
 
-                    if device_descriptor.vendor_id() == VENDOR_ID && device_descriptor.product_id() == device_id {
-                        match device.open() {
-                            Ok(handle) => {
-                                self.device_handle = Some(handle);
-                                self.device = Some(device);
-                                has_new_device = true;
-                                break;
-                            }
-                            Err(_e) => continue,
+                if device_descriptor.vendor_id() == VENDOR_ID && device_descriptor.product_id() == device_id {
+                    match device.open() {
+                        Ok(handle) => {
+                            self.device_handle = Some(handle);
+                            self.device = Some(device);
+                            has_new_device = true;
+                            break;
                         }
+                        Err(_e) => continue,
                     }
                 }
             }
+        }
 
-            if start_time.elapsed().unwrap().as_millis() > 50 && !has_new_device {
-                return false;
-            }
+        if !has_new_device {
+            return false;
         }
 
         let device_handle = self.device_handle.as_mut().unwrap();

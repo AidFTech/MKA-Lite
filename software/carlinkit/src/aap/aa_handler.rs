@@ -7,21 +7,19 @@ use std::time::Instant;
 use protobuf::CodedOutputStream;
 use protobuf::Message;
 use openssl_sys::*;
+use protobuf::MessageField;
 
+use crate::mirror::mpv::MpvVideo;
+use crate::mirror::mpv::RdAudio;
 use crate::Context;
 
-use crate::aap::aap_services::*;
-use crate::aap::aap_services::ServiceChannels::*;
-use crate::aap::aap_services::InputChannelMessage::*;
-use crate::aap::aap_services::SensorChannelMessage::*;
-use crate::aap::aap_services::MediaChannelMessage::*;
+use crate::aap::aap_services::ServiceChannels;
+use crate::aap::protos::protos::key_event::Key;
 
-use crate::aap::aap_channel_descriptor::*;
-
-use super::aap_messages::*;
 use super::aap_usb::AndroidUSBConnection;
 use super::media_messages::*;
-use super::sensor_messages::SensorMessage;
+
+use super::protos::protos::*;
 
 const AAP_FRAME_FIRST_FRAME: u8 = 1;
 const AAP_FRAME_LAST_FRAME: u8 = 2;
@@ -78,12 +76,16 @@ eCXS4VrhEf4/HYMWP7GB5MFUOEVtlLiLM05ruUL7CrphdfgayDXVcTPfk75lLhmu\n\
 KAwp3tIHPoJOQiKNQ3/qks5km/9dujUGU2ARiU3qmxLMdgegFz8e\n\
 -----END RSA PRIVATE KEY-----\n";
 
-const CHANNEL_COUNT: usize = MaximumChannel as usize;
+const CHANNEL_COUNT: usize = ServiceChannels::MaximumChannel as usize;
 const EMPTY_DATA_ARRAY: Vec<u8> = Vec::new();
 
 pub struct AapHandler <'a> {
     usb_handler: AndroidUSBConnection,
     context: &'a Arc<Mutex<Context>>,
+    
+    mpv_video: &'a Arc<Mutex<MpvVideo>>,
+    rd_audio: &'a Arc<Mutex<RdAudio>>,
+    nav_audio: &'a Arc<Mutex<RdAudio>>,
 
     w: u16,
     h: u16,
@@ -108,9 +110,48 @@ pub struct AapHandler <'a> {
 
     connection_start: Instant,
     ping_timer: Instant,
+
+    android_start: i64,
 }
 
 impl<'a> AapHandler <'a> {
+    pub fn new(context: &'a Arc<Mutex<Context>>, mpv_video: &'a Arc<Mutex<MpvVideo>>, rd_audio: &'a Arc<Mutex<RdAudio>>, nav_audio: &'a Arc<Mutex<RdAudio>>, w: u16, h: u16) -> Self {
+        return Self {
+            usb_handler: AndroidUSBConnection::new(),
+            context,
+
+            mpv_video,
+            rd_audio,
+            nav_audio,
+
+            w,
+            h,
+
+            current_data: [EMPTY_DATA_ARRAY; CHANNEL_COUNT],
+            total_size: [0; CHANNEL_COUNT],
+            data_complete: [false; CHANNEL_COUNT],
+            channel_session: [0; CHANNEL_COUNT],
+
+            bio_write: std::ptr::null_mut(),
+            bio_read: std::ptr::null_mut(),
+
+            ssl: std::ptr::null_mut(),
+            ssl_method: std::ptr::null_mut(),
+            ssl_context: std::ptr::null_mut(),
+
+            had_sdr: false,
+            first_video: false,
+
+            enter_hold: false,
+            home_hold: false,
+
+            connection_start: Instant::now(),
+
+            android_start: 0,
+            ping_timer: Instant::now(),
+        }
+    }
+
     pub fn process(&mut self) {
         let context = match self.context.try_lock() {
             Ok(context) => context,
@@ -133,7 +174,7 @@ impl<'a> AapHandler <'a> {
             let connected = self.usb_handler.connect();
 
             if connected {
-                self.write_block(true, 0, [0x0, 0x1, 0x0, 0x1].to_vec(), ControlMessage::ControlMessageVersionRequest as u16, Duration::from_millis(2000), false);
+                self.write_block(true, 0, [0x0, 0x1, 0x0, 0x1].to_vec(), ControlMessageType::MESSAGE_VERSION_REQUEST as u16, Duration::from_millis(2000), false);
 
                 if phone_type != 5 {
                     self.start_connection();
@@ -157,8 +198,8 @@ impl<'a> AapHandler <'a> {
         if phone_type == 5 && Instant::now() - self.ping_timer > Duration::from_millis(2000) {
             self.ping_timer = Instant::now();
             
-            let ping_msg = PingMessage::new();
-            self.write_message(true, ControlChannel as u8, ping_msg, ProtocolMessage::ProtocolMessagePingRequest as u16, Duration::from_millis(5000), true);
+            let ping_msg = PingRequest::new();
+            self.write_message(true, ServiceChannels::ControlChannel as u8, ping_msg, ControlMessageType::MESSAGE_PING_REQUEST as u16, Duration::from_millis(5000), true);
         }
     }
 
@@ -524,14 +565,14 @@ impl<'a> AapHandler <'a> {
             //println!("Message: {:X?}", msg_data);
         }*/
 
-        if msg_type == ControlMessage::ControlMessageVersionResponse as u16 { //Version response.
+        if msg_type == ControlMessageType::MESSAGE_VERSION_RESPONSE as u16 { //Version response.
             self.begin_ssl_handshake();
-        } else if msg_type == ControlMessage::ControlMessageSSLHandshake as u16 { //Handshake response.
+        } else if msg_type == ControlMessageType::MESSAGE_ENCAPSULATED_SSL as u16 { //Handshake response.
             self.handle_ssl_handshake(msg_data.to_vec());
-        } else if msg_type == ControlMessage::ControlMessageServiceDiscoveryRequest as u16 { //Service request.
+        } else if msg_type == ControlMessageType::MESSAGE_SERVICE_DISCOVERY_REQUEST as u16 { //Service request.
             self.handle_service_discovery_request(chan);
-        } else if msg_type == ProtocolMessage::ProtocolMessageAudioFocusRequest as u16 { //Audio focus request.
-            let mut request = AudioFocusRequest::new();
+        } else if msg_type == ControlMessageType::MESSAGE_AUDIO_FOCUS_REQUEST as u16 { //Audio focus request.
+            let mut request = AudioFocusRequestNotification::new();
             let request_data = msg_data;
             match request.merge_from_bytes(request_data) {
                 Ok(_) => {
@@ -542,56 +583,56 @@ impl<'a> AapHandler <'a> {
                     println!("Error: {}", e);
                 }
             }
-        } else if msg_type == ProtocolMessage::ProtocolMessageChannelOpenRequest as u16 { //Channel open request.
+        } else if msg_type == ControlMessageType::MESSAGE_CHANNEL_OPEN_REQUEST as u16 { //Channel open request.
             let mut request = ChannelOpenRequest::new();
             let request_data = msg_data;
             match request.merge_from_bytes(request_data) {
                 Ok(_) => {
-                    self.handle_channel_open_request(chan as u8, request.channel_id);
+                    self.handle_channel_open_request(chan as u8, request.service_id() as u32);
                 }
                 Err(e) => {
                     println!("Error: {}", e);
                 }
             }
-        } else if msg_type == ProtocolMessage::ProtocolMessageMediaData as u16 || msg_type == ProtocolMessage::ProtocolMessageMediaDataTime as u16 {
+        } else if msg_type == MediaMessageId::MEDIA_MESSAGE_CODEC_CONFIG as u16 || msg_type == MediaMessageId::MEDIA_MESSAGE_DATA as u16 {
             //TODO: Project media.
             self.send_media_ack(chan as u8);
-            if chan == VideoChannel as usize {
+            if chan == ServiceChannels::VideoChannel as usize {
                 let mut video_data = VideoMsg::new();
                 video_data.set_data(&full_msg_data);
                 //self.handle_video_message(video_data);
-            } else if chan == Audio1Channel as usize || chan == MediaAudioChannel as usize {
+            } else if chan == ServiceChannels::Audio1Channel as usize || chan == ServiceChannels::MediaAudioChannel as usize {
                 let mut audio_data = AudioMsg::new();
                 audio_data.set_data(&full_msg_data);
                 audio_data.set_channel(chan as u8);
 
                 //self.handle_audio_message(audio_data);
             }
-        } else if msg_type == ProtocolMessage::ProtocolMessagePingRequest as u16 {
-            let mut ping = PingMessage::new();
+        } else if msg_type == ControlMessageType::MESSAGE_PING_REQUEST as u16 {
+            let mut ping = PingResponse::new();
             let mut timestamp = self.get_timestamp();
 
             match ping.merge_from_bytes(msg_data) {
                 Ok(_) => {
-                    timestamp = ping.timestamp as u64;
+                    timestamp = ping.timestamp() as u64;
                 }
                 Err(_) => {
 
                 }
             }
 
-            let mut response = PingMessage::new();
-            response.timestamp = timestamp as i64;
+            let mut response = PingResponse::new();
+            response.set_timestamp(timestamp as i64);
 
-            self.write_message(true, chan as u8, response, ProtocolMessage::ProtocolMessagePingResponse as u16, Duration::from_millis(5000), true);
-        } else if msg_type == ProtocolMessage::ProtocolMessageNavigationFocusRequest as u16 {
-            let mut response = NavigationFocusMessage::new();
-            response.focus_type = 2;
+            self.write_message(true, chan as u8, response, ControlMessageType::MESSAGE_PING_RESPONSE as u16, Duration::from_millis(5000), true);
+        } else if msg_type == ControlMessageType::MESSAGE_NAV_FOCUS_REQUEST as u16 {
+            let mut response = NavFocusNotification::new();
+            response.set_focus_type(NavFocusType::NAV_FOCUS_PROJECTED);
 
-            self.write_message(true, chan as u8, response, ProtocolMessage::ProtocolMessageNavigationFocusResponse as u16, Duration::from_millis(5000), true);
-        } else if chan == PhoneStatusChannel as usize {
-            if msg_type == MediaInfoMessage::MediaInfoMessagePlayback as u16 {
-                let mut playback_msg = MediaPlaybackMessage::new();
+            self.write_message(true, chan as u8, response, ControlMessageType::MESSAGE_NAV_FOCUS_NOTIFICATION as u16, Duration::from_millis(5000), true);
+        } else if chan == ServiceChannels::PhoneStatusChannel as usize {
+            if msg_type == MediaPlaybackStatusMessageId::MEDIA_PLAYBACK_STATUS as u16 {
+                let mut playback_msg = MediaPlaybackStatus::new();
                 let mut msg_read = false;
                 match playback_msg.merge_from_bytes(msg_data) {
                     Ok(_) => {
@@ -611,20 +652,21 @@ impl<'a> AapHandler <'a> {
                         }
                     };
 
-                    let playing = playback_msg.playback_state == 2;
-                    let loading = playback_msg.playback_state == 1;
+                    let playing = playback_msg.state() == media_playback_status::State::PLAYING;
+                    let loading = playback_msg.state() == media_playback_status::State::STOPPED;
 
                     if context.audio_selected {
-                        context.track_time = playback_msg.track_progress;
+                        context.track_time = playback_msg.playback_seconds() as i32;
 
-                        context.app = playback_msg.media_app;
+                        context.app = playback_msg.media_source().to_string();
                         context.playing = playing;
                     } else if playing || loading {
-                        self.send_button_message(InputButton::ButtonStop as u32);
+                        self.send_button_message(KeyCode::KEYCODE_MEDIA_PAUSE as u32, 0x0);
+                        self.send_button_message(KeyCode::KEYCODE_MEDIA_PAUSE as u32, 0x2);
                     }
                 }
-            } else if msg_type == MediaInfoMessage::MediaInfoMessageMeta as u16 {
-                let mut meta_msg = MediaMetaMessage::new();
+            } else if msg_type == MediaPlaybackStatusMessageId::MEDIA_PLAYBACK_METADATA as u16 {
+                let mut meta_msg = MediaPlaybackMetadata::new();
                 let mut msg_read = false;
 
                 match meta_msg.merge_from_bytes(msg_data) {
@@ -645,26 +687,26 @@ impl<'a> AapHandler <'a> {
                         }
                     };
 
-                    context.song_title = meta_msg.track_name;
-                    context.artist = meta_msg.artist_name;
-                    context.album = meta_msg.album_name;
+                    context.song_title = meta_msg.song().to_string();
+                    context.artist = meta_msg.artist().to_string();
+                    context.album = meta_msg.album().to_string();
                 }
                 
             }
-        } else if chan == TouchChannel as usize {
-            if msg_type == InputChannelMessageBindingRequest as u16 {
+        } else if chan == ServiceChannels::TouchChannel as usize {
+            if msg_type == InputMessageId::INPUT_MESSAGE_KEY_BINDING_REQUEST as u16 {
                 self.handle_binding_request(chan as u8);
             }
-        } else if chan == SensorChannel as usize {
-            if msg_type == SensorChannelMessageStartRequest as u16 {
+        } else if chan == ServiceChannels::SensorChannel as usize {
+            if msg_type == SensorMessageId::SENSOR_MESSAGE_REQUEST as u16 {
                 self.handle_sensor_start_request(chan as u8);
             }
-        } else if chan == MediaAudioChannel as usize || chan == Audio1Channel as usize ||
-            chan == Audio2Channel as usize || chan == VideoChannel as usize || chan == MicrophoneChannel as usize {
+        } else if chan == ServiceChannels::MediaAudioChannel as usize || chan == ServiceChannels::Audio1Channel as usize ||
+            chan == ServiceChannels::Audio2Channel as usize || chan == ServiceChannels::VideoChannel as usize || chan == ServiceChannels::MicrophoneChannel as usize {
             //self.send_media_ack(chan as u8);
-            if msg_type == MediaChannelMessageSetupRequest as u16 {
+            if msg_type == MediaMessageId::MEDIA_MESSAGE_SETUP as u16 {
                 self.handle_media_setup_request(chan as u8);
-            } else if msg_type == MediaChannelMessageStartRequest as u16 {
+            } else if msg_type == MediaMessageId::MEDIA_MESSAGE_START as u16 {
                 let mut request = MediaStartRequest::new();
                 match request.merge_from_bytes(msg_data) {
                     Ok(_) => {
@@ -674,7 +716,7 @@ impl<'a> AapHandler <'a> {
                         println!("Error: {}", e);
                     }
                 }
-            } else if msg_type == MediaChannelMessageStopRequest as u16 {
+            } else if msg_type == MediaMessageId::MEDIA_MESSAGE_STOP as u16 {
                 self.channel_session[chan] = 0;
             }
         }
@@ -688,12 +730,13 @@ impl<'a> AapHandler <'a> {
             return;
         }
 
-        let mut sensor_msg = SensorMessage::new();
-        let night_sensor = sensor_msg.add_event_night();
+        let mut night_sensor_msg = NightModeData::new();
+        night_sensor_msg.set_night_mode(night);
 
-        night_sensor.night_mode = night;
+        let mut sensor_msg = SensorBatch::new();
+        sensor_msg.night_mode_data.push(night_sensor_msg);
 
-        self.write_message(true, SensorChannel as u8, sensor_msg, SensorChannelMessageEvent as u16, Duration::from_millis(5000), true);
+        self.write_message(true, ServiceChannels::SensorChannel as u8, sensor_msg, SensorMessageId::SENSOR_MESSAGE_BATCH as u16, Duration::from_millis(5000), true);
     }
 
     //Start playing audio if start is true.
@@ -703,15 +746,18 @@ impl<'a> AapHandler <'a> {
         }
 
         if start {
-            self.send_button_message(InputButton::ButtonStart as u32);
+            self.send_button_message(KeyCode::KEYCODE_MEDIA_PLAY as u32, 0x0);
+            self.send_button_message(KeyCode::KEYCODE_MEDIA_PLAY as u32, 0x2);
         } else {
-            self.send_button_message(InputButton::ButtonStop as u32);
+            self.send_button_message(KeyCode::KEYCODE_MEDIA_PAUSE as u32, 0x0);
+            self.send_button_message(KeyCode::KEYCODE_MEDIA_PAUSE as u32, 0x2);
         }
     }
 
     //Show the audio source window.
     pub fn show_audio_window(&mut self) {
-        self.send_button_message(InputButton::ButtonMusic as u32);
+        self.send_button_message(KeyCode::KEYCODE_MUSIC as u32, 0x0);
+        self.send_button_message(KeyCode::KEYCODE_MUSIC as u32, 0x2);
     }
 
     //Internal message handles:
@@ -804,7 +850,7 @@ impl<'a> AapHandler <'a> {
                     set_handshake_data.push(handshake_data[i as usize]);
                 }
 
-                self.write_block(false, ServiceChannels::ControlChannel as u8, set_handshake_data, ControlMessage::ControlMessageSSLHandshake as u16, Duration::from_millis(5000), false);
+                self.write_block(false, ServiceChannels::ControlChannel as u8, set_handshake_data, ControlMessageType::MESSAGE_ENCAPSULATED_SSL as u16, Duration::from_millis(5000), false);
             } else {
                 println!("Error code {}", SSL_get_error(self.ssl, ret));
                 return;
@@ -834,52 +880,37 @@ impl<'a> AapHandler <'a> {
                     set_handshake_data.push(handshake_data[i as usize]);
                 }
 
-                self.write_block(false, ServiceChannels::ControlChannel as u8, set_handshake_data, ControlMessage::ControlMessageSSLHandshake as u16, Duration::from_millis(5000), false);
+                self.write_block(false, ServiceChannels::ControlChannel as u8, set_handshake_data, ControlMessageType::MESSAGE_ENCAPSULATED_SSL as u16, Duration::from_millis(5000), false);
             } else if SSL_get_error(self.ssl, ret) != 0 {
                 return;
             }
 
-            let auth_message = AuthCompleteResponse::new();
-            self.write_message(false, ServiceChannels::ControlChannel as u8, auth_message, ControlMessage::ControlMessageAuthComplete as u16, Duration::from_millis(2000), false);
+            let auth_message = AuthResponse::new();
+            self.write_message(false, ServiceChannels::ControlChannel as u8, auth_message, ControlMessageType::MESSAGE_AUTH_COMPLETE as u16, Duration::from_millis(2000), false);
         }
     }
 
     //Send a button message.
-    fn send_button_message(&mut self, button: u32) {
-        let press_msg = ButtonPressMessage::get_button_press(button, true);
-        let release_msg = ButtonPressMessage::get_button_press(button, false);
+    fn send_button_message(&mut self, button: u32, state: u8) {
+        if state == 0x1 {
+            return;
+        }
 
-        let mut press_data = press_msg.write_to_bytes().unwrap();
-        let mut release_data = release_msg.write_to_bytes().unwrap();
+        let mut press_key = Key::new();
+        press_key.set_keycode(button);
+        press_key.set_down(state != 0x2);
+        press_key.set_metastate(button);
+        press_key.set_longpress(false);
 
-        let press_len = (press_data.len()&0xFF) as u8;
-        let release_len = (release_data.len()&0xFF) as u8;
+        let mut press_event = KeyEvent::new();
+        press_event.keys.push(press_key);
 
-        press_data.insert(0, 0xA);
-        press_data.insert(1, press_len);
+        let mut press_msg = InputReport::new();
+        press_msg.key_event = MessageField::some(press_event);
+        press_msg.set_timestamp(self.get_timestamp());
 
-        release_data.insert(0, 0xA);
-        release_data.insert(1, release_len);
-
-        let mut send_data = Vec::new();
-
-        let mut os = CodedOutputStream::vec(&mut send_data);
-        let _ = os.write_uint64(1, self.get_timestamp());
-        let _ = os.write_bytes(4, &press_data);
-
-        std::mem::drop(os);
-
-        self.write_block(true, TouchChannel as u8, send_data, InputChannelMessageInputEvent as u16, Duration::from_millis(5000), true);
-
-        let mut send_rel_data = Vec::new();
-
-        let mut os = CodedOutputStream::vec(&mut send_rel_data);
-        let _ = os.write_uint64(1, self.get_timestamp());
-        let _ = os.write_bytes(4, &release_data);
-
-        std::mem::drop(os);
-
-        self.write_block(true, TouchChannel as u8, send_rel_data, InputChannelMessageInputEvent as u16, Duration::from_millis(5000), true);
+        println!("Sent: {:X?}", press_msg.write_to_bytes());
+        self.write_message(true, ServiceChannels::TouchChannel as u8, press_msg, InputMessageId::INPUT_MESSAGE_INPUT_REPORT as u16, Duration::from_millis(5000), true);
     }
 
     //Send a scroll wheel message- clockwise if cw is true.
@@ -887,7 +918,7 @@ impl<'a> AapHandler <'a> {
         let mut scroll_data = Vec::new();
 
         let mut os = CodedOutputStream::vec(&mut scroll_data);
-        let _ = os.write_uint32(1, InputButton::ButtonScroll as u32);
+        let _ = os.write_uint32(1, KeyCode::KEYCODE_ROTARY_CONTROLLER as u32);
 
         if cw {
             let _ = os.write_int32(2, 1);
@@ -910,7 +941,8 @@ impl<'a> AapHandler <'a> {
 
         std::mem::drop(os);
 
-        self.write_block(true, TouchChannel as u8, send_data, InputChannelMessageInputEvent as u16, Duration::from_millis(5000), true);
+        println!("Sent: {:X?}", send_data);
+        self.write_block(true, ServiceChannels::TouchChannel as u8, send_data, InputMessageId::INPUT_MESSAGE_INPUT_REPORT as u16, Duration::from_millis(5000), true);
     }
 
     //Get the current timestamp.
@@ -930,10 +962,10 @@ impl<'a> AapHandler <'a> {
 
         match request.merge_from_bytes(request_data) {
             Ok(_) => {
-                let phone_name = request.get_phone_name();
+                let phone_name = request.device_name();
                 match self.context.try_lock() {
                     Ok(mut context) => {
-                        context.phone_name = phone_name;
+                        context.phone_name = phone_name.to_string();
                     }
                     Err(_) => {
                         println!("Service discovery request: Context locked.");
@@ -944,214 +976,326 @@ impl<'a> AapHandler <'a> {
                 println!("Error: {}", e);
             }
         }
+
+        let context = match self.context.try_lock() {
+            Ok(context) => context,
+            Err(_) => {
+                println!("Service discovery request: Context locked.");
+                return;
+            }
+        };
         
         let mut response = ServiceDiscoveryResponse::new();
         //TODO: Configure the response based on the context settings.
 
-        let input_channel = response.add_channel(TouchChannel as u32);
-        let input_touch = input_channel.add_input_event();
+        //Input:
+        let mut input_service = InputSourceService::new();
 
-        //let touch_config = input_touch.add_touch_parameter();
-        //touch_config.set_dimensions(800, 480);
+        input_service.keycodes_supported.push(KeyCode::KEYCODE_HOME as i32);
+        input_service.keycodes_supported.push(KeyCode::KEYCODE_BACK as i32);
 
-        input_touch.add_keycode(InputButton::ButtonMenu as u32);
-        input_touch.add_keycode(InputButton::ButtonMic1 as u32);
-        input_touch.add_keycode(InputButton::ButtonHome as u32);
-        input_touch.add_keycode(InputButton::ButtonBack as u32);
-        input_touch.add_keycode(InputButton::ButtonPhone as u32);
-        input_touch.add_keycode(InputButton::ButtonCallend as u32);
-        input_touch.add_keycode(InputButton::ButtonUp as u32);
-        input_touch.add_keycode(InputButton::ButtonDown as u32);
-        input_touch.add_keycode(InputButton::ButtonLeft as u32);
-        input_touch.add_keycode(InputButton::ButtonRight as u32);
-        input_touch.add_keycode(InputButton::ButtonEnter as u32);
-        input_touch.add_keycode(InputButton::ButtonMic as u32);
-        input_touch.add_keycode(InputButton::ButtonPlayPause as u32);
-        input_touch.add_keycode(InputButton::ButtonNext as u32);
-        input_touch.add_keycode(InputButton::ButtonPrev as u32);
-        input_touch.add_keycode(InputButton::ButtonMusic as u32);
-        input_touch.add_keycode(InputButton::ButtonScroll as u32);
-        input_touch.add_keycode(InputButton::ButtonTel as u32);
-        input_touch.add_keycode(InputButton::ButtonNavigation as u32);
-        input_touch.add_keycode(InputButton::ButtonMedia as u32);
-        input_touch.add_keycode(InputButton::ButtonRadio as u32);
-        input_touch.add_keycode(InputButton::Button1 as u32);
-        input_touch.add_keycode(InputButton::Button2 as u32);
-        input_touch.add_keycode(InputButton::Button3 as u32);
-        input_touch.add_keycode(InputButton::ButtonStart as u32);
-        input_touch.add_keycode(InputButton::ButtonStop as u32);
+        input_service.keycodes_supported.push(KeyCode::KEYCODE_CALL as i32);
 
-        let sensor_channel = response.add_channel(SensorChannel as u32);
-        let sensor_list = sensor_channel.add_sensor_channel();
+        input_service.keycodes_supported.push(KeyCode::KEYCODE_ENDCALL as i32);
+        input_service.keycodes_supported.push(KeyCode::KEYCODE_DPAD_UP as i32);
+        input_service.keycodes_supported.push(KeyCode::KEYCODE_DPAD_DOWN as i32);
+        input_service.keycodes_supported.push(KeyCode::KEYCODE_DPAD_LEFT as i32);
+        input_service.keycodes_supported.push(KeyCode::KEYCODE_DPAD_RIGHT as i32);
+        input_service.keycodes_supported.push(KeyCode::KEYCODE_DPAD_CENTER as i32);
+        //input_service.keycodes_supported.push(InputButton::ButtonMic as i32);
+        input_service.keycodes_supported.push(KeyCode::KEYCODE_MEDIA_PLAY_PAUSE as i32);
+        input_service.keycodes_supported.push(KeyCode::KEYCODE_MEDIA_NEXT as i32);
+        input_service.keycodes_supported.push(KeyCode::KEYCODE_MEDIA_PREVIOUS as i32);
+        
+        input_service.keycodes_supported.push(KeyCode::KEYCODE_MUSIC as i32);
 
-        sensor_list.add_config().sensor_type = SensorType::SensorTypeDrivingStatus as u32;
-        sensor_list.add_config().sensor_type = SensorType::SensorTypeNightData as u32;
-        sensor_list.add_config().sensor_type = SensorType::SensorTypeLocation as u32;
-        //sensor_list.add_config().sensor_type = SensorType::SensorTypeSpeed as u32;
-        //sensor_list.add_config().sensor_type = SensorType::SensorTypeGear as u32;
+        input_service.keycodes_supported.push(KeyCode::KEYCODE_ROTARY_CONTROLLER as i32);
 
-        let video_channel = response.add_channel(VideoChannel as u32);
-        let video_stream = video_channel.add_output_stream();
+        //input_service.keycodes_supported.push(InputButton::ButtonTel as i32);
 
-        video_stream.stream_type = STREAM_TYPE_VIDEO;
-        video_stream.set_available_in_call(true);
+        input_service.keycodes_supported.push(KeyCode::KEYCODE_MEDIA as i32);
+        input_service.keycodes_supported.push(KeyCode::KEYCODE_RADIO as i32);
+        //input_service.keycodes_supported.push(InputButton::Button1 as i32);
+        //input_service.keycodes_supported.push(InputButton::Button2 as i32);
+        //input_service.keycodes_supported.push(InputButton::Button3 as i32);
+        input_service.keycodes_supported.push(KeyCode::KEYCODE_MEDIA_PLAY as i32);
+        input_service.keycodes_supported.push(KeyCode::KEYCODE_MEDIA_PAUSE as i32);
+        
+        let mut input_service_wrapper = Service::new();
+        input_service_wrapper.set_id(ServiceChannels::TouchChannel as i32);
+        input_service_wrapper.input_source_service = MessageField::some(input_service);
+        response.services.push(input_service_wrapper);
 
-        let video_config = video_stream.add_video_config();
+        //Sensors:
+        let mut sensor_service = SensorSourceService::new();
 
-        if self.w >= 1920 && self.h >= 1080 {
-            video_config.video_resolution = 3;
-        } else if self.w >= 1280 && self.h >= 720 {
-            video_config.video_resolution = 2;
+        let mut sensor_driving_status = sensor_source_service::Sensor::new();
+        sensor_driving_status.set_sensor_type(SensorType::SENSOR_DRIVING_STATUS_DATA);
+
+        let mut sensor_night = sensor_source_service::Sensor::new();
+        sensor_night.set_sensor_type(SensorType::SENSOR_NIGHT_MODE);
+
+        let mut sensor_location = sensor_source_service::Sensor::new();
+        sensor_location.set_sensor_type(SensorType::SENSOR_LOCATION);
+
+        sensor_service.sensors.push(sensor_driving_status);
+        sensor_service.sensors.push(sensor_night);
+        sensor_service.sensors.push(sensor_location);
+
+        let mut sensor_service_wrapper = Service::new();
+        sensor_service_wrapper.set_id(ServiceChannels::SensorChannel as i32);
+        sensor_service_wrapper.sensor_source_service = MessageField::some(sensor_service);
+        response.services.push(sensor_service_wrapper);
+
+        //Video:
+        let mut video_sink = MediaSinkService::new();
+        let mut video_config = VideoConfiguration::new();
+
+        let mut margin_w = 0;
+        let mut margin_h = 0;
+
+        if self.w >= 1920 || self.h >= 1080 {
+            video_config.set_codec_resolution(VideoCodecResolutionType::VIDEO_1920x1080);
+
+            if self.h < 1080 {
+                margin_h = 1080 - self.h as u32;
+            }
+            if self.w < 1920 {
+                margin_w = 1920 - self.w as u32;
+            }
+        } else if self.w >= 1280 || self.h >= 720 {
+            video_config.set_codec_resolution(VideoCodecResolutionType::VIDEO_1280x720);
+            
+            if self.h < 720 {
+                margin_h = 720 - self.h as u32;
+            }
+            if self.w < 1280 {
+                margin_w = 1280 - self.w as u32;
+            }
         } else {
-            video_config.video_resolution = 1;
+            if self.w <= 800 && self.h <= 480 {
+                video_config.set_codec_resolution(VideoCodecResolutionType::VIDEO_800x480);
+                
+                if self.h < 480 {
+                    margin_h = 480 - self.h as u32;
+                }
+                if self.w < 800 {
+                    margin_w = 800 - self.w as u32;
+                }
+            } else {
+                video_config.set_codec_resolution(VideoCodecResolutionType::VIDEO_1280x720);
+            
+                if self.h < 720 {
+                    margin_h = 720 - self.h as u32;
+                }
+                if self.w < 1280 {
+                    margin_w = 1280 - self.w as u32;
+                }
+            }
         }
         
-        video_config.video_frame = 1;
-        video_config.margin_width = 0;
-        video_config.margin_height = 0;
-        video_config.dpi = 160;
-        video_config.additional_depth = 0;
+        video_config.set_frame_rate(VideoFrameRateType::VIDEO_FPS_60);
+        video_config.set_width_margin(margin_w);
+        video_config.set_height_margin(margin_h);
+        video_config.set_density(160);
+        video_config.set_decoder_additional_depth(0);
 
-        let audio_channel = response.add_channel(MediaAudioChannel as u32);
-        let audio_stream = audio_channel.add_output_stream();
+        video_sink.video_configs.push(video_config);
 
-        audio_stream.stream_type = STREAM_TYPE_AUDIO;
-        audio_stream.set_audio_type(AUDIO_TYPE_MEDIA);
-        audio_stream.set_available_in_call(true);
+        video_sink.set_available_type(MediaCodecType::MEDIA_CODEC_VIDEO_H264_BP);
+        video_sink.set_available_while_in_call(true);
+    
+        let mut video_sink_wrapper = Service::new();
+        video_sink_wrapper.set_id(ServiceChannels::VideoChannel as i32);
+        video_sink_wrapper.media_sink_service = MessageField::some(video_sink);
+        response.services.push(video_sink_wrapper);
 
-        let audio_config = audio_stream.add_audio_config();
-        audio_config.sample_rate = 48000;
+        //Main audio:
+        let mut audio_sink = MediaSinkService::new();
+        let mut audio_config = AudioConfiguration::new();
+
+        audio_config.set_sampling_rate(48000);
+        audio_config.set_number_of_bits(16);
+        audio_config.set_number_of_channels(2);
         
-        let speech_channel = response.add_channel(Audio1Channel as u32);
-        let speech_stream = speech_channel.add_output_stream();
+        audio_sink.set_available_type(MediaCodecType::MEDIA_CODEC_AUDIO_PCM);
+        audio_sink.set_available_while_in_call(false);
+        audio_sink.set_audio_type(AudioStreamType::AUDIO_STREAM_MEDIA);
+        audio_sink.audio_configs.push(audio_config);
+
+        let mut audio_sink_wrapper = Service::new();
+        audio_sink_wrapper.set_id(ServiceChannels::MediaAudioChannel as i32);
+        audio_sink_wrapper.media_sink_service = MessageField::some(audio_sink);
+        response.services.push(audio_sink_wrapper);
+
+        //Voice audio:
+        let mut voice_sink = MediaSinkService::new();
+        let mut voice_config = AudioConfiguration::new();
         
-        speech_stream.stream_type = STREAM_TYPE_AUDIO;
-        speech_stream.set_audio_type(AUDIO_TYPE_VOICE);
+        voice_config.set_sampling_rate(16000);
+        voice_config.set_number_of_bits(16);
+        voice_config.set_number_of_channels(1);
         
-        let speech_config = speech_stream.add_audio_config();
-        speech_config.sample_rate = 16000;
-        speech_config.channel_count = 1;
+        voice_sink.set_available_type(MediaCodecType::MEDIA_CODEC_AUDIO_PCM);
+        voice_sink.set_audio_type(AudioStreamType::AUDIO_STREAM_GUIDANCE);
+        voice_sink.set_available_while_in_call(true);
+        voice_sink.audio_configs.push(voice_config);
 
-        let mic_channel = response.add_channel(MicrophoneChannel as u32);
-        let mic_stream = mic_channel.add_input_stream();
+        let mut voice_sink_wrapper = Service::new();
+        voice_sink_wrapper.set_id(ServiceChannels::Audio1Channel as i32);
+        voice_sink_wrapper.media_sink_service = MessageField::some(voice_sink);
+        response.services.push(voice_sink_wrapper);
 
-        mic_stream.stream_type = STREAM_TYPE_AUDIO;
-        let mic_config = mic_stream.add_audio_config();
+        //Mic audio:
+        let mut mic_source = MediaSourceService::new();
+        let mut mic_config = AudioConfiguration::new();
 
-        mic_config.sample_rate = 16000;
-        mic_config.bit_depth = 16;
-        mic_config.channel_count = 1;
+        mic_config.set_sampling_rate(16000);
+        mic_config.set_number_of_bits(16);
+        mic_config.set_number_of_channels(1);
 
-        let media_notification = response.add_channel(PhoneStatusChannel as u32);
-        media_notification.add_empty_channel(9);
+        mic_source.set_available_type(MediaCodecType::MEDIA_CODEC_AUDIO_PCM);
+        mic_source.audio_config = MessageField::some(mic_config);
 
-        response.add_channel(NotificationChannel as u32);
+        let mut mic_source_wrapper = Service::new();
+        mic_source_wrapper.set_id(ServiceChannels::MicrophoneChannel as i32);
+        mic_source_wrapper.media_source_service = MessageField::some(mic_source);
+        response.services.push(mic_source_wrapper);
 
-        let nav_channel = response.add_channel(NavigationChannel as u32);
-        let nav_service = nav_channel.add_navigation_service();
-        
-        nav_service.minimum_interval = 750;
-        
-        //println!("Message: {:X?}", self.current_data);
+        //Media playback:
+        let media_playback_status_service = MediaPlaybackStatusService::new();
+        let mut media_status_service_wrapper = Service::new();
+        media_status_service_wrapper.set_id(ServiceChannels::MediaStatusChannel as i32);
+        media_status_service_wrapper.media_playback_service = MessageField::some(media_playback_status_service);
+        response.services.push(media_status_service_wrapper);
+
+        //Notifications:
+        let notification_service = GenericNotificationService::new();
+        let mut notification_service_wrapper = Service::new();
+        notification_service_wrapper.set_id(ServiceChannels::NotificationChannel as i32);
+        notification_service_wrapper.generic_notification_service = MessageField::some(notification_service);
+        response.services.push(notification_service_wrapper);
+
+        //Navigation:
+        let mut navigation_service = NavigationStatusService::new();
+        navigation_service.set_minimum_interval_ms(750);
+        navigation_service.set_type(navigation_status_service::InstrumentClusterType::ENUM);
+
+        let mut navigation_service_wrapper = Service::new();
+        navigation_service_wrapper.set_id(ServiceChannels::NavigationChannel as i32);
+        navigation_service_wrapper.navigation_status_service = MessageField::some(navigation_service);
+        response.services.push(navigation_service_wrapper);
+
+        //response.set_make("AidF".to_string());
+        response.set_head_unit_make("AidF".to_string());
+        response.set_head_unit_model("AIA-RPI100".to_string());
+        response.set_can_play_native_media_during_vr(true);
+
+        response.set_display_name("AidF".to_string());
+
         println!("Response: {:X?}", response.write_to_bytes());
-        self.write_message(true, chan as u8, response, ControlMessage::ControlMessageServiceDiscoveryResponse as u16, Duration::from_millis(2000), false);
+        self.write_message(true, chan as u8, response, ControlMessageType::MESSAGE_SERVICE_DISCOVERY_RESPONSE as u16, Duration::from_millis(2000), false);
 
         self.had_sdr = true;
     }
 
     //Handle an audio focus request.
-    fn handle_audio_focus_request(&mut self, channel: u8, req: AudioFocusRequest) {
-        let mut response = AudioFocusResponse::new();
+    fn handle_audio_focus_request(&mut self, channel: u8, req: AudioFocusRequestNotification) {
+        let mut response = AudioFocusNotification::new();
 
-        if req.focus_type == 4 { //Release.
-            response.focus_type = 3;
+        if req.request() == AudioFocusRequestType::AUDIO_FOCUS_RELEASE { //Release.
+            response.set_focus_state(AudioFocusStateType::AUDIO_FOCUS_STATE_LOSS);
         } else {
-            response.focus_type = 1;
+            response.set_focus_state(AudioFocusStateType::AUDIO_FOCUS_STATE_GAIN);
         }
 
-        self.write_message(true, channel, response, ProtocolMessage::ProtocolMessageAudioFocusResponse as u16, Duration::from_millis(5000), true);
+        self.write_message(true, channel, response, ControlMessageType::MESSAGE_AUDIO_FOCUS_NOTIFICATION as u16, Duration::from_millis(5000), true);
     }
 
     //Handle a channel open request.
     fn handle_channel_open_request(&mut self, channel: u8, channel_to_open: u32) {
         let mut response = ChannelOpenResponse::new();
-        response.status = 0;
+        response.set_status(MessageStatus::STATUS_SUCCESS);
 
-        self.write_message(true, channel, response.clone(), ProtocolMessage::ProtocolMessageChannelOpenResponse as u16, Duration::from_millis(5000), true);
+        self.write_message(true, channel, response.clone(), ControlMessageType::MESSAGE_CHANNEL_OPEN_RESPONSE as u16, Duration::from_millis(5000), true);
         if channel as u32 != channel_to_open {
-            self.write_message(true, channel_to_open as u8, response, ProtocolMessage::ProtocolMessageChannelOpenResponse as u16, Duration::from_millis(5000), true);
+            self.write_message(true, channel_to_open as u8, response, ControlMessageType::MESSAGE_CHANNEL_OPEN_RESPONSE as u16, Duration::from_millis(5000), true);
         }
 
         if channel == ServiceChannels::SensorChannel as u8 || channel_to_open == ServiceChannels::SensorChannel as u32 {
-            let mut sensor_msg = SensorMessage::new();
-            let night_sensor = sensor_msg.add_event_night();
+            let mut night_sensor_msg = NightModeData::new();
 
-            night_sensor.night_mode = false;
             match self.context.try_lock() {
                 Ok(context) => {
-                    night_sensor.night_mode = context.headlights_on;
+                    night_sensor_msg.set_night_mode(context.headlights_on); 
                 }
                 Err(_) => {
                     println!("Channel Open Request: Context Locked.")
                 }
             }
 
-            let status_msg = sensor_msg.add_event_status();
-            status_msg.status = 0;
+            let mut status_msg = DrivingStatusData::new();
+            status_msg.set_status(DrivingStatus::DRIVE_STATUS_UNRESTRICTED as i32);
 
-            self.write_message(true, SensorChannel as u8, sensor_msg, 0x8003, Duration::from_millis(5000), true);
+            let mut sensor_msg = SensorBatch::new();
+            sensor_msg.night_mode_data.push(night_sensor_msg);
+            sensor_msg.driving_status_data.push(status_msg);
+            
+            self.write_message(true, ServiceChannels::SensorChannel as u8, sensor_msg, SensorMessageId::SENSOR_MESSAGE_BATCH as u16, Duration::from_millis(5000), true);
         }
     }
 
     //Handle a binding request.
     fn handle_binding_request(&mut self, channel: u8) {
-        let mut response = BindingResponse::new();
-        response.status = 0;
+        let mut response = KeyBindingResponse::new();
+        response.set_status(0);
 
-        self.write_message(true, channel, response, InputChannelMessageBindingResponse as u16, Duration::from_millis(5000), true);
+        self.write_message(true, channel, response, InputMessageId::INPUT_MESSAGE_KEY_BINDING_RESPONSE as u16, Duration::from_millis(5000), true);
     }
 
     //Handle a sensor start request.
     fn handle_sensor_start_request(&mut self, channel: u8) {
-        let mut response = SensorStartResponse::new();
-        response.status = 0;
+        let mut response = SensorResponse::new();
+        response.set_status(MessageStatus::STATUS_SUCCESS);
 
-        self.write_message(true, channel, response, SensorChannelMessageStartResponse as u16, Duration::from_millis(5000), true);
+        self.write_message(true, channel, response, SensorMessageId::SENSOR_MESSAGE_RESPONSE as u16, Duration::from_millis(5000), true);
     }
 
     //Handle a media setup request.
     fn handle_media_setup_request(&mut self, channel: u8) {
-        let mut response = MediaSetupResponse::new();
-        response.status = 2;
-        response.max_unacked = 1;
-        response.add_config(0);
+        let mut response = Config::new();
+        response.set_status(config::Status::STATUS_READY);
+        response.set_max_unacked(1);
+        response.configuration_indices.push(0);
 
-        self.write_message(true, channel, response, MediaChannelMessageSetupResponse as u16, Duration::from_millis(5000), true);
+        self.write_message(true, channel, response, MediaMessageId::MEDIA_MESSAGE_CONFIG as u16, Duration::from_millis(5000), true);
 
-        if !self.first_video && channel == VideoChannel as u8 {
+        if !self.first_video && channel == ServiceChannels::VideoChannel as u8 {
             self.first_video = true;
 
-            let mut video_focus_gained = VideoFocus::new();
-            video_focus_gained.mode = true;
-            video_focus_gained.unrequested = true;
+            let mut video_focus_gained = VideoFocusNotification::new();
+            video_focus_gained.set_focus(VideoFocusMode::VIDEO_FOCUS_PROJECTED);
+            video_focus_gained.set_unsolicited(true);
 
-            self.write_message(true, VideoChannel as u8, video_focus_gained, MediaChannelMessageVideoFocus as u16, Duration::from_millis(5000), true);
+            self.write_message(true, ServiceChannels::VideoChannel as u8, video_focus_gained, MediaMessageId::MEDIA_MESSAGE_VIDEO_FOCUS_NOTIFICATION as u16, Duration::from_millis(5000), true);
 
-            let mut sensor_message = SensorMessage::new();
-            let location_message = sensor_message.add_event_location();
+            let mut sensor_message = SensorBatch::new();
 
-            location_message.set_speed(0);
+            let mut location_message = LocationData::new();
+            location_message.set_speed_e3(0);
 
-            self.write_message(true, SensorChannel as u8, sensor_message, SensorChannelMessageEvent as u16, Duration::from_millis(5000), true);
+            sensor_message.location_data.push(location_message);
+
+            self.write_message(true, ServiceChannels::SensorChannel as u8, sensor_message, SensorMessageId::SENSOR_MESSAGE_BATCH as u16, Duration::from_millis(5000), true);
         }
     }
 
     //Send a media acknowledgement.
     fn send_media_ack(&mut self, channel: u8) {
-        let mut ack_msg = MediaAck::new();
-        ack_msg.session = self.channel_session[channel as usize];
-        ack_msg.value = 1;
+        let mut ack_msg = Start::new();
+        ack_msg.set_session_id(self.channel_session[channel as usize]);
+        ack_msg.set_configuration_index(1);
 
-        self.write_message(true, channel, ack_msg, MediaChannelMessage::MediaChannelMessageAck as u16, Duration::from_millis(5000), true);
+        self.write_message(true, channel, ack_msg, MediaMessageId::MEDIA_MESSAGE_ACK as u16, Duration::from_millis(5000), true);
     }
 }

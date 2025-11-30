@@ -25,7 +25,7 @@ pub struct ChannelDescriptor {
 	//Empty channels.
 	empty_params: Vec<u32>,
 
-	navigation_status_params: Vec<NavigationStatusService>,
+	navigation_status_params: Vec<NavigationService>,
 
 	special_fields: protobuf::SpecialFields,
 }
@@ -69,8 +69,8 @@ impl ChannelDescriptor {
 		return &mut self.input_stream_params[index];
 	}
 
-	pub fn add_navigation_service(&mut self) -> &mut NavigationStatusService {
-		self.navigation_status_params.push(NavigationStatusService::new());
+	pub fn add_navigation_service(&mut self) -> &mut NavigationService {
+		self.navigation_status_params.push(NavigationService::new());
 		let index = self.navigation_status_params.len() - 1;
 		return &mut self.navigation_status_params[index];
 	}
@@ -1077,14 +1077,14 @@ impl Message for AudioConfig {
 }
 
 #[derive(Default, PartialEq, Clone)]
-pub struct NavigationStatusService {
+pub struct NavigationService {
 	pub service_type: u8,
 	pub minimum_interval: u32,
 
 	special_fields: protobuf::SpecialFields,
 }
 
-impl Message for NavigationStatusService {
+impl Message for NavigationService {
 	const NAME: &'static str = "Navigation Status Service";
 
 	fn is_initialized(&self) -> bool {
@@ -1147,8 +1147,8 @@ impl Message for NavigationStatusService {
 	}
 
 	fn default_instance() -> &'static Self {
-		static INSTANCE: Lazy<NavigationStatusService> = Lazy::new();
-		return INSTANCE.get(NavigationStatusService::new);
+		static INSTANCE: Lazy<NavigationService> = Lazy::new();
+		return INSTANCE.get(NavigationService::new);
 	}
 }
 

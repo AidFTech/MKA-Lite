@@ -19,63 +19,7 @@ impl <'a> MKAObj<'a> {
         }
     }
 
-    pub fn check_ibus(&mut self) {
-        let mut ibus_handler = match self.ibus_handler.try_lock() {
-            Ok(ibus_handler) => ibus_handler,
-            Err(_) => {
-                //TODO: Wait for the IBus handler to become available.
-                return;
-            }
-        };
-        
-        /*if ibus_handler.bytes_available() >= 4 {
-            let full_ib_start = Instant::now();
-            let mut ib_start = Instant::now();
-            
-            while Instant::now() - ib_start < Duration::from_millis(20) && Instant::now() - full_ib_start < Duration::from_millis(100) {
-                if ibus_handler.bytes_available() >= 4 {
-                    let ibus_msg = match ibus_handler.read_ibus_message() {
-                        Some(ibus_msg) => ibus_msg,
-                        None => {
-                            return;
-                        }
-                    };
-
-                    ib_start = Instant::now();
-                    
-                    std::mem::drop(ibus_handler);
-                    println!("{:X?}", ibus_msg.get_bytes());
-                    self.handle_ibus_message(ibus_msg);
-
-                    ibus_handler = match self.ibus_handler.try_lock() {
-                        Ok(ibus_handler) => ibus_handler,
-                        Err(_) => {
-                            println!("Check IBus Loop: IBus handler locked.");
-                            break;
-                        }
-                    };
-                }
-            }
-        }*/
-
-        let ibus_cache = ibus_handler.get_rx_cache();
-        let mut ibus_rx = Vec::new();
-
-        for ibus_msg in &mut *ibus_cache {
-            ibus_rx.push(ibus_msg.clone());
-        }
-
-        ibus_cache.clear();
-
-        std::mem::drop(ibus_handler);
-
-        for ibus_msg in ibus_rx {
-            println!("{:X?}", ibus_msg.get_bytes());
-            self.handle_ibus_message(ibus_msg);
-        }
-    }
-
-    fn handle_ibus_message(&mut self, ibus_msg: IBusMessage) {
+    pub fn handle_ibus_message(&mut self, ibus_msg: IBusMessage) {
         let mut context = match self.context.try_lock() {
             Ok(context) => context,
             Err(_) => {
@@ -276,7 +220,7 @@ impl <'a> MKAObj<'a> {
                                 sent_22 = true;
                                 break;
                             } else {
-                                ibus_handler.cache_message(ibus_msg);
+                                ibus_handler.rx_cache_message(ibus_msg);
                             }
                         }
                         None => {
@@ -315,7 +259,7 @@ impl <'a> MKAObj<'a> {
             
             match self.mirror_handler.try_lock() {
                 Ok(mut mirror_handler) => {
-                    mirror_handler.handle_ibus_message(ibus_msg);
+                    //mirror_handler.handle_ibus_message(ibus_msg);
                 }
                 Err(_) => {
                     println!("Handle IBus: Mirror handler locked.");
@@ -327,7 +271,7 @@ impl <'a> MKAObj<'a> {
             
             match self.mirror_handler.try_lock() {
                 Ok(mut mirror_handler) => {
-                    mirror_handler.handle_ibus_message(ibus_msg);
+                    //mirror_handler.handle_ibus_message(ibus_msg);
                 }
                 Err(_) => {
                     println!("Handle IBus: Mirror handler locked.");
@@ -337,13 +281,14 @@ impl <'a> MKAObj<'a> {
         }
     }
 
-    //Write an IBus message.
+    ///Write an IBus message.
     fn write_ibus_message(&mut self, ibus_msg: IBusMessage) {
         let mut sent = false;
         while !sent {
             match self.ibus_handler.try_lock() {
                 Ok(mut ibus_handler) => {
-                    ibus_handler.write_ibus_message(ibus_msg.clone());
+                    let tx_cache = ibus_handler.get_tx_cache();
+                    tx_cache.push(ibus_msg.clone());
                     sent = true;
                 }
                 Err(_) => {
@@ -353,7 +298,7 @@ impl <'a> MKAObj<'a> {
         }
     }
 
-    //Send a CD ping.
+    ///Send a CD ping.
     pub fn send_cd_ping(&mut self) {
         self.write_ibus_message(IBusMessage {
             sender: IBUS_DEVICE_CDC,
@@ -362,7 +307,7 @@ impl <'a> MKAObj<'a> {
         });
     }
 
-    //Send all radio screen update messages.
+    ///Send all radio screen update messages.
     fn send_radio_screen_update(&mut self) {
         let context = match self.context.try_lock() {
             Ok(context) => context,
@@ -396,7 +341,7 @@ impl <'a> MKAObj<'a> {
         self.send_radio_subtitle_text(phone_name, 6, true);
     }
 
-    //Send a radio header change message.
+    ///Send a radio header change message.
     fn send_radio_main_text(&mut self, text: String) {
         let mut text_data = Vec::new();
         text_data.push(IBUS_CMD_GT_WRITE_TITLE);
@@ -423,7 +368,7 @@ impl <'a> MKAObj<'a> {
         self.write_ibus_message(text_msg);
     }
 
-    //Send a radio subtitle change message. 
+    ///Send a radio subtitle change message. 
     fn send_radio_subtitle_text(&mut self, text: String, zone: u8, refresh: bool) {
         let mut text_data = Vec::new();
         text_data.push(IBUS_CMD_GT_WRITE_WITH_CURSOR);
@@ -453,7 +398,7 @@ impl <'a> MKAObj<'a> {
         }
     }
 
-    //Send a radio text change message.
+    ///Send a radio text change message.
     fn send_radio_center_text(&mut self, text: String, position: u8, version: i8) {
         let index: u8;
         if position == SONG_NAME {
@@ -494,7 +439,7 @@ impl <'a> MKAObj<'a> {
         self.write_ibus_message(text_change_message);
     }
 
-    //Send multiple radio text change messages.
+    ///Send multiple radio text change messages.
     fn send_all_radio_center_text(&mut self, version: i8, refresh: bool, song_title: String, artist: String, album: String, app: String) {
         self.send_radio_center_text(song_title, SONG_NAME, version);
         self.send_radio_center_text(artist, ARTIST, version);
@@ -510,7 +455,7 @@ impl <'a> MKAObj<'a> {
         }
     }
 
-    //Send a refresh message.
+    ///Send a refresh message.
     fn send_refresh(&mut self, index: u8) {
         let refresh_data = [IBUS_CMD_GT_WRITE_WITH_CURSOR, index, 0x1, 0x0].to_vec();
         let refresh_msg = IBusMessage {
@@ -522,7 +467,7 @@ impl <'a> MKAObj<'a> {
         self.write_ibus_message(refresh_msg);
     }
 
-    //Set whether the MKA is the selected source.
+    ///Set whether the MKA is the selected source.
     fn set_selected(&mut self, selected: bool) {
         let mut context = match self.context.try_lock() {
             Ok(context) => context,
@@ -551,7 +496,7 @@ impl <'a> MKAObj<'a> {
         }
     }
 
-    //Create the main settings menu.
+    ///Create the main settings menu.
     fn create_main_menu(&mut self) {
         let context = match self.context.try_lock() {
             Ok(context) => context,
@@ -578,7 +523,7 @@ impl <'a> MKAObj<'a> {
         self.send_refresh(0x61);
     }
 
-    //Create a menu option.
+    ///Create a menu option.
     fn create_menu_option(&mut self, index: u8, text: String) {
         let mut menu_option_data = Vec::new();
         menu_option_data.push(IBUS_CMD_GT_WRITE_NO_CURSOR);
@@ -599,6 +544,7 @@ impl <'a> MKAObj<'a> {
     }
 }
 
+///Get the CD status message.
 fn get_cd_status_message(status: u8, receiver: u8) -> IBusMessage {
     let mut pseudo_status = 0x89;
     if status == 0x0 {

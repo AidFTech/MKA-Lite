@@ -31,10 +31,12 @@ impl AndroidUSBConnection {
 		}
 	}
 
+	///Return whether a full AA connection has been established.
 	pub fn get_connected(&mut self) -> bool {
 		return self.aa_activated;
 	}
 
+	///Attempt to connect to an Android device.
 	pub fn connect(&mut self) -> bool {
 		if Instant::now() - self.last_check < Duration::from_millis(100) {
 			return false;
@@ -129,6 +131,12 @@ impl AndroidUSBConnection {
 		return false;
 	}
 
+	///Disable AA to reset the connection.
+	pub fn soft_reset(&mut self) {
+		self.aa_activated = false;
+	}
+
+	///Read bytes from USB.
 	pub fn read_bytes(&mut self) -> Vec<u8> {
 		if !self.aa_activated {
 			return [].to_vec();
@@ -157,6 +165,7 @@ impl AndroidUSBConnection {
 		}
 	}
 
+	///Write bytes to USB.
 	pub fn write_bytes(&mut self, buffer: &Vec<u8>, retry: bool, timeout: Duration) -> bool {
 		if !self.aa_activated {
 			return false;

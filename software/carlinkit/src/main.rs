@@ -13,6 +13,7 @@ use mka::MKAObj;
 use context::Context;
 use mirror::handler::MirrorHandler;
 use mirror::usb::USBConnection;
+use aap::aa_handler::AapHandler;
 
 fn main() {
     let args = env::args();
@@ -57,11 +58,12 @@ fn main() {
     
     let mutex_context: Arc<Mutex<Context>> = Arc::new(Mutex::new(context));
     let mutex_ibus_handler = Arc::new(Mutex::new(ibus_handler.unwrap()));
-    let mutex_mirror_handler = Arc::new(Mutex::new(MirrorHandler::new(&mutex_context, &mutex_ibus_handler, 800, 480)));
+    let mutex_carplay_handler = Arc::new(Mutex::new(MirrorHandler::new(&mutex_context, &mutex_ibus_handler, 800, 480)));
+    //let mutex_android_handler = Arc::new(Mutex::new(AapHandler::new(&mutex_context, )))
 
     let thread_ibus_handler = Arc::clone(&mutex_ibus_handler);
 
-    let mut mka_obj = MKAObj::new(&mutex_context, &mutex_ibus_handler, &mutex_mirror_handler);
+    let mut mka_obj = MKAObj::new(&mutex_context, &mutex_ibus_handler, &mutex_carplay_handler);
 
     mka_obj.send_cd_ping();
 
@@ -75,22 +77,54 @@ fn main() {
             };
 
             if ibus_handler.bytes_available() >= 4 {
-                let ib_msg = match ibus_handler.read_ibus_message() {
+                match ibus_handler.read_ibus_message() {
                     None => {
                         continue;
                     }
-                    Some(ib_msg) => ib_msg,
+                    Some(ib_msg) => {
+                        println!("{:X?}", ib_msg.get_bytes());
+                        ibus_handler.rx_cache_message(ib_msg);
+                    }
                 };
-                ibus_handler.cache_message(ib_msg);
             }
+            
+            let ib_tx = ibus_handler.get_tx_cache();
+            let mut ib_tx_vec = Vec::new();
+            for ib_msg in &mut *ib_tx {
+                ib_tx_vec.push(ib_msg.clone());
+            }
+
+            ib_tx.clear();
+
+            for ib_msg in ib_tx_vec {
+                ibus_handler.write_ibus_message(ib_msg.clone());
+            }
+
+            std::mem::drop(ibus_handler);
         }
     });
 
     loop {
-        mka_obj.check_ibus();
+        let mut ib_rx_list = Vec::new();
+
+        match mutex_ibus_handler.try_lock() {
+            Ok(mut ibus_handler) => {
+                let ib_rx = ibus_handler.get_rx_cache();
+                for ib_data in &mut *ib_rx {
+                    ib_rx_list.push(ib_data.clone());
+                }
+
+                ib_rx.clear();
+            }
+            Err(_) => ()
+        }
+
+        for ib_data in ib_rx_list {
+            mka_obj.handle_ibus_message(ib_data);
+        }
 
         // TODO: Return a Result() and act on errors (like run being false)
-        match mutex_mirror_handler.try_lock() {
+        match mutex_carplay_handler.try_lock() {
             Ok(mut mirror_handler) => {
                 mirror_handler.process();
             }
