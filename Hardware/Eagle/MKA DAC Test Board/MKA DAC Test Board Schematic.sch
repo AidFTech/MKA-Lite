@@ -171,6 +171,157 @@
 </layers>
 <schematic xreflabel="%F%N/%S.%C%R" xrefpart="/%S.%C%R">
 <libraries>
+<library name="PowerSymbols">
+<packages>
+</packages>
+<symbols>
+<symbol name="VCC">
+<wire x1="1.27" y1="-1.905" x2="0" y2="0" width="0.254" layer="94"/>
+<wire x1="0" y1="0" x2="-1.27" y2="-1.905" width="0.254" layer="94"/>
+<text x="-2.54" y="-2.54" size="1.778" layer="96" rot="R90">&gt;VALUE</text>
+<pin name="VCC" x="0" y="-2.54" visible="off" length="short" direction="sup" rot="R90"/>
+</symbol>
+<symbol name="2.75V">
+<description>&lt;h3&gt;2.75V Voltage Supply&lt;/h3&gt;</description>
+<wire x1="0.762" y1="1.27" x2="0" y2="2.54" width="0.254" layer="94"/>
+<wire x1="0" y1="2.54" x2="-0.762" y2="1.27" width="0.254" layer="94"/>
+<pin name="2.8V" x="0" y="0" visible="off" length="short" direction="sup" rot="R90"/>
+<text x="0" y="2.794" size="1.778" layer="96" align="bottom-center">&gt;VALUE</text>
+</symbol>
+<symbol name="DGND">
+<description>&lt;h3&gt;Digital Ground Supply&lt;/h3&gt;</description>
+<wire x1="-1.905" y1="0" x2="1.905" y2="0" width="0.254" layer="94"/>
+<pin name="GND" x="0" y="2.54" visible="off" length="short" direction="sup" rot="R270"/>
+<text x="0" y="-0.254" size="1.778" layer="96" align="top-center">&gt;VALUE</text>
+</symbol>
+<symbol name="5V">
+<description>&lt;h3&gt;5V Voltage Supply&lt;/h3&gt;</description>
+<wire x1="0.762" y1="1.27" x2="0" y2="2.54" width="0.254" layer="94"/>
+<wire x1="0" y1="2.54" x2="-0.762" y2="1.27" width="0.254" layer="94"/>
+<pin name="5V" x="0" y="0" visible="off" length="short" direction="sup" rot="R90"/>
+<text x="0" y="2.794" size="1.778" layer="96" align="bottom-center">&gt;VALUE</text>
+</symbol>
+<symbol name="3.3V">
+<description>&lt;h3&gt;3.3V Voltage Supply&lt;/h3&gt;</description>
+<wire x1="0.762" y1="1.27" x2="0" y2="2.54" width="0.254" layer="94"/>
+<wire x1="0" y1="2.54" x2="-0.762" y2="1.27" width="0.254" layer="94"/>
+<pin name="3.3V" x="0" y="0" visible="off" length="short" direction="sup" rot="R90"/>
+<text x="0" y="2.794" size="1.778" layer="96" align="bottom-center">&gt;VALUE</text>
+</symbol>
+<symbol name="AGND">
+<description>&lt;h3&gt;Analog Ground Supply&lt;/h3&gt;</description>
+<wire x1="-1.905" y1="0" x2="1.905" y2="0" width="0.254" layer="94"/>
+<text x="0" y="-0.254" size="1.778" layer="96" align="top-center">&gt;VALUE</text>
+<pin name="AGND" x="0" y="2.54" visible="off" length="short" direction="sup" rot="R270"/>
+</symbol>
+<symbol name="VIN">
+<description>&lt;h3&gt;Input Voltage Supply&lt;/h3&gt;</description>
+<wire x1="0.762" y1="1.27" x2="0" y2="2.54" width="0.254" layer="94"/>
+<wire x1="0" y1="2.54" x2="-0.762" y2="1.27" width="0.254" layer="94"/>
+<pin name="VIN" x="0" y="0" visible="off" length="short" direction="sup" rot="R90"/>
+<text x="0" y="2.794" size="1.778" layer="96" align="bottom-center">&gt;VALUE</text>
+</symbol>
+</symbols>
+<devicesets>
+<deviceset name="VCC" prefix="P+">
+<description>&lt;b&gt;SUPPLY SYMBOL&lt;/b&gt;</description>
+<gates>
+<gate name="VCC" symbol="VCC" x="0" y="0"/>
+</gates>
+<devices>
+<device name="">
+<technologies>
+<technology name=""/>
+</technologies>
+</device>
+</devices>
+</deviceset>
+<deviceset name="2.75V" prefix="SUPPLY">
+<description>&lt;h3&gt;2.75V Supply Symbol&lt;/h3&gt;
+&lt;p&gt;Power supply symbol for a specifically-stated 2.75V source.&lt;/p&gt;</description>
+<gates>
+<gate name="G$1" symbol="2.75V" x="0" y="0"/>
+</gates>
+<devices>
+<device name="">
+<technologies>
+<technology name=""/>
+</technologies>
+</device>
+</devices>
+</deviceset>
+<deviceset name="GND">
+<description>&lt;h3&gt;Ground Supply Symbol&lt;/h3&gt;
+&lt;p&gt;Generic signal ground supply symbol.&lt;/p&gt;</description>
+<gates>
+<gate name="1" symbol="DGND" x="0" y="0"/>
+</gates>
+<devices>
+<device name="">
+<technologies>
+<technology name=""/>
+</technologies>
+</device>
+</devices>
+</deviceset>
+<deviceset name="5V">
+<description>&lt;h3&gt;5V Supply Symbol&lt;/h3&gt;
+&lt;p&gt;Power supply symbol for a specifically-stated 5V source.&lt;/p&gt;</description>
+<gates>
+<gate name="G$1" symbol="5V" x="0" y="0"/>
+</gates>
+<devices>
+<device name="">
+<technologies>
+<technology name=""/>
+</technologies>
+</device>
+</devices>
+</deviceset>
+<deviceset name="3.3V">
+<description>&lt;h3&gt;3.3V Supply Symbol&lt;/h3&gt;
+&lt;p&gt;Power supply symbol for a specifically-stated 3.3V source.&lt;/p&gt;</description>
+<gates>
+<gate name="G$1" symbol="3.3V" x="0" y="0"/>
+</gates>
+<devices>
+<device name="">
+<technologies>
+<technology name=""/>
+</technologies>
+</device>
+</devices>
+</deviceset>
+<deviceset name="AGND">
+<description>&lt;b&gt;Analog Ground Symbol&lt;/b&gt;
+&lt;p&gt;Generic symbol for a analog ground supply.&lt;/p&gt;</description>
+<gates>
+<gate name="G$1" symbol="AGND" x="0" y="0"/>
+</gates>
+<devices>
+<device name="">
+<technologies>
+<technology name=""/>
+</technologies>
+</device>
+</devices>
+</deviceset>
+<deviceset name="VIN">
+<description>&lt;h3&gt;Input Voltage Supply&lt;/h3&gt;
+&lt;p&gt;Generic voltage input supply symbol.&lt;/p&gt;</description>
+<gates>
+<gate name="G$1" symbol="VIN" x="0" y="0"/>
+</gates>
+<devices>
+<device name="">
+<technologies>
+<technology name=""/>
+</technologies>
+</device>
+</devices>
+</deviceset>
+</devicesets>
+</library>
 <library name="Frame">
 <packages>
 <package name="DUMMY" urn="urn:adsk.eagle:footprint:37006/1">
@@ -2456,40 +2607,6 @@ FRAME-LETTER</description>
 </deviceset>
 </devicesets>
 </library>
-<library name="supply1" urn="urn:adsk.eagle:library:371">
-<description>&lt;b&gt;Supply Symbols&lt;/b&gt;&lt;p&gt;
- GND, VCC, 0V, +5V, -5V, etc.&lt;p&gt;
- Please keep in mind, that these devices are necessary for the
- automatic wiring of the supply signals.&lt;p&gt;
- The pin name defined in the symbol is identical to the net which is to be wired automatically.&lt;p&gt;
- In this library the device names are the same as the pin names of the symbols, therefore the correct signal names appear next to the supply symbols in the schematic.&lt;p&gt;
- &lt;author&gt;Created by librarian@cadsoft.de&lt;/author&gt;</description>
-<packages>
-</packages>
-<symbols>
-<symbol name="VCC" urn="urn:adsk.eagle:symbol:26928/1" library_version="1">
-<wire x1="1.27" y1="-1.905" x2="0" y2="0" width="0.254" layer="94"/>
-<wire x1="0" y1="0" x2="-1.27" y2="-1.905" width="0.254" layer="94"/>
-<text x="-2.54" y="-2.54" size="1.778" layer="96" rot="R90">&gt;VALUE</text>
-<pin name="VCC" x="0" y="-2.54" visible="off" length="short" direction="sup" rot="R90"/>
-</symbol>
-</symbols>
-<devicesets>
-<deviceset name="VCC" urn="urn:adsk.eagle:component:26957/1" prefix="P+" library_version="1">
-<description>&lt;b&gt;SUPPLY SYMBOL&lt;/b&gt;</description>
-<gates>
-<gate name="VCC" symbol="VCC" x="0" y="0"/>
-</gates>
-<devices>
-<device name="">
-<technologies>
-<technology name=""/>
-</technologies>
-</device>
-</devices>
-</deviceset>
-</devicesets>
-</library>
 <library name="Passives">
 <packages>
 <package name="0805">
@@ -3479,119 +3596,6 @@ Switches electrical signals</description>
 </deviceset>
 </devicesets>
 </library>
-<library name="SparkFun-PowerSymbols" urn="urn:adsk.eagle:library:530">
-<description>&lt;h3&gt;SparkFun Power Symbols&lt;/h3&gt; This library contains power, ground, and voltage-supply symbols. &lt;br&gt; &lt;br&gt; We've spent an enormous amount of time creating and checking these footprints and parts, but it is &lt;b&gt; the end user's responsibility&lt;/b&gt; to ensure correctness and suitablity for a given componet or application. &lt;br&gt; &lt;br&gt;If you enjoy using this library, please buy one of our products at &lt;a href=" www.sparkfun.com"&gt;SparkFun.com&lt;/a&gt;. &lt;br&gt; &lt;br&gt; &lt;b&gt;Licensing:&lt;/b&gt; Creative Commons ShareAlike 4.0 International - https://creativecommons.org/licenses/by-sa/4.0/ &lt;br&gt; &lt;br&gt; You are welcome to use this library for commercial purposes. For attribution, we ask that when you begin to sell your device using our footprint, you email us with a link to the product being sold. We want bragging rights that we helped (in a very small part) to create your 8th world wonder. We
-                    would like the opportunity to feature your device on our homepage.</description>
-<packages>
-</packages>
-<symbols>
-<symbol name="DGND" urn="urn:adsk.eagle:symbol:39415/1" library_version="1">
-<description>&lt;h3&gt;Digital Ground Supply&lt;/h3&gt;</description>
-<wire x1="-1.905" y1="0" x2="1.905" y2="0" width="0.254" layer="94"/>
-<pin name="GND" x="0" y="2.54" visible="off" length="short" direction="sup" rot="R270"/>
-<text x="0" y="-0.254" size="1.778" layer="96" align="top-center">&gt;VALUE</text>
-</symbol>
-<symbol name="5V" urn="urn:adsk.eagle:symbol:39412/1" library_version="1">
-<description>&lt;h3&gt;5V Voltage Supply&lt;/h3&gt;</description>
-<wire x1="0.762" y1="1.27" x2="0" y2="2.54" width="0.254" layer="94"/>
-<wire x1="0" y1="2.54" x2="-0.762" y2="1.27" width="0.254" layer="94"/>
-<pin name="5V" x="0" y="0" visible="off" length="short" direction="sup" rot="R90"/>
-<text x="0" y="2.794" size="1.778" layer="96" align="bottom-center">&gt;VALUE</text>
-</symbol>
-<symbol name="3.3V" urn="urn:adsk.eagle:symbol:39411/1" library_version="1">
-<description>&lt;h3&gt;3.3V Voltage Supply&lt;/h3&gt;</description>
-<wire x1="0.762" y1="1.27" x2="0" y2="2.54" width="0.254" layer="94"/>
-<wire x1="0" y1="2.54" x2="-0.762" y2="1.27" width="0.254" layer="94"/>
-<pin name="3.3V" x="0" y="0" visible="off" length="short" direction="sup" rot="R90"/>
-<text x="0" y="2.794" size="1.778" layer="96" align="bottom-center">&gt;VALUE</text>
-</symbol>
-<symbol name="AGND" urn="urn:adsk.eagle:symbol:39414/1" library_version="1">
-<description>&lt;h3&gt;Analog Ground Supply&lt;/h3&gt;</description>
-<wire x1="-1.905" y1="0" x2="1.905" y2="0" width="0.254" layer="94"/>
-<text x="0" y="-0.254" size="1.778" layer="96" align="top-center">&gt;VALUE</text>
-<pin name="AGND" x="0" y="2.54" visible="off" length="short" direction="sup" rot="R270"/>
-</symbol>
-<symbol name="VIN" urn="urn:adsk.eagle:symbol:39426/1" library_version="1">
-<description>&lt;h3&gt;Input Voltage Supply&lt;/h3&gt;</description>
-<wire x1="0.762" y1="1.27" x2="0" y2="2.54" width="0.254" layer="94"/>
-<wire x1="0" y1="2.54" x2="-0.762" y2="1.27" width="0.254" layer="94"/>
-<pin name="VIN" x="0" y="0" visible="off" length="short" direction="sup" rot="R90"/>
-<text x="0" y="2.794" size="1.778" layer="96" align="bottom-center">&gt;VALUE</text>
-</symbol>
-</symbols>
-<devicesets>
-<deviceset name="GND" urn="urn:adsk.eagle:component:39439/1" prefix="GND" library_version="1">
-<description>&lt;h3&gt;Ground Supply Symbol&lt;/h3&gt;
-&lt;p&gt;Generic signal ground supply symbol.&lt;/p&gt;</description>
-<gates>
-<gate name="1" symbol="DGND" x="0" y="0"/>
-</gates>
-<devices>
-<device name="">
-<technologies>
-<technology name=""/>
-</technologies>
-</device>
-</devices>
-</deviceset>
-<deviceset name="5V" urn="urn:adsk.eagle:component:39433/1" prefix="SUPPLY" library_version="1">
-<description>&lt;h3&gt;5V Supply Symbol&lt;/h3&gt;
-&lt;p&gt;Power supply symbol for a specifically-stated 5V source.&lt;/p&gt;</description>
-<gates>
-<gate name="G$1" symbol="5V" x="0" y="0"/>
-</gates>
-<devices>
-<device name="">
-<technologies>
-<technology name=""/>
-</technologies>
-</device>
-</devices>
-</deviceset>
-<deviceset name="3.3V" urn="urn:adsk.eagle:component:39435/1" prefix="SUPPLY" library_version="1">
-<description>&lt;h3&gt;3.3V Supply Symbol&lt;/h3&gt;
-&lt;p&gt;Power supply symbol for a specifically-stated 3.3V source.&lt;/p&gt;</description>
-<gates>
-<gate name="G$1" symbol="3.3V" x="0" y="0"/>
-</gates>
-<devices>
-<device name="">
-<technologies>
-<technology name=""/>
-</technologies>
-</device>
-</devices>
-</deviceset>
-<deviceset name="AGND" urn="urn:adsk.eagle:component:39436/1" library_version="1">
-<description>&lt;b&gt;Analog Ground Symbol&lt;/b&gt;
-&lt;p&gt;Generic symbol for a analog ground supply.&lt;/p&gt;</description>
-<gates>
-<gate name="G$1" symbol="AGND" x="0" y="0"/>
-</gates>
-<devices>
-<device name="">
-<technologies>
-<technology name=""/>
-</technologies>
-</device>
-</devices>
-</deviceset>
-<deviceset name="VIN" urn="urn:adsk.eagle:component:39447/1" prefix="SUPPLY" library_version="1">
-<description>&lt;h3&gt;Input Voltage Supply&lt;/h3&gt;
-&lt;p&gt;Generic voltage input supply symbol.&lt;/p&gt;</description>
-<gates>
-<gate name="G$1" symbol="VIN" x="0" y="0"/>
-</gates>
-<devices>
-<device name="">
-<technologies>
-<technology name=""/>
-</technologies>
-</device>
-</devices>
-</deviceset>
-</devicesets>
-</library>
 <library name="shorts">
 <packages>
 <package name="SHORT_TOP-50">
@@ -4002,15 +4006,15 @@ Switches electrical signals</description>
 <parts>
 <part name="FRAME1" library="Frame" deviceset="FRAME-LETTER" device="" package3d_urn="urn:adsk.eagle:package:37104/1"/>
 <part name="FRAME2" library="Frame" deviceset="FRAME-LETTER" device="" package3d_urn="urn:adsk.eagle:package:37104/1"/>
-<part name="SUPPLY12" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="5V" device=""/>
-<part name="GND20" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
+<part name="SUPPLY12" library="PowerSymbols" deviceset="5V" device=""/>
+<part name="GND20" library="PowerSymbols" deviceset="GND" device=""/>
 <part name="C47" library="Passives" deviceset="1UF" device="0603" value="1uF"/>
 <part name="C45" library="Passives" deviceset="1UF" device="0603" value="1uF"/>
-<part name="GND21" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
-<part name="GND22" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
-<part name="SUPPLY22" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="5V" device=""/>
+<part name="GND21" library="PowerSymbols" deviceset="GND" device=""/>
+<part name="GND22" library="PowerSymbols" deviceset="GND" device=""/>
+<part name="SUPPLY22" library="PowerSymbols" deviceset="5V" device=""/>
 <part name="C48" library="Passives" deviceset="1UF" device="0603" value="1uF"/>
-<part name="GND24" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
+<part name="GND24" library="PowerSymbols" deviceset="GND" device=""/>
 <part name="C49" library="Passives" deviceset="1UF" device="0603" value="1uF"/>
 <part name="C46" library="Passives" deviceset="10UF" device="0603" value="10uF"/>
 <part name="C44" library="Passives" deviceset="220PF" device="0603" value="200pF"/>
@@ -4025,16 +4029,16 @@ Switches electrical signals</description>
 <part name="U9" library="ICs" deviceset="DIT4096" device=""/>
 <part name="C38" library="Passives" deviceset="0.1UF" device="0603" value="0.1uF"/>
 <part name="C37" library="Passives" deviceset="0.1UF" device="0603" value="0.1uF"/>
-<part name="SUPPLY13" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="5V" device=""/>
-<part name="GND10" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
-<part name="GND11" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
-<part name="SUPPLY14" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="5V" device=""/>
-<part name="GND15" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
-<part name="SUPPLY15" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="5V" device=""/>
+<part name="SUPPLY13" library="PowerSymbols" deviceset="5V" device=""/>
+<part name="GND10" library="PowerSymbols" deviceset="GND" device=""/>
+<part name="GND11" library="PowerSymbols" deviceset="GND" device=""/>
+<part name="SUPPLY14" library="PowerSymbols" deviceset="5V" device=""/>
+<part name="GND15" library="PowerSymbols" deviceset="GND" device=""/>
+<part name="SUPPLY15" library="PowerSymbols" deviceset="5V" device=""/>
 <part name="C52" library="Passives" deviceset="0.1UF" device="0603" value="0.1uF"/>
 <part name="R31" library="Passives" deviceset="150OHM" device="0603" value="150"/>
 <part name="R30" library="Passives" deviceset="150OHM" device="0603" value="150"/>
-<part name="GND18" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
+<part name="GND18" library="PowerSymbols" deviceset="GND" device=""/>
 <part name="C39" library="Passives" deviceset="10UF" device="0603" value="10uF"/>
 <part name="C36" library="Passives" deviceset="10UF" device="0603" value="10uF"/>
 <part name="C51" library="Passives" deviceset="0.1UF" device="0603" value="0.1uF"/>
@@ -4047,19 +4051,19 @@ Switches electrical signals</description>
 <part name="C59" library="Passives" deviceset="10UF" device="0603" value="10uF"/>
 <part name="C54" library="Passives" deviceset="2.2UF" device="0603" value="2.2uF"/>
 <part name="C53" library="Passives" deviceset="2.2UF" device="0603" value="2.2uF"/>
-<part name="GND12" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
+<part name="GND12" library="PowerSymbols" deviceset="GND" device=""/>
 <part name="R33" library="Passives" deviceset="100OHM" device="0603" value="100"/>
 <part name="R32" library="Passives" deviceset="100OHM" device="0603" value="100"/>
 <part name="SH1" library="shorts" deviceset="SHORT" device="T5"/>
-<part name="AGND3" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="AGND" device=""/>
-<part name="SUPPLY17" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="3.3V" device=""/>
-<part name="SUPPLY21" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="3.3V" device=""/>
-<part name="GND19" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
-<part name="AGND1" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="AGND" device=""/>
-<part name="AGND2" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="AGND" device=""/>
-<part name="GND13" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
+<part name="AGND3" library="PowerSymbols" deviceset="AGND" device=""/>
+<part name="SUPPLY17" library="PowerSymbols" deviceset="3.3V" device=""/>
+<part name="SUPPLY21" library="PowerSymbols" deviceset="3.3V" device=""/>
+<part name="GND19" library="PowerSymbols" deviceset="GND" device=""/>
+<part name="AGND1" library="PowerSymbols" deviceset="AGND" device=""/>
+<part name="AGND2" library="PowerSymbols" deviceset="AGND" device=""/>
+<part name="GND13" library="PowerSymbols" deviceset="GND" device=""/>
 <part name="U10" library="ICs" deviceset="PCM5122" device="" value="PCM5122"/>
-<part name="SUPPLY16" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="3.3V" device=""/>
+<part name="SUPPLY16" library="PowerSymbols" deviceset="3.3V" device=""/>
 <part name="C56" library="Passives" deviceset="10NF" device="0603" value="10nF"/>
 <part name="C55" library="Passives" deviceset="10NF" device="0603" value="10nF"/>
 <part name="FRAME3" library="Frame" deviceset="FRAME-LETTER" device="" package3d_urn="urn:adsk.eagle:package:37104/1"/>
@@ -4068,8 +4072,8 @@ Switches electrical signals</description>
 <part name="J1" library="Connectors" deviceset="3PIN_953442_1" device=""/>
 <part name="J3" library="Connectors" deviceset="6PIN_5_103166_1" device=""/>
 <part name="F1" library="Passives" deviceset="LITTLEBLOCK_FUSE_3A" device="" value="3A"/>
-<part name="GND33" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
-<part name="SUPPLY18" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="VIN" device=""/>
+<part name="GND33" library="PowerSymbols" deviceset="GND" device=""/>
+<part name="SUPPLY18" library="PowerSymbols" deviceset="VIN" device=""/>
 <part name="C6" library="Passives" deviceset="RHS1V101MCN1GS" device=""/>
 <part name="L2" library="Passives" deviceset="ACM70V-701-2PL-TL00" device=""/>
 <part name="D5" library="Passives" deviceset="SMBJ18A" device=""/>
@@ -4079,74 +4083,74 @@ Switches electrical signals</description>
 <part name="U3" library="ICs" deviceset="TFP401" device=""/>
 <part name="U$2" library="Connectors" deviceset="HDMI_MOLEX_2086581051" device=""/>
 <part name="R12" library="Passives" deviceset="10KOHM" device="0603" value="10k"/>
-<part name="GND1" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
+<part name="GND1" library="PowerSymbols" deviceset="GND" device=""/>
 <part name="R13" library="Passives" deviceset="33OHM_ARR_4" device=""/>
 <part name="R14" library="Passives" deviceset="33OHM_ARR_4" device=""/>
 <part name="R15" library="Passives" deviceset="33OHM_ARR_4" device=""/>
 <part name="R16" library="Passives" deviceset="33OHM_ARR_4" device=""/>
 <part name="R17" library="Passives" deviceset="33OHM_ARR_4" device=""/>
 <part name="R18" library="Passives" deviceset="33OHM_ARR_4" device=""/>
-<part name="GND2" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
-<part name="GND3" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
-<part name="GND4" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
+<part name="GND2" library="PowerSymbols" deviceset="GND" device=""/>
+<part name="GND3" library="PowerSymbols" deviceset="GND" device=""/>
+<part name="GND4" library="PowerSymbols" deviceset="GND" device=""/>
 <part name="FRAME6" library="Frame" deviceset="FRAME-LETTER" device="" package3d_urn="urn:adsk.eagle:package:37104/1"/>
 <part name="U4" library="ICs" deviceset="SN65HVDA100" device=""/>
 <part name="U2" library="ICs" deviceset="THS8135" device=""/>
-<part name="GND5" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
-<part name="GND6" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
-<part name="AGND4" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="AGND" device=""/>
-<part name="GND7" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
+<part name="GND5" library="PowerSymbols" deviceset="GND" device=""/>
+<part name="GND6" library="PowerSymbols" deviceset="GND" device=""/>
+<part name="AGND4" library="PowerSymbols" deviceset="AGND" device=""/>
+<part name="GND7" library="PowerSymbols" deviceset="GND" device=""/>
 <part name="C7" library="Passives" deviceset="0.1UF" device="0603" value="0.1uF"/>
 <part name="C8" library="Passives" deviceset="0.1UF" device="0603" value="0.1uF"/>
 <part name="C9" library="Passives" deviceset="0.1UF" device="0603" value="0.1uF"/>
-<part name="AGND5" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="AGND" device=""/>
+<part name="AGND5" library="PowerSymbols" deviceset="AGND" device=""/>
 <part name="R19" library="Passives" deviceset="33OHM_ARR_4" device=""/>
-<part name="GND8" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
+<part name="GND8" library="PowerSymbols" deviceset="GND" device=""/>
 <part name="R20" library="Passives" deviceset="10KOHM" device="0603" value="10k"/>
 <part name="R21" library="Passives" deviceset="10KOHM" device="0603" value="10k"/>
-<part name="GND9" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
+<part name="GND9" library="PowerSymbols" deviceset="GND" device=""/>
 <part name="C10" library="Passives" deviceset="0.1UF" device="0603" value="0.1uF"/>
-<part name="GND14" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
-<part name="GND16" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
+<part name="GND14" library="PowerSymbols" deviceset="GND" device=""/>
+<part name="GND16" library="PowerSymbols" deviceset="GND" device=""/>
 <part name="R22" library="Passives" deviceset="2.8KOHM" device="0603" value="2.8k"/>
-<part name="GND17" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
+<part name="GND17" library="PowerSymbols" deviceset="GND" device=""/>
 <part name="U5" library="ICs" deviceset="74LVC1G08" device=""/>
 <part name="U6" library="ICs" deviceset="74VC1G86Q" device=""/>
 <part name="U7" library="ICs" deviceset="SN74AHC1G02" device="DCK"/>
-<part name="GND23" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
-<part name="GND25" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
-<part name="GND26" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
-<part name="SUPPLY19" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="3.3V" device=""/>
-<part name="SUPPLY20" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="3.3V" device=""/>
-<part name="SUPPLY23" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="3.3V" device=""/>
+<part name="GND23" library="PowerSymbols" deviceset="GND" device=""/>
+<part name="GND25" library="PowerSymbols" deviceset="GND" device=""/>
+<part name="GND26" library="PowerSymbols" deviceset="GND" device=""/>
+<part name="SUPPLY19" library="PowerSymbols" deviceset="3.3V" device=""/>
+<part name="SUPPLY20" library="PowerSymbols" deviceset="3.3V" device=""/>
+<part name="SUPPLY23" library="PowerSymbols" deviceset="3.3V" device=""/>
 <part name="FRAME7" library="Frame" deviceset="FRAME-LETTER" device="" package3d_urn="urn:adsk.eagle:package:37104/1"/>
 <part name="FRAME8" library="Frame" deviceset="FRAME-LETTER" device="" package3d_urn="urn:adsk.eagle:package:37104/1"/>
 <part name="RPI-CM1" library="ICs" deviceset="RPI-CM5" device=""/>
 <part name="U1" library="ICs" deviceset="CD74HC4046A" device=""/>
 <part name="C1" library="Passives" deviceset="100PF" device="0603" value="100pF"/>
-<part name="GND34" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
+<part name="GND34" library="PowerSymbols" deviceset="GND" device=""/>
 <part name="R1" library="Passives" deviceset="470OHM" device="" value="470"/>
-<part name="SUPPLY1" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="3.3V" device=""/>
+<part name="SUPPLY1" library="PowerSymbols" deviceset="3.3V" device=""/>
 <part name="D1" library="Passives" deviceset="SD103AWS-TP" device=""/>
 <part name="R2" library="Passives" deviceset="47KOHM" device="" value="47k"/>
 <part name="C3" library="Passives" deviceset="0.1UF" device="0603" value="0.1uF"/>
-<part name="P+1" library="supply1" library_urn="urn:adsk.eagle:library:371" deviceset="VCC" device="" value="+5V"/>
+<part name="P+1" library="PowerSymbols" deviceset="VCC" device="" value="+5V"/>
 <part name="C2" library="Passives" deviceset="1UF" device="" value="1uF"/>
-<part name="GND28" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
+<part name="GND28" library="PowerSymbols" deviceset="GND" device=""/>
 <part name="R3" library="Passives" deviceset="25KOHM" device="" value="25k"/>
 <part name="R4" library="Passives" deviceset="25KOHM" device="" value="25k"/>
-<part name="GND35" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
+<part name="GND35" library="PowerSymbols" deviceset="GND" device=""/>
 <part name="U12" library="ICs" deviceset="74HC4017PW" device=""/>
 <part name="C4" library="Passives" deviceset="0.1UF" device="0603" value="0.1uF"/>
-<part name="P+2" library="supply1" library_urn="urn:adsk.eagle:library:371" deviceset="VCC" device="" value="+5V"/>
-<part name="GND29" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
-<part name="GND32" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
+<part name="P+2" library="PowerSymbols" deviceset="VCC" device="" value="+5V"/>
+<part name="GND29" library="PowerSymbols" deviceset="GND" device=""/>
+<part name="GND32" library="PowerSymbols" deviceset="GND" device=""/>
 <part name="U13" library="ICs" deviceset="MP2348" device=""/>
 <part name="U14" library="ICs" deviceset="SN74HC163" device=""/>
-<part name="SUPPLY2" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="3.3V" device=""/>
+<part name="SUPPLY2" library="PowerSymbols" deviceset="3.3V" device=""/>
 <part name="C5" library="Passives" deviceset="0.1UF" device="0603" value="0.1uF"/>
-<part name="GND27" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
-<part name="GND30" library="SparkFun-PowerSymbols" library_urn="urn:adsk.eagle:library:530" deviceset="GND" device=""/>
+<part name="GND27" library="PowerSymbols" deviceset="GND" device=""/>
+<part name="GND30" library="PowerSymbols" deviceset="GND" device=""/>
 </parts>
 <sheets>
 <sheet>
@@ -4497,6 +4501,32 @@ Switches electrical signals</description>
 <busses>
 </busses>
 <nets>
+<net name="N$1" class="0">
+<segment>
+<pinref part="U13" gate="G$1" pin="IN"/>
+<wire x1="106.68" y1="119.38" x2="99.06" y2="119.38" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="N$3" class="0">
+<segment>
+<pinref part="U13" gate="G$1" pin="EN"/>
+<wire x1="106.68" y1="104.14" x2="99.06" y2="104.14" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="N$4" class="0">
+<segment>
+<pinref part="U13" gate="G$1" pin="GND"/>
+<wire x1="124.46" y1="91.44" x2="124.46" y2="86.36" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="N$7" class="0">
+<segment>
+<pinref part="U13" gate="G$1" pin="SS"/>
+<wire x1="121.92" y1="91.44" x2="121.92" y2="88.9" width="0.1524" layer="91"/>
+<wire x1="121.92" y1="88.9" x2="116.84" y2="88.9" width="0.1524" layer="91"/>
+<wire x1="116.84" y1="88.9" x2="116.84" y2="86.36" width="0.1524" layer="91"/>
+</segment>
+</net>
 </nets>
 </sheet>
 <sheet>
@@ -6914,6 +6944,7 @@ Switches electrical signals</description>
 <wire x1="177.8" y1="144.78" x2="177.8" y2="138.43" width="0.1524" layer="91"/>
 <pinref part="U6" gate="G$1" pin="A"/>
 <wire x1="177.8" y1="138.43" x2="188.849" y2="138.43" width="0.1524" layer="91"/>
+<label x="177.8" y="144.78" size="1.27" layer="95" rot="R90" xref="yes"/>
 </segment>
 <segment>
 <pinref part="U14" gate="G$1" pin="CLK"/>
@@ -7064,11 +7095,6 @@ Switches electrical signals</description>
 </schematic>
 </drawing>
 <compatibility>
-<note version="8.2" severity="warning">
-Since Version 8.2, EAGLE supports online libraries. The ids
-of those online libraries will not be understood (or retained)
-with this version.
-</note>
 <note version="8.3" severity="warning">
 Since Version 8.3, EAGLE supports URNs for individual library
 assets (packages, symbols, and devices). The URNs of those assets

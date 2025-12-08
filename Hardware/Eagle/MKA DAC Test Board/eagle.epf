@@ -1,6 +1,6 @@
 [Eagle]
 Version="09 06 02"
-Platform="Windows"
+Platform="Linux"
 Globals="Globals"
 Desktop="Desktop"
 
@@ -265,6 +265,9 @@ UsedLibraryUrn="urn:adsk.eagle:library:196"
 UsedLibraryUrn="urn:adsk.eagle:library:197"
 UsedLibraryUrn="urn:adsk.eagle:library:198"
 UsedLibraryUrn="urn:adsk.eagle:library:199"
+UsedLibrary="/home/tsalmon/Documents/BlueBus/EAGLE-libararies/ICs.lbr"
+UsedLibrary="/home/tsalmon/Documents/BlueBus/EAGLE-libararies/Passives.lbr"
+UsedLibrary="/home/tsalmon/Documents/BlueBus/EAGLE-libararies/PowerSymbols.lbr"
 UsedLibraryUrn="urn:adsk.eagle:library:530"
 
 [Win_1]
@@ -272,5 +275,5 @@ Type="Control Panel"
 Number=0
 
 [Desktop]
-Screen="1920 1200"
+Screen="10080 1840"
 Window="Win_1"
